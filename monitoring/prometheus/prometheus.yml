@@ -6,17 +6,17 @@ scrape_configs:
   - job_name: "bot-server"
     static_configs:
      - targets:
-        - "BOT_IP:9100"
-        - "BOT_IP:8080"
+        - "212.113.117.153:9100"
+        - "212.113.117.153:8080"
 
   - job_name: "vpn-server"
     static_configs:
      - targets:
-        - "VPN_IP:9100"
-        - "VPN_IP:8080"
+        - "185.140.12.144:9100"
+        - "185.140.12.144:8080"
 
   - job_name: "registry-server"
     static_configs:
      - targets:
-        - "127.0.0.1:9100"
-        - "127.0.0.1:8080"
+        - "node-exporter:9100"
+        - "cadvisor:8080"
