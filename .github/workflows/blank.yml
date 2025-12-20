@@ -1,0 +1,29 @@
+name: Deploy infra Workflow
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy-monitoring:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+  
+      - name: Deploy monitoring to Infra server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.MONITORING_HOST }}
+          username: root
+          key: ${{ secrets.MONITORING_SSH_KEY }}
+          script: |
+            set -e
+  
+            cd /opt/vpn-infra || exit 1
+            git pull
+  
+            echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" > compose/prod/.env
+  
+            docker compose -f compose/prod/docker-compose.yml pull
+            docker compose -f compose/prod/docker-compose.yml up -d
