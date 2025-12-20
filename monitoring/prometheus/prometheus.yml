@@ -18,5 +18,5 @@ scrape_configs:
   - job_name: "registry-server"
     static_configs:
      - targets:
-        - "REGISTRY_SERVER_IP:9100"
+        - "77.95.206.47:9100"
         - "cadvisor:8080"
