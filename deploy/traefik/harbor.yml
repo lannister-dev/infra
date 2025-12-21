@@ -4,8 +4,6 @@ http:
       rule: "Host(`registry.lannister.webtm.ru`)"
       entryPoints:
         - web
-      middlewares:
-        - redirect-to-https
       service: harbor
 
     harbor-https:
@@ -15,12 +13,6 @@ http:
       tls:
         certResolver: letsencrypt
       service: harbor
-
-  middlewares:
-    redirect-to-https:
-      redirectScheme:
-        scheme: https
-        permanent: true
 
   services:
     harbor:
