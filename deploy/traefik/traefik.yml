@@ -4,14 +4,17 @@ entryPoints:
   websecure:
     address: ":443"
 
-  providers:
-    docker:
-      exposedByDefault: false
+providers:
+  docker:
+    exposedByDefault: false
+  file:
+    directory: /traefik
+    watch: true
 
-  certificatesResolvers:
-    letsencrypt:
-      acme:
-        email: degterev907@gmail.com
-        storage: /acme.json
-        httpChallenge:
-          entryPoint: web
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: degterev907@gmail.com
+      storage: /acme.json
+      httpChallenge:
+        entryPoint: web
