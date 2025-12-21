@@ -1,0 +1,15 @@
+http:
+  routers:
+    harbor:
+      rule: "Host(`registry.lannister.webtm.ru`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      service: harbor
+
+  services:
+    harbor:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8080"
