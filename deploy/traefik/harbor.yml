@@ -1,21 +1,7 @@
 http:
   routers:
-    acme:
-      rule: "PathPrefix(`/.well-known/acme-challenge/`)"
-      entryPoints:
-        - web
-      service: noop@internal
-      priority: 100
-
-    harbor-http:
-      rule: "Host(`registry.lannister.webtm.ru`)"
-      entryPoints:
-        - web
-      service: harbor
-      priority: 1
-
-    harbor-https:
-      rule: "Host(`registry.lannister.webtm.ru`)"
+    harbor:
+      rule: "Host(`registry.lannister-dev.ru`)"
       entryPoints:
         - websecure
       tls:
