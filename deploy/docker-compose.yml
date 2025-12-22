@@ -68,7 +68,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik:/traefik
-
+    env_file:
+      - ../.env
 volumes:
   prometheus_data:
   grafana_data:
