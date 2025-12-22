@@ -1,12 +1,26 @@
 http:
   routers:
-    harbor:
+    harbor-http:
+      rule: "Host(`registry.lannister-dev.ru`)"
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      service: harbor
+
+    harbor-https:
       rule: "Host(`registry.lannister-dev.ru`)"
       entryPoints:
         - websecure
       tls:
         certResolver: cloudflare
       service: harbor
+
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
 
   services:
     harbor:
