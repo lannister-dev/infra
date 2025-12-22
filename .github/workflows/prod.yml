@@ -20,12 +20,8 @@ jobs:
           username: root
           key: ${{ secrets.MONITORING_SSH_KEY }}
           script: |
-            set -e
-  
+            set -e  
             cd /opt/vpn-infra || exit 1
-            git pull
-  
-            echo "GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GF_SECURITY_ADMIN_PASSWORD }}" > .env
-  
+            git pull  
             docker compose -f deploy/docker-compose.yml pull
             docker compose -f deploy/docker-compose.yml up -d
