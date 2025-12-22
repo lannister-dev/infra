@@ -16,5 +16,7 @@ certificatesResolvers:
     acme:
       email: degterev907@gmail.com
       storage: /acme.json
-      httpChallenge:
-        entryPoint: web
+      caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      dnsChallenge:
+        provider: cloudflare
+        delayBeforeCheck: 10

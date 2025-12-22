@@ -19,12 +19,9 @@ services:
     restart: unless-stopped
     env_file:
       - ../.env
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_USERS_ALLOW_SIGN_UP: "false"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.lannister.webtm.ru`)"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
@@ -64,6 +61,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
