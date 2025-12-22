@@ -10,9 +10,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Получение .env
-        run: |
-          echo "${{ secrets.INFRA_ENV_PROD }}" > .env
       - name: Deploy monitoring to Infra server
         uses: appleboy/ssh-action@v1
         with:
@@ -22,6 +19,7 @@ jobs:
           script: |
             set -e  
             cd /opt/vpn-infra || exit 1
+            echo "${{ secrets.INFRA_ENV_PROD }}" > .env
             git pull  
             docker compose -f deploy/docker-compose.yml pull
             docker compose -f deploy/docker-compose.yml up -d
