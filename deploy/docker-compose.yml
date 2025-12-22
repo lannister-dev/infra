@@ -61,8 +61,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
