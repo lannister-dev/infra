@@ -5,11 +5,10 @@ api:
   dashboard: true
 
 entryPoints:
+  web:
+    address: ":80"
   websecure:
     address: ":443"
-    http:
-      tls:
-        certResolver: cloudflare
 
 providers:
   docker:
