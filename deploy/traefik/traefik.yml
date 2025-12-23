@@ -7,7 +7,6 @@ api:
 entryPoints:
   web:
     address: ":80"
-
   websecure:
     address: ":443"
 
@@ -24,9 +23,3 @@ certificatesResolvers:
       storage: /acme/acme.json
       dnsChallenge:
         provider: cloudflare
-        delayBeforeCheck: 10
-tls:
-  stores:
-    default:
-      defaultCertificate:
-        certResolver: cloudflare
