@@ -24,6 +24,7 @@ services:
       - traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)
       - traefik.http.routers.grafana.entrypoints=websecure
       - traefik.http.routers.grafana.tls=true
+      - traefik.http.routers.grafana.tls.certresolver=cloudflare
       - traefik.http.routers.grafana.service=grafana
       - traefik.http.services.grafana.loadbalancer.server.port=3000
     volumes:
