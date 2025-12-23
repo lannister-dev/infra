@@ -28,7 +28,8 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-    networks: [deploy_default]
+    networks:
+      - traefik_proxy
     depends_on:
       - prometheus
 
@@ -67,7 +68,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik:/traefik
-    networks: [deploy_default]
+    networks:
+      - traefik_proxy
     env_file:
       - ../.env
 
@@ -75,5 +77,5 @@ volumes:
   prometheus_data:
   grafana_data:
 networks:
-  deploy_default:
+  traefik_proxy:
     external: true
