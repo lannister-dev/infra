@@ -71,9 +71,17 @@ services:
       - "443:443"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)
+      - traefik.http.routers.traefik.entrypoints=websecure
+      - traefik.http.routers.traefik.tls=true
+      - traefik.http.routers.traefik.tls.certresolver=cloudflare
+      - traefik.http.routers.traefik.service=api@internal
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_acme:/acme
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
     networks:
       - traefik_proxy
     env_file:
