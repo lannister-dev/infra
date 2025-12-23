@@ -25,3 +25,8 @@ certificatesResolvers:
       dnsChallenge:
         provider: cloudflare
         delayBeforeCheck: 10
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certResolver: cloudflare
