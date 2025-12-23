@@ -82,6 +82,7 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  traefik_acme:
 networks:
   traefik_proxy:
     name: traefik_proxy
