@@ -21,6 +21,7 @@ services:
       - ../.env
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik_proxy
       - traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)
       - traefik.http.routers.grafana.entrypoints=websecure
       - traefik.http.routers.grafana.service=grafana
