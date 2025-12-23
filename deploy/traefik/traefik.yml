@@ -6,9 +6,7 @@ entryPoints:
     address: ":80"
   websecure:
     address: ":443"
-    http:
-      tls:
-        certResolver: cloudflare
+
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
@@ -19,6 +17,6 @@ certificatesResolvers:
   cloudflare:
     acme:
       email: degterev907@gmail.com
-      storage: /acme.json
+      storage: /acme/acme.json
       dnsChallenge:
         provider: cloudflare
