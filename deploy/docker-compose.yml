@@ -55,7 +55,7 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
 
   traefik:
-    image: traefik:v3.3
+    image: traefik:v3.2.5
     container_name: traefik
     restart: unless-stopped
     command:
