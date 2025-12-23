@@ -6,7 +6,9 @@ entryPoints:
     address: ":80"
   websecure:
     address: ":443"
-
+    http:
+      tls:
+        certResolver: cloudflare
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
