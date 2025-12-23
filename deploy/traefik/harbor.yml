@@ -12,4 +12,4 @@ http:
     harbor:
       loadBalancer:
         servers:
-          - url: "http://host.docker.internal:8080"
+          - url: "http://proxy:8080"
