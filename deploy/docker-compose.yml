@@ -78,4 +78,5 @@ volumes:
   grafana_data:
 networks:
   traefik_proxy:
+    name: tarefik_proxy
     external: true
