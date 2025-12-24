@@ -1,5 +1,6 @@
 log:
   level: DEBUG
+
 api:
   dashboard: true
   insecure: true
@@ -10,8 +11,6 @@ entryPoints:
 
   websecure:
     address: ":443"
-    http:
-      tls: {}
 
 providers:
   docker:
@@ -26,3 +25,7 @@ certificatesResolvers:
       storage: /acme/acme.json
       dnsChallenge:
         provider: cloudflare
+
+tls:
+  stores:
+    default: {}
