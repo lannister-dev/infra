@@ -21,12 +21,8 @@ providers:
 certificatesResolvers:
   cloudflare:
     acme:
-      caServer: https://acme-staging-v02.api.letsencrypt.org/directory
       email: degterev907@gmail.com
       storage: /acme/acme.json
+      caServer: https://acme-staging-v02.api.letsencrypt.org/directory
       dnsChallenge:
         provider: cloudflare
-
-tls:
-  stores:
-    default: {}
