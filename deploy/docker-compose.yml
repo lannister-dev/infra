@@ -58,40 +58,26 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
 
   traefik:
-    image: traefik:v2.4
+    image: traefik:v2.11
     container_name: traefik
     restart: unless-stopped
-    command:
-      - "--log.level=DEBUG"
-      - "--api.insecure=true"
-      - "--api.dashboard=true"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-      - "--entrypoints.websecure.address=:443"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--certificatesresolvers.cloudflare.acme.email=degterev907@gmail.com"
-      - "--certificatesresolvers.cloudflare.acme.storage=/acme/acme.json"
-      - "--certificatesresolvers.cloudflare.acme.dnschallenge=true"
-      - "--certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare"
     ports:
-      - "80:80"
       - "443:443"
-      - "8080:8080"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik_acme:/acme
     env_file:
       - ../.env
+    volumes:
+      - ./traefik/ssl:/ssl
+      - ./traefik/traefik.toml:/etc/traefik/traefik.toml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
       - traefik.enable=true
-      - traefik.docker.network=traefik_proxy
-      - traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)
-      - traefik.http.routers.traefik.entrypoints=websecure
-      - traefik.http.routers.traefik.tls.certresolver=cloudflare
+      - traefik.http.routers.traefik.entrypoints=https
+      - traefik.http.routers.traefik.rule=Host(`${DASHBOARD_DOMAIN}`)
+      - traefik.http.routers.traefik.tls=true
+      - traefik.http.routers.traefik.tls.certresolver=letsEncrypt
       - traefik.http.routers.traefik.service=api@internal
-
+      - traefik.http.middlewares.traefik-auth.basicauth.users=${DASHBOARD_USER}
+      - traefik.http.routers.traefik.middlewares=traefik-auth
     networks:
       - traefik_proxy
 
