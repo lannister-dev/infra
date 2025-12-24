@@ -27,6 +27,11 @@ services:
       - traefik.http.routers.grafana.tls.certresolver=cloudflare
       - traefik.http.routers.grafana.service=grafana
       - traefik.http.services.grafana.loadbalancer.server.port=3000
+      # HTTP router (redirect)
+      - traefik.http.routers.grafana-http.rule=Host(`grafana.lannister-dev.ru`)
+      - traefik.http.routers.grafana-http.entrypoints=web
+      - traefik.http.routers.grafana-http.middlewares=redirect-to-https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
     volumes:
       - grafana_data:/var/lib/grafana
       - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
