@@ -30,10 +30,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-    environment:
-      GF_SERVER_DOMAIN: grafana.lannister-dev.ru
-      GF_SERVER_ROOT_URL: https://grafana.lannister-dev.ru/
-      GF_SERVER_PROTOCOL: https
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
     networks:
       - traefik_proxy
     depends_on:
