@@ -22,10 +22,9 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)
-      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.entrypoints=https
       - traefik.http.routers.grafana.tls=true
-      - traefik.http.routers.grafana.tls.certresolver=cloudflare
-      - traefik.http.routers.grafana.service=grafana
+      - traefik.http.routers.grafana.tls.certresolver=letsEncrypt
       - traefik.http.services.grafana.loadbalancer.server.port=3000
     volumes:
       - grafana_data:/var/lib/grafana
@@ -72,12 +71,10 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.traefik.entrypoints=https
-      - traefik.http.routers.traefik.rule=Host(`${DASHBOARD_DOMAIN}`)
+      - traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)
       - traefik.http.routers.traefik.tls=true
       - traefik.http.routers.traefik.tls.certresolver=letsEncrypt
       - traefik.http.routers.traefik.service=api@internal
-      - traefik.http.middlewares.traefik-auth.basicauth.users=${DASHBOARD_USER}
-      - traefik.http.routers.traefik.middlewares=traefik-auth
     networks:
       - traefik_proxy
 
