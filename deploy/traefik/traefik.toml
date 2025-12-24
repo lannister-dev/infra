@@ -3,7 +3,9 @@
     address = ":443"
 
 [api]
+  [api]
   dashboard = true
+  insecure = true
 
 [providers.docker]
   exposedByDefault = false
