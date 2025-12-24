@@ -1,0 +1,16 @@
+[entryPoints]
+  [entryPoints.https]
+    address = ":443"
+
+[api]
+  dashboard = true
+
+[providers.docker]
+  exposedByDefault = false
+  network = "traefik_proxy"
+
+[certificatesResolvers.letsEncrypt.acme]
+  storage = "/ssl/acme.json"
+  [certificatesResolvers.letsEncrypt.acme.dnsChallenge]
+    provider = "cloudflare"
+    delayBeforeCheck = 0
