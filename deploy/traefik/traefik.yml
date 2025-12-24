@@ -26,12 +26,3 @@ certificatesResolvers:
       caServer: https://acme-staging-v02.api.letsencrypt.org/directory
       dnsChallenge:
         provider: cloudflare
-tls:
-  stores:
-    default:
-      defaultGeneratedCert:
-        resolver: cloudflare
-        domain:
-          main: lannister-dev.ru
-          sans:
-            - "*.lannister-dev.ru"
