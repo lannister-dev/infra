@@ -62,7 +62,7 @@ services:
     container_name: traefik
     restart: unless-stopped
     command:
-      - "--configFile=/traefik/traefik.yml"
+      - "--configFile=/etc/traefik/traefik.yml"
     ports:
       - "80:80"
       - "443:443"
