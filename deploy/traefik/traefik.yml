@@ -22,5 +22,6 @@ certificatesResolvers:
     acme:
       email: degterev907@gmail.com
       storage: /acme/acme.json
+      caServer: https://acme-v02.api.letsencrypt.org/directory
       dnsChallenge:
         provider: cloudflare
