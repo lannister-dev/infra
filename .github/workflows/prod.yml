@@ -21,5 +21,5 @@ jobs:
             cd /opt/vpn-infra || exit 1
             echo "${{ secrets.INFRA_ENV_PROD }}" > .env
             git pull  
-            docker compose -f deploy/docker-compose.yml pull
-            docker compose -f deploy/docker-compose.yml up -d
+            docker-compose -f deploy/docker-compose.yml pull
+            docker-compose -f deploy/docker-compose.yml up -d
