@@ -1,3 +1,9 @@
+[log]
+  level = "DEBUG"
+
+[accessLog]
+  format = "json"
+
 [entryPoints]
   [entryPoints.https]
     address = ":443"
