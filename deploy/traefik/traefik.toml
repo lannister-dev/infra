@@ -12,12 +12,10 @@
       scheme = "https"
       permanent = true
 
-[entryPoints.https]
-  address = ":443"
-
-  [entryPoints.https.http.tls]
-    certResolver = "letsEncrypt"
-    store = "default"
+  [entryPoints.https]
+    address = ":443"
+    [entryPoints.https.tls]
+      store = "default"
 
 [tls.stores]
   [tls.stores.default]
@@ -33,3 +31,11 @@
 [providers.file]
   filename = "/certs/dynamic.yml"
   watch = true
+
+# Если ACME оставляете — оставляйте блоком ниже (он у вас рабочий, судя по acme.json)
+[certificatesResolvers.letsEncrypt.acme]
+  email = "degterev907@gmail.com"
+  storage = "/ssl/acme.json"
+  [certificatesResolvers.letsEncrypt.acme.dnsChallenge]
+    provider = "cloudflare"
+    delayBeforeCheck = 0
