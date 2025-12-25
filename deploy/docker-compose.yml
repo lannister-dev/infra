@@ -91,8 +91,8 @@ services:
     labels:
       - traefik.enable=true
       # Router
+      - traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
       - traefik.http.routers.traefik.entrypoints=websecure
-      - traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)
       - traefik.http.routers.traefik.tls=true
       - traefik.http.routers.traefik.tls.certresolver=cf
       - traefik.http.routers.traefik.service=api@internal
