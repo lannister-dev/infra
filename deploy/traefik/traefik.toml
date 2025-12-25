@@ -4,9 +4,17 @@
 [accessLog]
   format = "json"
 
+
 [entryPoints]
+  [entryPoints.http]
+    address = ":80"
   [entryPoints.https]
     address = ":443"
+
+[entryPoints.http.http.redirections.entryPoint]
+  to = "https"
+  scheme = "https"
+  permanent = true
 
 [api]
   dashboard = true
