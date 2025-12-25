@@ -82,7 +82,7 @@ services:
 
       - "--api=true"
       - "--api.dashboard=true"
-      - "--api.insecure=false"
+      - "--api.insecure=true"
 
       - "--certificatesresolvers.cf.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
       - "--certificatesresolvers.cf.acme.email=degterev907@gmail.com"
