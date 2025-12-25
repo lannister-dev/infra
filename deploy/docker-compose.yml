@@ -79,7 +79,7 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=traefik_proxy"
 
-      - "api=true"
+      - "--api=true"
       - "--api.dashboard=true"
       - "--api.insecure=false"
 
