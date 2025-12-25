@@ -20,21 +20,16 @@ services:
     env_file:
       - ../.env
     labels:
-      - "traefik.enable=true"
+      - traefik.enable=true
 
       # Router
-      - "traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls=true"
-      - "traefik.http.routers.grafana.tls.certresolver=cf"
-      - "traefik.http.routers.grafana.middlewares=grafana-headers@docker"
+      - traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls=true
+      - traefik.http.routers.grafana.tls.certresolver=cf
 
       # Service
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-
-      # Middleware
-      - "traefik.http.middlewares.grafana-headers.headers.customRequestHeaders.X-Forwarded-Proto=https"
-      - "traefik.http.middlewares.grafana-headers.headers.customRequestHeaders.X-Forwarded-Port=443"
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
 
     volumes:
       - grafana_data:/var/lib/grafana
@@ -82,10 +77,6 @@ services:
       - ./traefik/acme:/acme
     command:
       - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.websecure.http.tls=true"
 
@@ -105,17 +96,26 @@ services:
       - "--accesslog=true"
       - "--log.level=INFO"
     labels:
-      - traefik.enable=true
-      # Router
-      - traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)
-      - traefik.http.routers.traefik.entrypoints=websecure
-      - traefik.http.routers.traefik.tls=true
-      - traefik.http.routers.traefik.tls.certresolver=cf
-      - traefik.http.routers.traefik.service=api@internal
-      # Basic Auth middleware
-      - traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$RWsuY3iD$$W3qlQsMXCi0hWoEZf0Kdz/
-        # Attach middleware to router
-      - traefik.http.routers.traefik.middlewares=traefik-auth@docker
+      - "traefik.enable=true"
+
+        # ===== HTTP → HTTPS redirect (КЛЮЧЕВО) =====
+      - "traefik.http.middlewares.redirect-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-https.redirectscheme.permanent=true"
+
+      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-https"
+
+      # ===== Traefik dashboard =====
+      - "traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=cf"
+      - "traefik.http.routers.traefik.service=api@internal"
+
+      # ===== Basic Auth =====
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$RWsuY3iD$$W3qlQsMXCi0hWoEZf0Kdz/"
+      - "traefik.http.routers.traefik.middlewares=traefik-auth@docker"
     networks:
       - traefik_proxy
 
