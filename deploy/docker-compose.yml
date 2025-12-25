@@ -76,29 +76,39 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/acme:/acme
     command:
+      # ================= ENTRYPOINTS =================
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.websecure.http.tls=true"
 
+      # ================= PROVIDERS ===================
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=traefik_proxy"
 
+      # ================= API / DASHBOARD =============
       - "--api=true"
       - "--api.dashboard=true"
       - "--api.insecure=true"
 
-      - "--certificatesresolvers.cf.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      # ================= ACME (DNS-01 ONLY) ==========
       - "--certificatesresolvers.cf.acme.email=degterev907@gmail.com"
       - "--certificatesresolvers.cf.acme.storage=/acme/acme.json"
+      - "--certificatesresolvers.cf.acme.dnschallenge=true"
       - "--certificatesresolvers.cf.acme.dnschallenge.provider=cloudflare"
 
+      # ❗ КРИТИЧЕСКИ ВАЖНО — ЯВНО ВЫКЛЮЧАЕМ ОСТАЛЬНЫЕ CHALLENGE
+      - "--certificatesresolvers.cf.acme.tlschallenge=false"
+      - "--certificatesresolvers.cf.acme.httpchallenge=false"
+
+      # ================= LOGGING =====================
       - "--accesslog=true"
       - "--log.level=INFO"
+
     labels:
       - "traefik.enable=true"
 
-        # ===== HTTP → HTTPS redirect (КЛЮЧЕВО) =====
+      # ============ HTTP → HTTPS REDIRECT ============
       - "traefik.http.middlewares.redirect-https.redirectscheme.scheme=https"
       - "traefik.http.middlewares.redirect-https.redirectscheme.permanent=true"
 
@@ -106,14 +116,14 @@ services:
       - "traefik.http.routers.http-catchall.entrypoints=web"
       - "traefik.http.routers.http-catchall.middlewares=redirect-https"
 
-      # ===== Traefik dashboard =====
+      # ============ TRAEFIK DASHBOARD ================
       - "traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)"
       - "traefik.http.routers.traefik.entrypoints=websecure"
       - "traefik.http.routers.traefik.tls=true"
       - "traefik.http.routers.traefik.tls.certresolver=cf"
       - "traefik.http.routers.traefik.service=api@internal"
 
-      # ===== Basic Auth =====
+      # ============ BASIC AUTH =======================
       - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$RWsuY3iD$$W3qlQsMXCi0hWoEZf0Kdz/"
       - "traefik.http.routers.traefik.middlewares=traefik-auth@docker"
     networks:
