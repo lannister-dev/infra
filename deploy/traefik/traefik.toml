@@ -5,6 +5,13 @@
   format = "json"
 
 [entryPoints]
+  [entryPoints.http]
+    address = ":80"
+    [entryPoints.http.http.redirections.entryPoint]
+      to = "https"
+      scheme = "https"
+      permanent = true
+
   [entryPoints.https]
     address = ":443"
 
@@ -17,7 +24,16 @@
   network = "traefik_proxy"
 
 [certificatesResolvers.letsEncrypt.acme]
+  email = "degterev907@gmail.com"
   storage = "/ssl/acme.json"
+
+  # ❗ ТОЛЬКО DNS challenge
   [certificatesResolvers.letsEncrypt.acme.dnsChallenge]
     provider = "cloudflare"
     delayBeforeCheck = 0
+
+  # ❗ ЯВНО запрещаем остальные
+  [certificatesResolvers.letsEncrypt.acme.httpChallenge]
+    entryPoint = ""
+
+  [certificatesResolvers.letsEncrypt.acme.tlsChallenge]
