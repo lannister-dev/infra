@@ -20,17 +20,11 @@ services:
     env_file:
       - ../.env
     labels:
-      - traefik.enable=true
-
-      # Router
-      - traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)
-      - traefik.http.routers.grafana.entrypoints=websecure
-      - traefik.http.routers.grafana.tls=true
-      - traefik.http.routers.grafana.tls.certresolver=cf
-
-      # Service
-      - traefik.http.services.grafana.loadbalancer.server.port=3000
-
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -76,45 +70,35 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/acme:/acme
     command:
-      # ================= ENTRYPOINTS =================
+      # ENTRYPOINTS
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.websecure.http.tls=true"
+      - "--entrypoints.websecure.http.tls.certresolver=cf"
 
-      # ================= PROVIDERS ===================
+      # PROVIDERS
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=traefik_proxy"
 
-      # ================= API / DASHBOARD =============
-      - "--api=true"
+      # API / DASHBOARD
       - "--api.dashboard=true"
-      - "--api.insecure=true"
+      - "--api.insecure=false"
 
-      # ================= ACME (DNS-01 ONLY) ==========
+      # ACME (DNS-01)
       - "--certificatesresolvers.cf.acme.email=degterev907@gmail.com"
       - "--certificatesresolvers.cf.acme.storage=/acme/acme.json"
-      - "--certificatesresolvers.cf.acme.dnschallenge=true"
       - "--certificatesresolvers.cf.acme.dnschallenge.provider=cloudflare"
 
-      # ❗ КРИТИЧЕСКИ ВАЖНО — ЯВНО ВЫКЛЮЧАЕМ ОСТАЛЬНЫЕ CHALLENGE
-      - "--certificatesresolvers.cf.acme.tlschallenge=false"
-      - "--certificatesresolvers.cf.acme.httpchallenge=false"
-
-      # ================= LOGGING =====================
+      # LOGGING
       - "--accesslog=true"
       - "--log.level=INFO"
-
     labels:
       - "traefik.enable=true"
-
-      # ============ HTTP → HTTPS REDIRECT ============
-      - "traefik.http.middlewares.redirect-https.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.redirect-https.redirectscheme.permanent=true"
-
-      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
-      - "traefik.http.routers.http-catchall.entrypoints=web"
-      - "traefik.http.routers.http-catchall.middlewares=redirect-https"
 
       # ============ TRAEFIK DASHBOARD ================
       - "traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)"
