@@ -24,7 +24,12 @@ services:
       - traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)
       - traefik.http.routers.grafana.entrypoints=websecure
       - traefik.http.routers.grafana.tls.certresolver=cf
-      - traefik.http.services.grafana.loadbalancer.server.port=3000
+
+      - traefik.http.middlewares.grafana-headers.headers.customRequestHeaders.X-Forwarded-Proto=https
+      - traefik.http.middlewares.grafana-headers.headers.customRequestHeaders.X-Forwarded-Port=443
+      - traefik.http.routers.grafana.middlewares=grafana-headers
+      
+       traefik.http.services.grafana.loadbalancer.server.port=3000
     volumes:
       - grafana_data:/var/lib/grafana
       - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -101,7 +106,6 @@ services:
       - traefik.http.routers.traefik.tls=true
       - traefik.http.routers.traefik.tls.certresolver=cf
       - traefik.http.routers.traefik.service=api@internal
-
       # Basic Auth middleware
       - traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$RWsuY3iD$$W3qlQsMXCi0hWoEZf0Kdz/
         # Attach middleware to router
