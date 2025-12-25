@@ -89,6 +89,7 @@ services:
       - "--certificatesresolvers.cf.acme.storage=/acme/acme.json"
       - "--certificatesresolvers.cf.acme.dnschallenge.provider=cloudflare"
 
+      - "--accesslog=true"
       - "--log.level=INFO"
     labels:
       - traefik.enable=true
