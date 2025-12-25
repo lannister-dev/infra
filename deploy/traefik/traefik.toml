@@ -14,6 +14,11 @@
 
   [entryPoints.https]
     address = ":443"
+    [entryPoints.https.http.tls]
+      certResolver = "letsEncrypt"
+
+[tls.stores]
+  [tls.stores.default]
 
 [api]
   dashboard = true
@@ -26,7 +31,6 @@
 [certificatesResolvers.letsEncrypt.acme]
   email = "degterev907@gmail.com"
   storage = "/ssl/acme.json"
-
   [certificatesResolvers.letsEncrypt.acme.dnsChallenge]
     provider = "cloudflare"
     delayBeforeCheck = 0
