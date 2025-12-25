@@ -20,3 +20,8 @@ scrape_configs:
      - targets:
         - "77.95.206.47:9100"
         - "cadvisor:8080"
+
+  - job_name: 'traefik'
+    static_configs:
+      - targets:
+        - "traefik:8080"
