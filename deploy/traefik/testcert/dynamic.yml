@@ -1,4 +1,6 @@
 tls:
-  certificates:
-    - certFile: /certs/grafana.crt
-      keyFile: /certs/grafana.key
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/grafana.crt
+        keyFile: /certs/grafana.key
