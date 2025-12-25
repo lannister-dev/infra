@@ -60,6 +60,8 @@ services:
     image: traefik:v2.11
     container_name: traefik
     restart: unless-stopped
+    command:
+      - "--configFile=/etc/traefik/traefik.toml"
     ports:
       - "80:80"
       - "443:443"
@@ -68,7 +70,6 @@ services:
       - ../.env
     volumes:
       - ./traefik/ssl:/ssl
-      - ./traefik/testcert:/certs:ro
       - ./traefik/traefik.toml:/etc/traefik/traefik.toml
       - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
