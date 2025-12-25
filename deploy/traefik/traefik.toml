@@ -23,14 +23,9 @@
   exposedByDefault = false
   network = "traefik_proxy"
 
-[providers.file]
-  filename = "/certs/dynamic.yml"
-  watch = true
-
 [certificatesResolvers.letsEncrypt.acme]
   email = "degterev907@gmail.com"
   storage = "/ssl/acme.json"
 
   [certificatesResolvers.letsEncrypt.acme.dnsChallenge]
     provider = "cloudflare"
-    delayBeforeCheck = 0
