@@ -32,3 +32,7 @@
   [certificatesResolvers.letsEncrypt.acme.dnsChallenge]
     provider = "cloudflare"
     delayBeforeCheck = 0
+
+[providers.file]
+  filename = "/certs/dynamic.yml"
+  watch = true
