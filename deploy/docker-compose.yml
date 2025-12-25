@@ -63,6 +63,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "8080:8080"
     env_file:
       - ../.env
     volumes:
@@ -74,6 +75,7 @@ services:
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
 
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.traefik.address=:8080"
 
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
