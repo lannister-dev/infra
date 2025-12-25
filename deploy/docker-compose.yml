@@ -75,7 +75,6 @@ services:
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.websecure.http.tls=true"
       - "--entrypoints.websecure.http.tls.certresolver=cf"
@@ -93,6 +92,9 @@ services:
       - "--certificatesresolvers.cf.acme.email=degterev907@gmail.com"
       - "--certificatesresolvers.cf.acme.storage=/acme/acme.json"
       - "--certificatesresolvers.cf.acme.dnschallenge.provider=cloudflare"
+
+      # METRICS
+      - "--metrics.prometheus=true"
 
       # LOGGING
       - "--accesslog=true"
