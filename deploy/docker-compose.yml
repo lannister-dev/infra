@@ -20,16 +20,22 @@ services:
     env_file:
       - ../.env
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)
-      - traefik.http.routers.grafana.entrypoints=websecure
-      - traefik.http.routers.grafana.tls.certresolver=cf
+      - "traefik.enable=true"
 
-      - traefik.http.middlewares.grafana-headers.headers.customRequestHeaders.X-Forwarded-Proto=https
-      - traefik.http.middlewares.grafana-headers.headers.customRequestHeaders.X-Forwarded-Port=443
-      - traefik.http.routers.grafana.middlewares=grafana-headers
-      
-       traefik.http.services.grafana.loadbalancer.server.port=3000
+      # Router
+      - "traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=cf"
+      - "traefik.http.routers.grafana.middlewares=grafana-headers@docker"
+
+      # Service
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+      # Middleware
+      - "traefik.http.middlewares.grafana-headers.headers.customRequestHeaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.grafana-headers.headers.customRequestHeaders.X-Forwarded-Port=443"
+
     volumes:
       - grafana_data:/var/lib/grafana
       - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
