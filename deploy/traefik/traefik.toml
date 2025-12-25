@@ -14,8 +14,6 @@
 
   [entryPoints.https]
     address = ":443"
-    [entryPoints.https.http.tls]
-      certResolver = "letsEncrypt"
 
 [tls.stores]
   [tls.stores.default]
