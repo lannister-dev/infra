@@ -1,0 +1,15 @@
+http:
+  routers:
+    harbor:
+      rule: "Host(`harbor.lannister-dev.ru`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cf
+      service: harbor
+
+  services:
+    harbor:
+      loadBalancer:
+        servers:
+          - url: "http://nginx:8080"
