@@ -1,4 +1,10 @@
 http:
+  middlewares:
+    harbor-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+          X-Forwarded-Host: "harbor.lannister-dev.ru"
   routers:
     harbor:
       rule: "Host(`harbor.lannister-dev.ru`)"
