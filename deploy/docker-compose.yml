@@ -23,7 +23,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.service=grafana"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     volumes:
       - grafana_data:/var/lib/grafana
@@ -105,12 +105,11 @@ services:
       # ============ TRAEFIK DASHBOARD ================
       - "traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)"
       - "traefik.http.routers.traefik.entrypoints=websecure"
-      - "traefik.http.routers.traefik.tls=true"
-      - "traefik.http.routers.traefik.tls.certresolver=cf"
+      - "traefik.http.routers.traefik.service=traefik"
       - "traefik.http.routers.traefik.service=api@internal"
 
       # ============ BASIC AUTH =======================
-      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$RWsuY3iD$$W3qlQsMXCi0hWoEZf0Kdz/"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
       - "traefik.http.routers.traefik.middlewares=traefik-auth@docker"
     networks:
       - traefik_proxy

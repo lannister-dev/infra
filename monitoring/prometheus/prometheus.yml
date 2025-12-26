@@ -15,7 +15,7 @@ scrape_configs:
         - "185.140.12.144:9100"
         - "185.140.12.144:8080"
 
-  - job_name: "registry-server"
+  - job_name: "infra-server"
     static_configs:
      - targets:
         - "77.95.206.47:9100"
