@@ -68,7 +68,7 @@ services:
       - ../.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./tarefik/tls.yaml:/etc/traefik/tls.yaml
+      - ./traefik/tls.yaml:/etc/traefik/tls.yaml
       - ./traefik/acme:/acme
     command:
       # ENTRYPOINTS
