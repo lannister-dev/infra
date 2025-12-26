@@ -68,6 +68,7 @@ services:
       - ../.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./tarefik/tls.yaml:/etc/traefik/tls.yaml
       - ./traefik/acme:/acme
     command:
       # ENTRYPOINTS
@@ -83,6 +84,7 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=traefik_proxy"
+      - "--providers.file.filename=/etc/traefik/tls.yaml"
 
       # API / DASHBOARD
       - "--api.dashboard=true"
