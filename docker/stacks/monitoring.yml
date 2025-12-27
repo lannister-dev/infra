@@ -103,12 +103,16 @@ services:
 configs:
   prometheus_config:
     external: true
+    name: ${CFG_PROMETHEUS_CONFIG}
   grafana_ini:
     external: true
+    name: ${CFG_GRAFANA_INI}
   grafana_datasources:
     external: true
+    name: ${CFG_GRAFANA_DATASOURCES}
   grafana_dashboards:
     external: true
+    name: ${CFG_GRAFANA_DASHBOARDS}
 
 volumes:
   prometheus_data:
