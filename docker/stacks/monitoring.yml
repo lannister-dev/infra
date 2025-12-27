@@ -92,15 +92,12 @@ services:
 
 configs:
   prometheus_config:
-    file: ./monitoring/prometheus/prometheus.yml
-  grafana_ini:
-    file: ./grafana/grafana.ini
     external: true
-
+  grafana_ini:
+    external: true
 volumes:
   prometheus_data:
   grafana_data:
-
 networks:
   traefik_proxy:
     external: true
