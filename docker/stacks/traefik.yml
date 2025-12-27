@@ -32,7 +32,7 @@ services:
       # PROVIDERS
       - "--providers.swarm=true"
       - "--providers.swarm.exposedbydefault=false"
-      - "--providers.swarm.network=traefik_proxy"
+      - "--providers.swarm.network=traefik_swarm"
       - "--providers.swarm.watch=true"
       - "--providers.file.filename=/etc/traefik/tls.yaml"
 
@@ -76,7 +76,7 @@ services:
       retries: 3
 
     networks:
-      - traefik_proxy
+      - traefik_swarm
 
 configs:
   traefik_tls:
@@ -84,6 +84,5 @@ configs:
 volumes:
   traefik_acme:
 networks:
-  traefik_proxy:
+  traefik_swarm:
     external: true
-    name: traefik_swarm
