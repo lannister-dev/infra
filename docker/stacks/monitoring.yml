@@ -105,9 +105,9 @@ configs:
     external: true
   grafana_ini:
     external: true
-  grafana_ds_prometheus:
+  grafana_datasources:
     external: true
-  grafana_dashboards_yaml:
+  grafana_dashboards:
     external: true
 
 volumes:
