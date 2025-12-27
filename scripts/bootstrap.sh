@@ -30,16 +30,21 @@ docker network create \
 # ---------- CONFIGS ----------
 echo "[2/6] Ensure Docker configs"
 
-create_config () {
+create_config() {
   local name="$1"
   local file="$2"
 
-  if [[ ! -f "$file" ]]; then
-    echo "Config file not found: $file"
+  if [ ! -f "$file" ]; then
+    echo "❌ Config file not found: $file"
     exit 1
   fi
 
-  docker config inspect "$name" >/dev/null 2>&1 || \
+  docker config inspect "$name" >/dev/null 2>&1 && {
+    echo "✔ config $name exists"
+    return
+  }
+
+  echo "➕ creating config $name"
   docker config create "$name" "$file"
 }
 
