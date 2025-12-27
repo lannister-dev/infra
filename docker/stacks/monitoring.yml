@@ -42,6 +42,14 @@ services:
     image: grafana/grafana:latest
     env_file:
       - ../../.env
+    configs:
+      - source: grafana_ini
+        target: /etc/grafana/grafana.ini
+      # Provisioning: datasources + dashboards
+      - source: grafana_ds_prometheus
+        target: /etc/grafana/provisioning/datasources/prometheus.yml
+      - source: grafana_dashboards_yaml
+        target: /etc/grafana/provisioning/dashboards/dashboards.yml
     deploy:
       <<: *deploy-common
       placement:
@@ -53,12 +61,8 @@ services:
         - "traefik.http.routers.grafana.entrypoints=websecure"
         - "traefik.http.routers.grafana.service=grafana"
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-    configs:
-      - source: grafana_ini
-        target: /etc/grafana/grafana.ini
     volumes:
       - grafana_data:/var/lib/grafana
-      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:3000/api/health" ]
       interval: 10s
@@ -98,12 +102,18 @@ services:
 
 configs:
   prometheus_config:
-    file: ../../monitoring/prometheus/prometheus.yml
+    external: true
   grafana_ini:
-    file: ../../monitoring/grafana/grafana.ini
+    external: true
+  grafana_ds_prometheus:
+    external: true
+  grafana_dashboards_yaml:
+    external: true
+
 volumes:
   prometheus_data:
   grafana_data:
+
 networks:
   traefik_proxy:
     external: true
