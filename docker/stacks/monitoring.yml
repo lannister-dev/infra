@@ -43,12 +43,12 @@ services:
     env_file:
       - ../../.env
     configs:
-      - source: grafana_ini
+      - source: ${CFG_GRAFANA_INI}
         target: /etc/grafana/grafana.ini
       # Provisioning: datasources + dashboards
-      - source: grafana_datasources
+      - source: ${CFG_GRAFANA_DATASOURCES}
         target: /etc/grafana/provisioning/datasources/prometheus.yml
-      - source: grafana_dashboards
+      - source: ${CFG_GRAFANA_DASHBOARDS}
         target: /etc/grafana/provisioning/dashboards/dashboards.yml
     deploy:
       <<: *deploy-common
@@ -99,20 +99,6 @@ services:
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
-
-configs:
-  prometheus_config:
-    external: true
-    name: ${CFG_PROMETHEUS_CONFIG}
-  grafana_ini:
-    external: true
-    name: ${CFG_GRAFANA_INI}
-  grafana_datasources:
-    external: true
-    name: ${CFG_GRAFANA_DATASOURCES}
-  grafana_dashboards:
-    external: true
-    name: ${CFG_GRAFANA_DASHBOARDS}
 
 volumes:
   prometheus_data:
