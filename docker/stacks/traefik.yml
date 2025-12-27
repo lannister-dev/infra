@@ -83,7 +83,7 @@ services:
 
 configs:
   traefik_tls:
-    file: ../traefik/tls.yaml
+    external: true
 volumes:
   traefik_acme:
 networks:
