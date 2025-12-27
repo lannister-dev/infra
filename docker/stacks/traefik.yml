@@ -15,8 +15,10 @@ services:
       - ../../.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/tls.yaml:/etc/traefik/tls.yaml
       - traefik_acme:/acme
+    configs:
+      - source: traefik_tls
+        target: /etc/traefik/tls.yaml
     command:
       # ENTRYPOINTS
       - "--entrypoints.web.address=:80"
@@ -76,6 +78,9 @@ services:
     networks:
       - traefik_proxy
 
+configs:
+  traefik_tls:
+    external: true
 volumes:
   traefik_acme:
 networks:
