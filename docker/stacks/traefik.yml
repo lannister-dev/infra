@@ -76,7 +76,7 @@ services:
       retries: 3
 
     networks:
-      - traefik_swarm
+      - traefik_proxy
 
 configs:
   traefik_tls:
@@ -84,5 +84,6 @@ configs:
 volumes:
   traefik_acme:
 networks:
-  traefik_swarm:
+  traefik_proxy:
     external: true
+    name: traefik_swarm
