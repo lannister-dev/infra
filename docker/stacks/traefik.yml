@@ -67,6 +67,7 @@ services:
         - "traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)"
         - "traefik.http.routers.traefik.entrypoints=websecure"
         - "traefik.http.routers.traefik.service=api@internal"
+        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
         # ============ BASIC AUTH =======================
         - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$apr1$RWsuY3iD$W3qlQsMXCi0hWoEZf0Kdz/"

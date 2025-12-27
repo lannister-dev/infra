@@ -10,6 +10,9 @@ for the platform, including:
 - VPN infrastructure (VLESS / Xray)
 - Application stacks (bots, APIs, workers)
 
+## Infrastructure Docs
+- [Harbor Registry](docs/harbor.md)
+
 Current state:
 - 
 - Swarm manager: A
