@@ -15,18 +15,20 @@ x-deploy-common: &deploy-common
 services:
   prometheus:
     image: prom/prometheus:latest
-    volumes:
-      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=15d"
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
     deploy:
       <<: *deploy-common
       placement:
         constraints:
           - node.role == manager
+    volumes:
+      - prometheus_data:/prometheus
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:9090/-/healthy" ]
       interval: 10s
@@ -40,10 +42,6 @@ services:
     image: grafana/grafana:latest
     env_file:
       - ../../.env
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
     deploy:
       <<: *deploy-common
       placement:
@@ -55,6 +53,14 @@ services:
         - "traefik.http.routers.grafana.entrypoints=websecure"
         - "traefik.http.routers.grafana.service=grafana"
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    configs:
+      - source: grafana_provisioning
+        target: /etc/grafana/provisioning
+      - source: grafana_ini
+        target: /etc/grafana/grafana.ini
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:3000/api/health" ]
       interval: 10s
@@ -84,9 +90,16 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
 
+configs:
+  prometheus_config:
+    file: ./monitoring/prometheus/prometheus.yml
+  grafana_ini:
+    file: ./grafana/grafana.ini
+
 volumes:
   prometheus_data:
   grafana_data:
+
 networks:
   traefik_proxy:
     external: true
