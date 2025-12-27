@@ -46,9 +46,9 @@ services:
       - source: grafana_ini
         target: /etc/grafana/grafana.ini
       # Provisioning: datasources + dashboards
-      - source: grafana_ds_prometheus
+      - source: grafana_datasources
         target: /etc/grafana/provisioning/datasources/prometheus.yml
-      - source: grafana_dashboards_yaml
+      - source: grafana_dashboards
         target: /etc/grafana/provisioning/dashboards/dashboards.yml
     deploy:
       <<: *deploy-common
