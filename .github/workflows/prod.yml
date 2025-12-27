@@ -20,6 +20,8 @@ jobs:
             set -e  
             cd /opt/vpn-infra || exit 1
             echo "${{ secrets.INFRA_ENV_PROD }}" > .env
-            git pull  
+            git pull
+            chmod +x scripts/bootstrap.sh
+            ./scripts/bootstrap.sh
             docker stack deploy --with-registry-auth -c docker/stacks/traefik.yml traefik
             docker stack deploy --with-registry-auth -c docker/stacks/monitoring.yml monitoring
