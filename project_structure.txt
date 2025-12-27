@@ -1,0 +1,40 @@
+├── .github
+│   ├── workflows
+│   │   ├── prod.yml
+├── docker
+│   ├── compose
+│   │   ├── __init__.py
+│   │   ├── docker-compose.yml
+│   ├── stacks
+│   │   ├── __init__.py
+│   │   ├── monitoring.yml
+│   │   ├── traefik.yml
+│   │   ├── vpn-xray.yml
+│   ├── traefik
+│   │   ├── __init__.py
+│   │   ├── tls.yaml
+│   ├── __init__.py
+├── monitoring
+│   ├── grafana
+│   │   ├── provisioning
+│   │   │   ├── dashboards
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── dashboards.yml
+│   │   │   ├── datasources
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── prometheus.yml
+│   │   │   ├── __init__.py
+│   │   ├── __init__.py
+│   ├── prometheus
+│   │   ├── __init__.py
+│   │   ├── prometheus.yml
+│   ├── __init__.py
+├── wireduard
+│   ├── __init__.py
+│   ├── apply.sh
+│   ├── peers.yml
+│   ├── wg0.conf.j2
+├── .env
+├── .gitignore
+├── project_structure.txt
+├── README.md
