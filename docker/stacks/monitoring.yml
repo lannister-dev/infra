@@ -95,6 +95,7 @@ configs:
     file: ./monitoring/prometheus/prometheus.yml
   grafana_ini:
     file: ./grafana/grafana.ini
+    external: true
 
 volumes:
   prometheus_data:
