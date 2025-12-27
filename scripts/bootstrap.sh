@@ -22,10 +22,7 @@ docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active || {
 echo "[1/6] Ensure traefik_swarm network"
 
 docker network inspect traefik_swarm >/dev/null 2>&1 || \
-docker network create \
-  --driver overlay \
-  --attachable \
-  traefik_swarm
+docker network create --driver overlay --attachable traefik_swarm
 
 # ---------- CONFIGS ----------
 echo "[2/6] Ensure Docker configs"
