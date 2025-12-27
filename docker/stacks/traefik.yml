@@ -84,6 +84,7 @@ services:
 configs:
   traefik_tls:
     external: true
+    name: ${CFG_TRAEFIK_TLS}
 volumes:
   traefik_acme:
 networks:
