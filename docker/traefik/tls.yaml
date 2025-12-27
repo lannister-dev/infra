@@ -21,4 +21,4 @@ http:
     harbor:
       loadBalancer:
         servers:
-          - url: "http://nginx:8080"
+          - url: "http://172.17.0.1:8080"
