@@ -54,8 +54,6 @@ services:
         - "traefik.http.routers.grafana.service=grafana"
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     configs:
-      - source: grafana_provisioning
-        target: /etc/grafana/provisioning
       - source: grafana_ini
         target: /etc/grafana/grafana.ini
     volumes:
@@ -73,8 +71,11 @@ services:
     image: prom/node-exporter:latest
     deploy:
       mode: global
-    network_mode: host
-    pid: host
+    ports:
+      - target: 9100
+        published: 9100
+        protocol: tcp
+        mode: host
     command:
       - "--path.rootfs=/host"
     volumes:
@@ -84,6 +85,11 @@ services:
     image: gcr.io/cadvisor/cadvisor:latest
     deploy:
       mode: global
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -92,9 +98,9 @@ services:
 
 configs:
   prometheus_config:
-    external: true
+    file: ../../monitoring/prometheus/prometheus.yml
   grafana_ini:
-    external: true
+    file: ../../monitoring/grafana/grafana.ini
 volumes:
   prometheus_data:
   grafana_data:
