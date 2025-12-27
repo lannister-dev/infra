@@ -22,7 +22,7 @@ jobs:
             
             git fetch origin
             git reset --hard origin/main
-            git clean -fb
+            git clean -fd
             
             echo "${{ secrets.INFRA_ENV_PROD }}" > .env
             
