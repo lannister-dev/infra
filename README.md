@@ -1,10 +1,16 @@
-# vpn-infra
+# Infrastructure Repository
 
-Infrastructure repository for VPN service.
+This repository contains the full infrastructure-as-code
+for the platform, including:
 
-## Stack
-- Docker Compose
-- Prometheus
-- Grafana
-- node-exporter
-- cAdvisor
+- Networking (WireGuard mesh)
+- Reverse proxy (Traefik)
+- Observability (Prometheus, Grafana, Loki)
+- Container registry (Harbor)
+- VPN infrastructure (VLESS / Xray)
+- Application stacks (bots, APIs, workers)
+
+Current state:
+- 
+- Swarm manager: A
+- Workers: none / partial
