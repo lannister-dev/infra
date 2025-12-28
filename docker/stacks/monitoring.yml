@@ -99,6 +99,15 @@ services:
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
+configs:
+  ${CFG_PROMETHEUS_CONFIG}:
+    external: true
+  ${CFG_GRAFANA_INI}:
+    external: true
+  ${CFG_GRAFANA_DATASOURCES}:
+    external: true
+  ${CFG_GRAFANA_DASHBOARDS}:
+    external: true
 
 volumes:
   prometheus_data:
