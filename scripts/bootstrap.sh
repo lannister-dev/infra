@@ -66,16 +66,16 @@ ensure_config() {
 }
 
 ensure_config "prometheus_config__${PROMETHEUS_CONFIG_VERSION}" \
-  "$ROOT_DIR/docker/monitoring/prometheus/prometheus.yml"
+  "$ROOT_DIR/monitoring/prometheus/prometheus.yml"
 
 ensure_config "grafana_ini__${GRAFANA_INI_VERSION}" \
-  "$ROOT_DIR/docker/monitoring/grafana/grafana.ini"
+  "$ROOT_DIR/monitoring/grafana/grafana.ini"
 
 ensure_config "grafana_datasources__${GRAFANA_DATASOURCES_VERSION}" \
-  "$ROOT_DIR/docker/monitoring/grafana/provisioning/datasources/prometheus.yml"
+  "$ROOT_DIR/monitoring/grafana/provisioning/datasources/prometheus.yml"
 
 ensure_config "grafana_dashboards__${GRAFANA_DASHBOARDS_VERSION}" \
-  "$ROOT_DIR/docker/monitoring/grafana/provisioning/dashboards/dashboards.yml"
+  "$ROOT_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
 
 # ==============================
 # SUMMARY
