@@ -80,9 +80,13 @@ services:
 
     networks:
       - traefik_proxy
+configs:
+  ${CFG_TRAEFIK_TLS}:
+    external: true
 
 volumes:
   traefik_acme:
+
 networks:
   traefik_proxy:
     external: true
