@@ -13,7 +13,7 @@ services:
           - node.role == manager
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.swarmpit.rule=Host(`swarm.lannister-dev.ru`)"
+        - "traefik.http.routers.swarmpit.rule=Host(`swarmpit.lannister-dev.ru`)"
         - "traefik.http.routers.swarmpit.entrypoints=websecure"
         - "traefik.http.routers.swarmpit.tls=true"
         - "traefik.http.services.swarmpit.loadbalancer.server.port=8080"
