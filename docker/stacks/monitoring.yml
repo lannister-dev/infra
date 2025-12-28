@@ -20,7 +20,7 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=15d"
     configs:
-      - source: ${CFG_PROMETHEUS_CONFIG}
+      - source: prometheus_config
         target: /etc/prometheus/prometheus.yml
     deploy:
       <<: *deploy-common
@@ -43,12 +43,11 @@ services:
     env_file:
       - ../../.env
     configs:
-      - source: ${CFG_GRAFANA_INI}
+      - source: grafana_ini
         target: /etc/grafana/grafana.ini
-      # Provisioning: datasources + dashboards
-      - source: ${CFG_GRAFANA_DATASOURCES}
+      - source: grafana_datasources
         target: /etc/grafana/provisioning/datasources/prometheus.yml
-      - source: ${CFG_GRAFANA_DASHBOARDS}
+      - source: grafana_dashboards
         target: /etc/grafana/provisioning/dashboards/dashboards.yml
     deploy:
       <<: *deploy-common
@@ -100,13 +99,13 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
 configs:
-  ${CFG_PROMETHEUS_CONFIG}:
+  prometheus_config:
     external: true
-  ${CFG_GRAFANA_INI}:
+  grafana_ini:
     external: true
-  ${CFG_GRAFANA_DATASOURCES}:
+  grafana_datasources:
     external: true
-  ${CFG_GRAFANA_DASHBOARDS}:
+  grafana_dashboards:
     external: true
 
 volumes:
