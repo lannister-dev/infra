@@ -3,25 +3,24 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: "bot-server"
-    static_configs:
-     - targets:
-        - "212.113.117.153:9100"
-        - "212.113.117.153:8080"
 
-  - job_name: "vpn-server"
-    static_configs:
-     - targets:
-        - "185.140.12.144:9100"
-        - "185.140.12.144:8080"
+  - job_name: "node-exporter"
+    dns_sd_configs:
+      - names:
+          - tasks.node-exporter
+        type: A
+        port: 9100
 
-  - job_name: "infra-server"
-    static_configs:
-     - targets:
-        - "77.95.206.47:9100"
-        - "cadvisor:8080"
+  - job_name: "cadvisor"
+    dns_sd_configs:
+      - names:
+          - tasks.cadvisor
+        type: A
+        port: 8080
 
-  - job_name: 'traefik'
-    static_configs:
-      - targets:
-        - "traefik:8080"
+  - job_name: "traefik"
+    dns_sd_configs:
+      - names:
+          - tasks.traefik
+        type: A
+        port: 8080
