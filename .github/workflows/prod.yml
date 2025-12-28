@@ -30,3 +30,4 @@ jobs:
             
             docker stack deploy --with-registry-auth -c docker/stacks/traefik.yml traefik
             docker stack deploy --with-registry-auth -c docker/stacks/monitoring.yml monitoring
+            decker stack deploy --with-registry-auth -c docker/stacks/swarmpit.yml swarmpit
