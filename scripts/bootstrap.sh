@@ -1,41 +1,61 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== Docker Swarm bootstrap (standard approach) ==="
+echo "=== Docker Swarm bootstrap (configs-first) ==="
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-# ---------- PRECHECKS ----------
-echo "[0/6] Prechecks"
+# ==============================
+# CONFIG VERSIONS (SOURCE OF TRUTH)
+# ==============================
+PROMETHEUS_CONFIG_VERSION="V1_0"
+GRAFANA_INI_VERSION="V1_0"
+GRAFANA_DATASOURCES_VERSION="V1_0"
+GRAFANA_DASHBOARDS_VERSION="V1_0"
 
-command -v docker >/dev/null || { echo "❌ Docker not installed"; exit 1; }
-
-docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active || {
-  echo "❌ Docker Swarm is not initialized"
+# ==============================
+# PRECHECKS
+# ==============================
+command -v docker >/dev/null || {
+  echo "❌ Docker is not installed"
   exit 1
 }
 
-# ---------- NETWORK ----------
-echo "[1/6] Ensure traefik_swarm network"
+if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active; then
+  echo "❌ Docker Swarm is not initialized"
+  exit 1
+fi
+
+# ==============================
+# NETWORKS
+# ==============================
+echo "[1/4] Ensuring traefik_swarm network"
 
 docker network inspect traefik_swarm >/dev/null 2>&1 || \
 docker network create --driver overlay --attachable traefik_swarm >/dev/null
 
-# ---------- VOLUMES ----------
-echo "[2/6] Ensure volumes"
+# ==============================
+# VOLUMES
+# ==============================
+echo "[2/4] Ensuring volumes"
 
-docker volume inspect traefik_acme >/dev/null 2>&1 || docker volume create traefik_acme >/dev/null
-docker volume inspect prometheus_data >/dev/null 2>&1 || docker volume create prometheus_data >/dev/null
-docker volume inspect grafana_data >/dev/null 2>&1 || docker volume create grafana_data >/dev/null
+for v in traefik_acme prometheus_data grafana_data; do
+  docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v" >/dev/null
+done
 
-# ---------- DOCKER CONFIGS ----------
-echo "[3/6] Ensure docker configs (immutable names)"
+# ==============================
+# DOCKER CONFIGS (IMMUTABLE)
+# ==============================
+echo "[3/4] Ensuring docker configs (versioned)"
 
-create_config() {
+ensure_config() {
   local name="$1"
   local file="$2"
 
-  [ -f "$file" ] || { echo "❌ File not found: $file"; exit 1; }
+  if [[ ! -f "$file" ]]; then
+    echo "❌ Config source not found: $file"
+    exit 1
+  fi
 
   if docker config inspect "$name" >/dev/null 2>&1; then
     echo "✔ config exists: $name"
@@ -45,20 +65,22 @@ create_config() {
   fi
 }
 
-create_config prometheus_config \
-  "$ROOT_DIR/monitoring/prometheus/prometheus.yml"
+ensure_config "prometheus_config__${PROMETHEUS_CONFIG_VERSION}" \
+  "$ROOT_DIR/docker/monitoring/prometheus/prometheus.yml"
 
-create_config grafana_ini \
-  "$ROOT_DIR/monitoring/grafana/grafana.ini"
+ensure_config "grafana_ini__${GRAFANA_INI_VERSION}" \
+  "$ROOT_DIR/docker/monitoring/grafana/grafana.ini"
 
-create_config grafana_datasources \
-  "$ROOT_DIR/monitoring/grafana/provisioning/datasources/prometheus.yml"
+ensure_config "grafana_datasources__${GRAFANA_DATASOURCES_VERSION}" \
+  "$ROOT_DIR/docker/monitoring/grafana/provisioning/datasources/prometheus.yml"
 
-create_config grafana_dashboards \
-  "$ROOT_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
+ensure_config "grafana_dashboards__${GRAFANA_DASHBOARDS_VERSION}" \
+  "$ROOT_DIR/docker/monitoring/grafana/provisioning/dashboards/dashboards.yml"
 
+# ==============================
+# SUMMARY
+# ==============================
+echo "[4/4] Active docker configs:"
+docker config ls | grep -E 'prometheus_config__|grafana_'
 
-echo "[4/5] Active docker configs:"
-docker config ls | grep -E 'prometheus_config|grafana_'
-
-echo "[5/5] Bootstrap completed successfully"
+echo "✅ Bootstrap completed successfully"
