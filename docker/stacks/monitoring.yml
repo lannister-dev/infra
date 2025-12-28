@@ -62,8 +62,10 @@ services:
     configs:
       - source: grafana_ini__V1_0
         target: /etc/grafana/grafana.ini
-      - source: grafana_provisioning__V1_0
-        target: /etc/grafana/provisioning
+      - source: grafana_datasources__V1_0
+        target: /etc/grafana/provisioning/datasources/prometheus.yml
+      - source: grafana_dashboards__V1_0
+        target: /etc/grafana/provisioning/dashboards/dashboards.yml
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:3000/api/health" ]
       interval: 10s
@@ -133,7 +135,9 @@ configs:
     external: true
   grafana_ini__V1_0:
     external: true
-  grafana_provisioning__V1_0:
+  grafana_datasources__V1_0:
+    external: true
+  grafana_dashboards__V1_0:
     external: true
 
 networks:
