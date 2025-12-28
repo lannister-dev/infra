@@ -31,5 +31,5 @@ jobs:
             source ./.bootstrap.env
             set -a
             
-            docker stack deploy --env-file ./.bootstrap.env -c docker/stacks/traefik.yml traefik
-            docker stack deploy --env-file ./.bootstrap.env -c docker/stacks/monitoring.yml monitoring
+            docker stack deploy --with-registry-auth -c docker/stacks/traefik.yml traefik
+            docker stack deploy --with-registry-auth -c docker/stacks/monitoring.yml monitoring
