@@ -27,8 +27,10 @@ services:
           - node.role == manager
     volumes:
       - prometheus_data:/prometheus
-      - /opt/vpn-infra/docker/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    configs:
+      - source: prometheus_config__V1_0
+        target: /etc/prometheus/prometheus.yml
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:9090/-/healthy" ]
       interval: 10s
@@ -56,7 +58,12 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - /opt/vpn-infra/docker/monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
-      - /opt/vpn-infra/docker/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_provisioning:/etc/grafana/provisioning
+    configs:
+      - source: grafana_ini__V1_0
+        target: /etc/grafana/grafana.ini
+      - source: grafana_provisioning__V1_0
+        target: /etc/grafana/provisioning
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:3000/api/health" ]
       interval: 10s
@@ -120,6 +127,14 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+
+configs:
+  prometheus_config__V1_0:
+    external: true
+  grafana_ini__V1_0:
+    external: true
+  grafana_provisioning__V1_0:
+    external: true
 
 networks:
   traefik_proxy:
