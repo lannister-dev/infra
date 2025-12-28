@@ -71,6 +71,13 @@ services:
         # ============ BASIC AUTH =======================
         - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$apr1$RWsuY3iD$W3qlQsMXCi0hWoEZf0Kdz/"
         - "traefik.http.routers.traefik.middlewares=dashboard-auth@swarm"
+
+        # ===== PROMETHEUS =====
+        - "prometheus-scrape=true"
+        - "prometheus-app=traefik"
+        - "prometheus-env=monitoring"
+        - "prometheus-metrics-port=8080"
+        - "prometheus-scrape-profile=important"
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:8080/ping" ]
       interval: 10s
