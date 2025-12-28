@@ -71,7 +71,7 @@ services:
       - traefik_proxy
 
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.8.1
     deploy:
       mode: global
     ports:

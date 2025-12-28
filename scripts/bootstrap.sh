@@ -57,14 +57,8 @@ create_config grafana_datasources \
 create_config grafana_dashboards \
   "$ROOT_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
 
-# ---------- DEPLOY ----------
-echo "[4/6] Deploy stacks"
 
-docker stack deploy -c docker/stacks/traefik.yml traefik
-docker stack deploy -c docker/stacks/monitoring.yml monitoring
-
-# ---------- SUMMARY ----------
-echo "[5/6] Active docker configs:"
+echo "[4/5] Active docker configs:"
 docker config ls | grep -E 'prometheus_config|grafana_'
 
-echo "[6/6] Bootstrap completed successfully"
+echo "[5/5] Bootstrap completed successfully"
