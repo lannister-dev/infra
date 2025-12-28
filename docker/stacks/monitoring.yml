@@ -19,6 +19,7 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
     configs:
       - source: prometheus_config
         target: /etc/prometheus/prometheus.yml
@@ -29,12 +30,12 @@ services:
           - node.role == manager
     volumes:
       - prometheus_data:/prometheus
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:9090/-/healthy" ]
       interval: 10s
       timeout: 5s
       retries: 3
-
     networks:
       - monitoring
       - traefik_proxy
@@ -75,27 +76,36 @@ services:
   node-exporter:
     image: prom/node-exporter:v1.8.1
     command:
-      - "--path.rootfs=/host"
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($|/)
     volumes:
-      - "/:/host:ro,rslave"
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
     deploy:
       mode: global
       resources:
         limits:
           memory: 256M
         reservations:
-          memory: 128M
+          memory: 64M
       labels:
-        - prometheus.port=9100
+        prometheus-scrape: "true"
+        prometheus-app: node-exporter
+        prometheus-env: monitoring
+        prometheus-metrics-port: "9100"
+        prometheus-scrape-profile: important
     networks:
       - monitoring
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.2
+    command:
+      - --docker_only
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /:/rootfs:ro
-      - /var/run:/var/run
+      - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
     deploy:
@@ -106,7 +116,11 @@ services:
         reservations:
           memory: 256M
       labels:
-        - prometheus.port=8080
+        prometheus-scrape: "true"
+        prometheus-app: cadvisor
+        prometheus-env: monitoring
+        prometheus-metrics-port: "8080"
+        prometheus-scrape-profile: important
     networks:
       - monitoring
 
