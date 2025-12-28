@@ -27,6 +27,9 @@ jobs:
             echo "${{ secrets.INFRA_ENV_PROD }}" > .env
             
             ./scripts/bootstrap.sh
+            set -a
+            source ./.bootstrap.env
+            set -a
             
             docker stack deploy --env-file ./.bootstrap.env -c docker/stacks/traefik.yml traefik
             docker stack deploy --env-file ./.bootstrap.env -c docker/stacks/monitoring.yml monitoring

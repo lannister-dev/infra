@@ -83,10 +83,8 @@ create_config_hashed grafana_dashboards \
   "$ROOT_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml" \
   CFG_GRAFANA_DASHBOARDS
 
-# ---------- EXPORT ENV ----------
-echo "[3/7] Write & export bootstrap env"
-
-set -a
+# ---------- WRITE ENV ----------
+echo "[3/7] Write bootstrap env"
 cat > "$BOOTSTRAP_ENV" <<EOF
 CFG_TRAEFIK_TLS=$CFG_TRAEFIK_TLS
 CFG_PROMETHEUS_CONFIG=$CFG_PROMETHEUS_CONFIG
@@ -94,9 +92,8 @@ CFG_GRAFANA_INI=$CFG_GRAFANA_INI
 CFG_GRAFANA_DATASOURCES=$CFG_GRAFANA_DATASOURCES
 CFG_GRAFANA_DASHBOARDS=$CFG_GRAFANA_DASHBOARDS
 EOF
-source "$BOOTSTRAP_ENV"
-set +a
-echo "✔ wrote & exported $BOOTSTRAP_ENV"
+echo "✔ wrote $BOOTSTRAP_ENV"
+echo "Next: set -a; source $BOOTSTRAP_ENV; set +a"
 
 # ---------- VOLUMES ----------
 echo "[4/7] Ensure volumes"
