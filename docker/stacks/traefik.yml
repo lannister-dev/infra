@@ -19,7 +19,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_acme:/acme
     configs:
-      - source: ${CFG_TRAEFIK_TLS}
+      - source: traefik_tls
         target: /etc/traefik/tls.yaml
     command:
       # ENTRYPOINTS
@@ -81,7 +81,7 @@ services:
     networks:
       - traefik_proxy
 configs:
-  ${CFG_TRAEFIK_TLS}:
+  traefik_tls:
     external: true
 
 volumes:
