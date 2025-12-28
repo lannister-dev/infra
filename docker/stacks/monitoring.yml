@@ -29,6 +29,7 @@ services:
       placement:
         constraints:
           - node.role == manager
+    user: "0"
     volumes:
       - prometheus_data:/prometheus
       - /var/run/docker.sock:/var/run/docker.sock:ro
