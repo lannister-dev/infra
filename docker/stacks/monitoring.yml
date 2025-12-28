@@ -20,7 +20,7 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=15d"
     configs:
-      - source: prometheus_config
+      - source: ${CFG_PROMETHEUS_CONFIG}
         target: /etc/prometheus/prometheus.yml
     deploy:
       <<: *deploy-common

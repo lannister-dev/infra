@@ -84,8 +84,9 @@ create_config_hashed grafana_dashboards \
   CFG_GRAFANA_DASHBOARDS
 
 # ---------- EXPORT ENV ----------
-echo "[3/7] Write bootstrap env"
+echo "[3/7] Write & export bootstrap env"
 
+set -a
 cat > "$BOOTSTRAP_ENV" <<EOF
 CFG_TRAEFIK_TLS=$CFG_TRAEFIK_TLS
 CFG_PROMETHEUS_CONFIG=$CFG_PROMETHEUS_CONFIG
@@ -93,8 +94,9 @@ CFG_GRAFANA_INI=$CFG_GRAFANA_INI
 CFG_GRAFANA_DATASOURCES=$CFG_GRAFANA_DATASOURCES
 CFG_GRAFANA_DASHBOARDS=$CFG_GRAFANA_DASHBOARDS
 EOF
-
-echo "✔ wrote $BOOTSTRAP_ENV"
+source "$BOOTSTRAP_ENV"
+set +a
+echo "✔ wrote & exported $BOOTSTRAP_ENV"
 
 # ---------- VOLUMES ----------
 echo "[4/7] Ensure volumes"
