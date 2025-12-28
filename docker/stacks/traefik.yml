@@ -18,7 +18,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_acme:/acme
-      - ./docker/traefik/dynamic:/dynamic:ro
+      - /opt/vpn-infra/docker/traefik/dynamic:/dynamic:ro
     command:
       # ENTRYPOINTS
       - "--entrypoints.web.address=:80"
