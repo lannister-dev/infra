@@ -21,4 +21,4 @@ http:
     harbor:
       loadBalancer:
         servers:
-          - url: "http://172.17.0.1:8081"
+          - url: "http://77.95.206.47:8081"
