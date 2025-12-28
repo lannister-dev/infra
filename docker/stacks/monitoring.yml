@@ -57,8 +57,6 @@ services:
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     volumes:
       - grafana_data:/var/lib/grafana
-      - /opt/vpn-infra/docker/monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
-      - grafana_provisioning:/etc/grafana/provisioning
     configs:
       - source: grafana_ini__V1_0
         target: /etc/grafana/grafana.ini
