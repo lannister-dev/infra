@@ -20,9 +20,6 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=15d"
       - "--web.enable-lifecycle"
-    configs:
-      - source: prometheus_config
-        target: /etc/prometheus/prometheus.yml
     deploy:
       <<: *deploy-common
       placement:
@@ -30,6 +27,7 @@ services:
           - node.role == manager
     volumes:
       - prometheus_data:/prometheus
+      - /opt/vpn-infra/docker/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:9090/-/healthy" ]
@@ -44,13 +42,6 @@ services:
     image: grafana/grafana:latest
     env_file:
       - ../../.env
-    configs:
-      - source: grafana_ini
-        target: /etc/grafana/grafana.ini
-      - source: grafana_datasources
-        target: /etc/grafana/provisioning/datasources/prometheus.yml
-      - source: grafana_dashboards
-        target: /etc/grafana/provisioning/dashboards/dashboards.yml
     deploy:
       <<: *deploy-common
       placement:
@@ -64,6 +55,8 @@ services:
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      - /opt/vpn-infra/docker/monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - /opt/vpn-infra/docker/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:3000/api/health" ]
       interval: 10s
@@ -123,16 +116,6 @@ services:
         prometheus-scrape-profile: important
     networks:
       - monitoring
-
-configs:
-  prometheus_config:
-    external: true
-  grafana_ini:
-    external: true
-  grafana_datasources:
-    external: true
-  grafana_dashboards:
-    external: true
 
 volumes:
   prometheus_data:
