@@ -42,9 +42,9 @@ create_config_versioned() {
   name="${base}_${hash}"
 
   if docker config inspect "$name" >/dev/null 2>&1; then
-    echo "✔ config exists: $name"
+    echo "✔ config exists: $name" >&2
   else
-    echo "➕ creating config: $name"
+    echo "➕ creating config: $name" >&2
     docker config create "$name" "$file" >/dev/null
   fi
 
