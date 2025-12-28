@@ -18,7 +18,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_acme:/acme
-      - traefik_dynamic:/etc/traefik
+      - ./docker/traefik/dynamic:/dynamic:ro
     command:
       # ENTRYPOINTS
       - "--entrypoints.web.address=:80"
@@ -34,7 +34,8 @@ services:
       - "--providers.swarm.exposedbydefault=false"
       - "--providers.swarm.network=traefik_swarm"
       - "--providers.swarm.watch=true"
-      - "--providers.file.filename=/etc/traefik/tls.yaml"
+      - "--providers.file.directory=/dynamic"
+      - "--providers.file.watch=true"
 
       # API / DASHBOARD
       - "--api.dashboard=true"
@@ -86,3 +87,5 @@ networks:
   traefik_proxy:
     external: true
     name: traefik_swarm
+    driver: overlay
+    attachable: true
