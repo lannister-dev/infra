@@ -1,6 +1,6 @@
 network:
   cidr: 10.100.0.0/24
-  listen_port: 51820
+  listen_port: 443
 
 nodes:
   A:
