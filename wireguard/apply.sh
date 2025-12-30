@@ -1,4 +1,4 @@
-!/usr/bin/env bash
+#!/usr/bin/env bash
 set -Eeuo pipefail
 
 ### -----------------------------
@@ -40,9 +40,9 @@ require_cmd wg
 require_cmd wg-quick
 require_cmd python3
 
-[ -f "$PEERS_FILE" ]     || fatal "Missing peers.yml"
-[ -f "$TEMPLATE_FILE" ]  || fatal "Missing wg0.conf.j2"
-[ -s "$PRIVATE_KEY_FILE" ] || fatal "Missing private key: $PRIVATE_KEY_FILE"
+[ -f "$PEERS_FILE" ]        || fatal "Missing peers.yml"
+[ -f "$TEMPLATE_FILE" ]     || fatal "Missing wg0.conf.j2"
+[ -s "$PRIVATE_KEY_FILE" ]  || fatal "Missing private key: $PRIVATE_KEY_FILE"
 
 log "Node: $NODE_NAME"
 log "Base dir: $BASE_DIR"
@@ -76,7 +76,7 @@ print(tpl.render(
     network=data.get("network", {}),
     private_key="${PRIVATE_KEY}",
 ))
-EOF > "${TMP_CONF}" || fatal "Failed to render wg config"
+EOF
 
 chmod 600 "${TMP_CONF}"
 
@@ -97,7 +97,6 @@ else
 fi
 
 rm -f "${TMP_CONF}"
-
 chmod 600 "${WG_CONF}"
 
 ### -----------------------------
