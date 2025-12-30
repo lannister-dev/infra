@@ -3,6 +3,7 @@ Address = {{ node.wg_ip }}/24
 PrivateKey = {{ private_key }}
 ListenPort = {{ network.listen_port }}
 SaveConfig = false
+PostUp = wg set %i listen-port {{ network.listen_port }}
 
 {% for peer_name, peer in nodes.items() %}
 {% if peer_name != node_name %}
