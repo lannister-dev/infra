@@ -1,20 +1,15 @@
 [Interface]
 Address = {{ node.wg_ip }}/24
 PrivateKey = {{ private_key }}
-{% if node.role == "manager" %}
 ListenPort = {{ network.listen_port }}
-{% endif %}
+SaveConfig = false
 
 {% for peer_name, peer in nodes.items() %}
 {% if peer_name != node_name %}
 [Peer]
 PublicKey = {{ peer.public_key }}
 AllowedIPs = {{ peer.wg_ip }}/32
-{% if node.role != "manager" %}
-{% if peer_name == "B" %}
 Endpoint = {{ peer.public_ip }}:{{ network.listen_port }}
 PersistentKeepalive = 25
-{% endif %}
-{% endif %}
 {% endif %}
 {% endfor %}

@@ -1,21 +1,22 @@
-network: 10.100.0.0/24
-listen_port: 51820
+network:
+  cidr: 10.100.0.0/24
+  listen_port: 51820
 
 nodes:
   A:
-    ip: 10.100.0.1
+    wg_ip: 10.100.0.1
     public_ip: 212.113.117.153
     public_key: FDPVzesuxtYytnpsh6WyumRNaLWRV4f4XFWh7ZCGYXo=
     role: worker
 
   B:
-    ip: 10.100.0.2
+    wg_ip: 10.100.0.2
     public_ip: 77.95.206.47
     public_key: yQuERtb19j+pQMCEDHS0+dV+a1L9Xs/YQl0qcNa68hs=
     role: manager
 
   DE:
-    ip: 10.100.0.3
+    wg_ip: 10.100.0.3
     public_ip: 185.140.12.144
     public_key: VZ4+Xmd445D2q42kddFmEgdYY5dZNysi8am6mtxdQms=
     role: vpn
