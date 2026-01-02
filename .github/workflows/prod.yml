@@ -31,3 +31,9 @@ jobs:
             docker stack deploy --with-registry-auth -c docker/stacks/traefik.yml traefik
             docker stack deploy --with-registry-auth -c docker/stacks/monitoring.yml monitoring
             docker stack deploy --with-registry-auth -c docker/stacks/swarmpit.yml swarmpit
+            docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray.yml vpn
+            
+          name: Sanity check (manager)
+          run: |
+            export INFRA_ROLE=manager
+            ./scripts/sanity-check.sh --strict

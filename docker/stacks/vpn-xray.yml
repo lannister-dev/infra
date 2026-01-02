@@ -1,0 +1,22 @@
+services:
+  vpn-xray:
+    image: traefik/whoami:v1.10.3
+    networks:
+      - traefik_swarm
+    deploy:
+      labels:
+        - "traefik.enable=true"
+
+        # ROUTER
+        - "traefik.http.routers.vpn.rule=Host(`vpn.lannister-dev.ru`) && Path(`/api/v1/stream`)"
+        - "traefik.http.routers.vpn.entrypoints=websecure"
+        - "traefik.http.routers.vpn.tls.certresolver=cf"
+
+        # SERVICE → DE over WireGuard
+        - "traefik.http.services.vpn.loadbalancer.server.url=http://10.100.0.2:10000"
+
+        # WS headers (НЕ middleware headers!)
+        - "traefik.http.routers.vpn.middlewares=vpn-ws@swarm"
+
+        - "traefik.http.middlewares.vpn-ws.headers.customrequestheaders.Connection=Upgrade"
+        - "traefik.http.middlewares.vpn-ws.headers.customrequestheaders.Upgrade=websocket"
