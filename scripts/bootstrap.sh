@@ -129,3 +129,12 @@ case "${INFRA_ROLE}" in
     exit 1
     ;;
 esac
+
+# ==============================
+# ENSURE EXECUTABLE PERMISSIONS
+# ==============================
+chmod +x \
+  "$ROOT_DIR/vpn/install.sh" \
+  "$ROOT_DIR/scripts/sanity-check.sh" \
+  "$ROOT_DIR/wireguard/apply.sh" \
+  "$ROOT_DIR/wireguard/manager/wireguard-manager.sh" || true
