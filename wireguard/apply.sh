@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Wrapper entrypoint for vpn-infra WireGuard management.
-# Loads defaults and forwards CLI args to engine.
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULTS_FILE="${SCRIPT_DIR}/manager/defaults.env"
+LOCAL_DEFAULTS_FILE="${SCRIPT_DIR}/manager/defaults.env.local"
 ENGINE="${SCRIPT_DIR}/manager/wireguard-manager.sh"
 
 if [[ ! -f "${DEFAULTS_FILE}" ]]; then
@@ -13,8 +11,15 @@ if [[ ! -f "${DEFAULTS_FILE}" ]]; then
   exit 1
 fi
 
-# shellcheck disable=SC1090
+# Export all vars from defaults
+set -a
 source "${DEFAULTS_FILE}"
+
+# Optional local overrides (not in git)
+if [[ -f "${LOCAL_DEFAULTS_FILE}" ]]; then
+  source "${LOCAL_DEFAULTS_FILE}"
+fi
+set +a
 
 if [[ ! -x "${ENGINE}" ]]; then
   echo "[WG][ERROR] engine not executable: ${ENGINE}" >&2
@@ -22,4 +27,4 @@ if [[ ! -x "${ENGINE}" ]]; then
   exit 1
 fi
 
-exec bash "${ENGINE}" "$@"
+exec "${ENGINE}" "$@"
