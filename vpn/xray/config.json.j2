@@ -1,0 +1,26 @@
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "${VPN_WG_BIND_IP}",
+      "port": ${VPN_XRAY_PORT},
+      "protocol": "vless",
+      "settings": {
+        "clients": ${VPN_CLIENTS_JSON},
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "none",
+        "wsSettings": {
+          "path": "${VPN_WS_PATH}"
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    { "protocol": "freedom", "settings": {} }
+  ]
+}

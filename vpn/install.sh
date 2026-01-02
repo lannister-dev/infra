@@ -44,36 +44,14 @@ fi
 log "Rendering Xray config"
 mkdir -p /etc/xray
 
-VPN_CLIENTS_JSON="$(jq -c . "${CLIENTS_FILE}")"
+VPN_CLIENTS_JSON="$(jq -c . "${ROOT_DIR}/vpn/xray/clients.json")"
+export VPN_CLIENTS_JSON
 
-jq -n \
-  --arg listen "${VPN_WG_BIND_IP}" \
-  --arg ws_path "${VPN_WS_PATH}" \
-  --argjson port "${VPN_XRAY_PORT}" \
-  --argjson clients "${VPN_CLIENTS_JSON}" \
-  '{
-    log: { loglevel: "warning" },
-    inbounds: [{
-      listen: $listen,
-      port: $port,
-      protocol: "vless",
-      settings: {
-        clients: $clients,
-        decryption: "none"
-      },
-      streamSettings: {
-        network: "ws",
-        security: "none",
-        wsSettings: {
-          path: $ws_path
-        }
-      }
-    }],
-    outbounds: [{
-      protocol: "freedom",
-      settings: {}
-    }]
-  }' > /etc/xray/config.json
+envsubst < "${ROOT_DIR}/vpn/xray/config.json.j2" > /etc/xray/config.json
+
+# validate result
+jq . /etc/xray/config.json >/dev/null \
+  || die "Rendered /etc/xray/config.json is invalid JSON"
 
 chmod 600 /etc/xray/config.json
 
