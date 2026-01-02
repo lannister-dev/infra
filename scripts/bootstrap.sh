@@ -128,7 +128,7 @@ case "${INFRA_ROLE}" in
     echo "❌ Unknown INFRA_ROLE=${INFRA_ROLE}"
     exit 1
     ;;
-
+esac
 # ==============================
 # ENSURE EXECUTABLE PERMISSIONS
 # ==============================
