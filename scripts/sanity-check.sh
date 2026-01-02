@@ -25,7 +25,6 @@ is_root() {
 load_env() {
   if [[ -f "${ENV_FILE}" ]]; then
     set -a
-    # shellcheck disable=SC1090
     source "${ENV_FILE}"
     set +a
   else
@@ -131,8 +130,10 @@ check_manager() {
   local ws_path="${VPN_WS_PATH:-/api/v1/stream}"
 
   if [[ -z "${vpn_domain}" ]]; then
-  warn "VPN_DOMAIN is empty; skipping HTTPS checks on manager node"
-  return
+    warn "VPN_DOMAIN is empty; skipping HTTPS checks on manager node"
+    [[ "${STRICT}" == "1" ]] || return
+    warn "STRICT=1 but VPN_DOMAIN is empty — continuing anyway"
+    return
   fi
 
   log "Checking HTTPS reachability: https://${vpn_domain}/"
@@ -203,6 +204,20 @@ check_vpn() {
   else
     ss -lntp | grep -E ":${port}\b" >/dev/null \
       || die "xray is not listening on port ${port}"
+  fi
+
+  if systemctl list-unit-files | grep -q '^hysteria2\.service'; then
+    log "Checking hysteria2 service"
+    systemctl is-active --quiet hysteria2 || die "hysteria2 service is not active"
+
+    local hy2_port="${HY2_LISTEN_PORT:-443}"
+    if ! ss -lunp | grep -q ":${hy2_port}\b"; then
+      die "hysteria2 is not listening on UDP/${hy2_port}"
+    fi
+
+    log "hysteria2: OK (UDP/${hy2_port})"
+  else
+    warn "hysteria2 not installed; skipping hysteria checks"
   fi
 
   # WireGuard interface check (best-effort)
