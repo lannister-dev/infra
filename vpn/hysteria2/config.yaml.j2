@@ -1,17 +1,18 @@
-listen: :${HYSTERIA_PORT}
+listen: ":${HY2_LISTEN_PORT}"
 
 tls:
-  cert: /etc/hysteria/cert.pem
-  key: /etc/hysteria/key.pem
+  certFile: /etc/hysteria/cert.pem
+  keyFile: /etc/hysteria/key.pem
 
 auth:
   type: password
-  password: ${HYSTERIA_PASSWORD}
+  password:
+    - ${HY2_AUTH_PASSWORD}
 
 obfs:
   type: salamander
   salamander:
-    password: ${HYSTERIA_OBFS}
+    password: ${HY2_OBFS_PASSWORD}
 
 quic:
   initStreamReceiveWindow: 8388608
@@ -23,14 +24,4 @@ bandwidth:
   up: 100 mbps
   down: 100 mbps
 
-ignoreClientBandwidth: true
-
-acl:
-  inline:
-    - direct(all)
-
-masquerade:
-  type: proxy
-  proxy:
-    url: https://www.cloudflare.com/
-    rewriteHost: true
+disableUDP: false
