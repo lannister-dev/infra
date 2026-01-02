@@ -1,4 +1,4 @@
-listen: ":${HY2_LISTEN_PORT}"
+listen: :${HY2_LISTEN_PORT}
 
 tls:
   certFile: /etc/hysteria/cert.pem
@@ -11,7 +11,7 @@ auth:
 obfs:
   type: salamander
   salamander:
-    password: ${HY2_OBFS_PASSWORD}
+    password: "${HY2_OBFS_PASSWORD}"
 
 quic:
   initStreamReceiveWindow: 8388608
