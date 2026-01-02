@@ -109,7 +109,6 @@ echo "✅ Bootstrap completed successfully"
 # ==============================
 
 INFRA_ROLE="${INFRA_ROLE:-infra}"
-
 echo "🔎 Infra role: ${INFRA_ROLE}"
 
 case "${INFRA_ROLE}" in
@@ -120,15 +119,15 @@ case "${INFRA_ROLE}" in
     echo "➡ app role: bot / celery / db handled by stacks"
     ;;
   vpn)
-    echo "➡ vpn role: installing WireGuard + VLESS"
+    echo "➡ vpn role: installing WireGuard + Xray + Hysteria2"
     bash "$ROOT_DIR/wireguard/apply.sh" --install
     bash "$ROOT_DIR/vpn/install.sh"
+    bash "$ROOT_DIR/vpn/hysteria2/install.sh"
     ;;
   *)
     echo "❌ Unknown INFRA_ROLE=${INFRA_ROLE}"
     exit 1
     ;;
-esac
 
 # ==============================
 # ENSURE EXECUTABLE PERMISSIONS
