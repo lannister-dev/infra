@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+IS_MANAGER="$(docker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null || echo false)"
+if [[ "${IS_MANAGER}" != "true" ]]; then
+  echo "[BOOTSTRAP] Not a swarm manager; skipping swarm configs/network/volume setup."
+  exit 0
+fi
+
 set -euo pipefail
 set -e
 
