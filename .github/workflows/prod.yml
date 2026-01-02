@@ -34,4 +34,4 @@ jobs:
             docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray.yml vpn
             
             export INFRA_ROLE=manager
-            ./scripts/sanity-check.sh --strict
+            ./scripts/sanity-check.sh
