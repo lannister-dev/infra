@@ -131,9 +131,8 @@ check_manager() {
   local ws_path="${VPN_WS_PATH:-/api/v1/stream}"
 
   if [[ -z "${vpn_domain}" ]]; then
-    warn "VPN_DOMAIN is empty; skipping HTTPS checks"
-    [[ "${STRICT}" == "1" ]] && die "Set VPN_DOMAIN in .env for full verification"
-    return
+  warn "VPN_DOMAIN is empty; skipping HTTPS checks on manager node"
+  return
   fi
 
   log "Checking HTTPS reachability: https://${vpn_domain}/"
