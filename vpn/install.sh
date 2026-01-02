@@ -61,6 +61,19 @@ jq . /etc/xray/config.json >/dev/null || die "Generated config.json is invalid"
 # ==============================
 # START SERVICE
 # ==============================
+log "Configuring systemd override for Xray (run as root, config in /etc/xray)"
+
+mkdir -p /etc/systemd/system/xray.service.d
+
+cat >/etc/systemd/system/xray.service.d/30-user-and-config.conf <<'EOF'
+[Service]
+User=root
+Group=root
+ExecStart=
+ExecStart=/usr/local/bin/xray run -config /etc/xray/config.json
+EOF
+
+systemctl daemon-reload
 systemctl enable xray --now
 systemctl restart xray
 
