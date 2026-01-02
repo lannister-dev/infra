@@ -224,6 +224,12 @@ main() {
   load_env
   local detected
   detected="$(detect_role)"
+
+  # infra is an alias for manager
+  if [[ "${detected}" == "infra" ]]; then
+    detected="manager"
+  fi
+
   log "Detected role: ${detected} (override via INFRA_ROLE or --role)"
 
   case "${detected}" in
