@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
+set -e
 
+apt-get update
+apt-get install -y \
+  wireguard \
+  wireguard-tools \
+  iproute2 \
+  iptables \
+  zip \
+  unzip \
+  qrencode \
+  ca-certificates \
+  curl
 echo "=== Docker Swarm bootstrap (configs-first) ==="
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -84,3 +96,29 @@ echo "[4/4] Active docker configs:"
 docker config ls | grep -E 'prometheus_config__|grafana_'
 
 echo "✅ Bootstrap completed successfully"
+
+# ==============================
+# ROLE-BASED EXTENSIONS
+# ==============================
+
+INFRA_ROLE="${INFRA_ROLE:-infra}"
+
+echo "🔎 Infra role: ${INFRA_ROLE}"
+
+case "${INFRA_ROLE}" in
+  infra)
+    echo "➡ infra role: only swarm / monitoring / traefik"
+    ;;
+  app)
+    echo "➡ app role: bot / celery / db handled by stacks"
+    ;;
+  vpn)
+    echo "➡ vpn role: installing WireGuard + VLESS"
+    bash "$ROOT_DIR/wireguard/apply.sh" --install
+    bash "$ROOT_DIR/vpn/install.sh"
+    ;;
+  *)
+    echo "❌ Unknown INFRA_ROLE=${INFRA_ROLE}"
+    exit 1
+    ;;
+esac
