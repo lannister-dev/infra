@@ -1,0 +1,6 @@
+# Local overrides (never commit)
+manager/defaults.env.local
+
+# Optional exported artifacts
+*.zip
+*.conf.export
