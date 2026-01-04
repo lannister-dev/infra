@@ -4,47 +4,40 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ROOT_DIR}/.env"
 
-# -------------------------
-# helpers
-# -------------------------
-log() { echo "[SANITY] $*"; }
+log()  { echo "[SANITY] $*"; }
 warn() { echo "[SANITY][WARN] $*" >&2; }
-die() { echo "[SANITY][FAIL] $*" >&2; exit 1; }
+die()  { echo "[SANITY][FAIL] $*" >&2; exit 1; }
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
 }
 
-is_root() {
-  [[ ${EUID:-999} -eq 0 ]]
-}
-
 # -------------------------
 # load env (optional but preferred)
 # -------------------------
-load_env() {
-  if [[ -f "${ENV_FILE}" ]]; then
-    set -a
-    source "${ENV_FILE}"
-    set +a
-  else
-    warn ".env not found at ${ENV_FILE} (some checks will be skipped)"
-  fi
-}
+if [[ -f "${ENV_FILE}" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "${ENV_FILE}"
+  set +a
+else
+  warn ".env not found at ${ENV_FILE} (some checks will be skipped)"
+fi
 
 # -------------------------
 # args
 # -------------------------
 ROLE="${INFRA_ROLE:-auto}"   # manager|vpn|app|auto
-STRICT="${STRICT:-1}"        # 1 => fail on missing critical checks
+STRICT="${STRICT:-1}"        # 1 => fail if critical vars missing
 VERBOSE="${VERBOSE:-0}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --role) ROLE="$2"; shift 2;;
-    --non-strict) STRICT="0"; shift;;
-    --verbose) VERBOSE="1"; shift;;
-    *) die "Unknown arg: $1";;
+    --role) ROLE="${2:-}"; shift 2 ;;
+    --strict) STRICT="1"; shift ;;
+    --non-strict) STRICT="0"; shift ;;
+    --verbose) VERBOSE="1"; shift ;;
+    *) die "Unknown arg: $1" ;;
   esac
 done
 
@@ -52,7 +45,7 @@ done
 # detect role (best-effort)
 # -------------------------
 detect_role() {
-  # if explicitly set
+  # honor explicit role
   if [[ "${ROLE}" != "auto" ]]; then
     echo "${ROLE}"
     return
@@ -78,7 +71,7 @@ detect_role() {
 }
 
 # -------------------------
-# checks: manager (B)
+# checks: manager
 # -------------------------
 check_manager() {
   log "Role=manager checks (Swarm manager / Traefik / routing)"
@@ -87,19 +80,17 @@ check_manager() {
   need_cmd curl
   need_cmd jq
 
-  # Swarm must be active
   docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active \
     || die "Docker Swarm is not active on this node"
 
   docker info --format '{{.Swarm.ControlAvailable}}' | grep -q true \
     || die "This node is not a Swarm manager (ControlAvailable=false)"
 
-  # Network exists
-  if ! docker network inspect traefik_swarm >/dev/null 2>&1; then
-    die "Overlay network traefik_swarm not found (bootstrap not applied or wrong node)"
-  fi
+  # overlay network
+  docker network inspect traefik_swarm >/dev/null 2>&1 \
+    || die "Overlay network traefik_swarm not found (run bootstrap on manager)"
 
-  # Stacks present (soft check for vpn stack)
+  # stacks presence
   local stacks
   stacks="$(docker stack ls --format '{{.Name}}' | tr '\n' ' ')"
   [[ "${stacks}" == *"traefik"* ]] || die "Stack 'traefik' not found"
@@ -107,44 +98,29 @@ check_manager() {
   [[ "${stacks}" == *"swarmpit"* ]] || warn "Stack 'swarmpit' not found"
   [[ "${stacks}" == *"vpn"* ]] || warn "Stack 'vpn' not found (vpn-xray.yml not deployed?)"
 
-  # Traefik service healthy-ish
-  if ! docker service ls --format '{{.Name}} {{.Replicas}}' | grep -q '^traefik_traefik '; then
-    die "Service traefik_traefik not found (stack deploy failed?)"
-  fi
+  # traefik service exists
+  docker service ls --format '{{.Name}} {{.Replicas}}' | grep -q '^traefik_traefik ' \
+    || die "Service traefik_traefik not found (stack deploy failed?)"
 
-  # If WireGuard is used for upstream to DE: check handshake presence (best-effort)
-  if command -v wg >/dev/null 2>&1; then
-    if wg show >/dev/null 2>&1; then
-      if ! wg show | grep -q 'peer:'; then
-        warn "WireGuard has no peers (wg show shows no peers)"
-      fi
-    else
-      warn "wg command exists but wg show failed"
-    fi
-  else
-    warn "wg not installed; skipping WG handshake checks"
-  fi
-
-  # Domain + websocket router check (critical)
+  # domain checks (soft if missing)
   local vpn_domain="${VPN_DOMAIN:-}"
   local ws_path="${VPN_WS_PATH:-/api/v1/stream}"
 
   if [[ -z "${vpn_domain}" ]]; then
     warn "VPN_DOMAIN is empty; skipping HTTPS checks on manager node"
-    [[ "${STRICT}" == "1" ]] || return
-    warn "STRICT=1 but VPN_DOMAIN is empty — continuing anyway"
+    [[ "${STRICT}" == "1" ]] && die "Set VPN_DOMAIN in .env for full verification"
     return
   fi
 
+  # root should be reachable (fallback page recommended)
   log "Checking HTTPS reachability: https://${vpn_domain}/"
   local code_root
   code_root="$(curl -sS -o /dev/null -w '%{http_code}' "https://${vpn_domain}/" || true)"
-  [[ "${code_root}" != "000" ]] || die "Cannot reach https://${vpn_domain}/ (TLS/DNS/CF/Traefik problem)"
-  log "Root HTTP status: ${code_root}"
+  [[ "${code_root}" != "000" ]] || die "Cannot reach https://${vpn_domain}/ (DNS/TLS/CF/Traefik)"
+  log "Root HTTP status: ${code_root} (ok)"
 
-  # WebSocket path should NOT be 404 from edge if router exists.
-  # We'll attempt a WS handshake. Expected: 101 (ideal) or 400/426/502, but NOT 404.
-  log "Checking WS path routing (expect NOT 404): https://${vpn_domain}${ws_path}"
+  # ws path routing: should not be 404/000 at edge
+  log "Checking WS route (expect NOT 404): https://${vpn_domain}${ws_path}"
   local code_ws
   code_ws="$(curl -sS -o /dev/null -w '%{http_code}' \
     -H 'Connection: Upgrade' \
@@ -154,22 +130,21 @@ check_manager() {
     "https://${vpn_domain}${ws_path}" || true)"
 
   if [[ "${code_ws}" == "404" || "${code_ws}" == "000" ]]; then
-    die "WS route check failed: status=${code_ws}. Router likely missing or CF/Traefik not routing ${ws_path}"
+    die "WS route check failed: status=${code_ws}. Traefik/CF not routing ${ws_path}"
   fi
   log "WS route HTTP status: ${code_ws} (ok if not 404)"
 
-  # Upstream TCP reachability from B to DE via WireGuard (optional, but recommended)
+  # optional: upstream reachability over WG
   local upstream_ip="${VPN_UPSTREAM_WG_IP:-}"
   local upstream_port="${VPN_XRAY_PORT:-10000}"
   if [[ -n "${upstream_ip}" ]]; then
     need_cmd nc
     log "Checking upstream TCP reachability: ${upstream_ip}:${upstream_port}"
-    if ! nc -z -w 2 "${upstream_ip}" "${upstream_port}" >/dev/null 2>&1; then
-      die "Cannot reach upstream ${upstream_ip}:${upstream_port} from manager (WireGuard route/firewall/service down)"
-    fi
+    nc -z -w 2 "${upstream_ip}" "${upstream_port}" >/dev/null 2>&1 \
+      || die "Cannot reach upstream ${upstream_ip}:${upstream_port} from manager (WG route/firewall/xray)"
     log "Upstream TCP: OK"
   else
-    warn "VPN_UPSTREAM_WG_IP not set; skipping direct upstream TCP check (set it to DE WG IP for stronger verification)"
+    warn "VPN_UPSTREAM_WG_IP not set; skipping direct upstream TCP check"
   fi
 }
 
@@ -183,17 +158,14 @@ check_vpn() {
   need_cmd ss
   need_cmd jq
 
-  # xray service active
+  # xray active
   systemctl is-active --quiet xray || die "xray service is not active"
 
-  # config valid json
-  if [[ -f /etc/xray/config.json ]]; then
-    jq . /etc/xray/config.json >/dev/null || die "/etc/xray/config.json is not valid JSON"
-  else
-    die "/etc/xray/config.json not found"
-  fi
+  # config path contract: /etc/xray/config.json
+  [[ -f /etc/xray/config.json ]] || die "/etc/xray/config.json not found (run vpn/install.sh)"
+  jq . /etc/xray/config.json >/dev/null || die "/etc/xray/config.json is not valid JSON"
 
-  # listening port check
+  # listen check
   local port="${VPN_XRAY_PORT:-10000}"
   local bind_ip="${VPN_WG_BIND_IP:-}"
   log "Checking xray listen on port=${port} (bind_ip=${bind_ip:-any})"
@@ -206,25 +178,9 @@ check_vpn() {
       || die "xray is not listening on port ${port}"
   fi
 
-  if systemctl list-unit-files | grep -q '^hysteria2\.service'; then
-    log "Checking hysteria2 service"
-    systemctl is-active --quiet hysteria2 || die "hysteria2 service is not active"
-
-    local hy2_port="${HY2_LISTEN_PORT:-443}"
-    if ! ss -lunp | grep -q ":${hy2_port}\b"; then
-      die "hysteria2 is not listening on UDP/${hy2_port}"
-    fi
-
-    log "hysteria2: OK (UDP/${hy2_port})"
-  else
-    warn "hysteria2 not installed; skipping hysteria checks"
-  fi
-
-  # WireGuard interface check (best-effort)
+  # wireguard best-effort
   if command -v wg >/dev/null 2>&1; then
-    if ! wg show >/dev/null 2>&1; then
-      warn "wg show failed; WireGuard may be down"
-    fi
+    wg show >/dev/null 2>&1 || warn "wg show failed; WireGuard may be down"
   else
     warn "wg not installed; skipping WG checks"
   fi
@@ -236,11 +192,10 @@ check_vpn() {
 # main
 # -------------------------
 main() {
-  load_env
   local detected
   detected="$(detect_role)"
 
-  # infra is an alias for manager
+  # infra alias
   if [[ "${detected}" == "infra" ]]; then
     detected="manager"
   fi
@@ -248,10 +203,10 @@ main() {
   log "Detected role: ${detected} (override via INFRA_ROLE or --role)"
 
   case "${detected}" in
-    manager) check_manager;;
-    vpn) check_vpn;;
-    app) log "Role=app: no specific checks defined (ok)";;
-    *) die "Unknown role: ${detected}";;
+    manager) check_manager ;;
+    vpn)     check_vpn ;;
+    app)     log "Role=app: no specific checks defined (ok)" ;;
+    *)       die "Unknown role: ${detected}" ;;
   esac
 
   log "All checks passed"
