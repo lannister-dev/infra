@@ -22,6 +22,17 @@ services:
 
         - "traefik.http.middlewares.vpn-ws.headers.customrequestheaders.Connection=Upgrade"
         - "traefik.http.middlewares.vpn-ws.headers.customrequestheaders.Upgrade=websocket"
+
+  vpn-fallback:
+    image: nginx:alpine
+    networks:
+      - traefik_swarm
+    deploy:
+      replicas: 1
+    configs:
+      - source: vpn_fallback_index__V1_0
+        target: /usr/share/nginx/html/index.html
+        mode: 0444
 networks:
   traefik_swarm:
     external: true
