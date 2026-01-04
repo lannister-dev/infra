@@ -1,139 +1,176 @@
 #!/usr/bin/env bash
+set -Eeuo pipefail
 
-IS_MANAGER="$(docker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null || echo false)"
-if [[ "${IS_MANAGER}" != "true" ]]; then
-  echo "[BOOTSTRAP] Not a swarm manager; skipping swarm configs/network/volume setup."
-  exit 0
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="${ROOT_DIR}/.env"
+
+log()  { echo "[BOOTSTRAP] $*"; }
+warn() { echo "[BOOTSTRAP][WARN] $*" >&2; }
+die()  { echo "[BOOTSTRAP][FAIL] $*" >&2; exit 1; }
+
+[[ ${EUID:-999} -eq 0 ]] || die "Run as root"
+
+# -------------------------
+# load env (optional)
+# -------------------------
+if [[ -f "${ENV_FILE}" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "${ENV_FILE}"
+  set +a
+else
+  warn ".env not found at ${ENV_FILE} (role may be set externally)"
 fi
 
-set -euo pipefail
-set -e
-
-apt-get update
-apt-get install -y \
-  wireguard \
-  wireguard-tools \
-  iproute2 \
-  iptables \
-  zip \
-  unzip \
-  qrencode \
-  ca-certificates \
-  curl
-echo "=== Docker Swarm bootstrap (configs-first) ==="
-
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-
-# ==============================
-# CONFIG VERSIONS (SOURCE OF TRUTH)
-# ==============================
-PROMETHEUS_CONFIG_VERSION="V1_0"
-GRAFANA_INI_VERSION="V1_0"
-GRAFANA_DATASOURCES_VERSION="V1_0"
-GRAFANA_DASHBOARDS_VERSION="V1_0"
-
-# ==============================
-# PRECHECKS
-# ==============================
-command -v docker >/dev/null || {
-  echo "❌ Docker is not installed"
-  exit 1
-}
-
-if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active; then
-  echo "❌ Docker Swarm is not initialized"
-  exit 1
+INFRA_ROLE="${INFRA_ROLE:-infra}"   # infra|manager|vpn|app
+# infra is alias for manager
+if [[ "${INFRA_ROLE}" == "infra" ]]; then
+  INFRA_ROLE="manager"
 fi
 
-# ==============================
-# NETWORKS
-# ==============================
-echo "[1/4] Ensuring traefik_swarm network"
+log "Repo: ${ROOT_DIR}"
+log "Role: ${INFRA_ROLE}"
 
-docker network inspect traefik_swarm >/dev/null 2>&1 || \
-docker network create --driver overlay --attachable traefik_swarm >/dev/null
-
-# ==============================
-# VOLUMES
-# ==============================
-echo "[2/4] Ensuring volumes"
-
-for v in traefik_acme prometheus_data grafana_data; do
-  docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v" >/dev/null
-done
-
-# ==============================
-# DOCKER CONFIGS (IMMUTABLE)
-# ==============================
-echo "[3/4] Ensuring docker configs (versioned)"
-
-ensure_config() {
-  local name="$1"
-  local file="$2"
-
-  if [[ ! -f "$file" ]]; then
-    echo "❌ Config source not found: $file"
-    exit 1
-  fi
-
-  if docker config inspect "$name" >/dev/null 2>&1; then
-    echo "✔ config exists: $name"
-  else
-    echo "➕ creating config: $name"
-    docker config create "$name" "$file" >/dev/null
-  fi
-}
-
-ensure_config "prometheus_config__${PROMETHEUS_CONFIG_VERSION}" \
-  "$ROOT_DIR/monitoring/prometheus/prometheus.yml"
-
-ensure_config "grafana_ini__${GRAFANA_INI_VERSION}" \
-  "$ROOT_DIR/monitoring/grafana/grafana.ini"
-
-ensure_config "grafana_datasources__${GRAFANA_DATASOURCES_VERSION}" \
-  "$ROOT_DIR/monitoring/grafana/provisioning/datasources/prometheus.yml"
-
-ensure_config "grafana_dashboards__${GRAFANA_DASHBOARDS_VERSION}" \
-  "$ROOT_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
-
-# ==============================
-# SUMMARY
-# ==============================
-echo "[4/4] Active docker configs:"
-docker config ls | grep -E 'prometheus_config__|grafana_'
-
-echo "✅ Bootstrap completed successfully"
-
-# ==============================
-# ROLE-BASED EXTENSIONS
-# ==============================
-
-INFRA_ROLE="${INFRA_ROLE:-infra}"
-echo "🔎 Infra role: ${INFRA_ROLE}"
-
-case "${INFRA_ROLE}" in
-  infra)
-    echo "➡ infra role: only swarm / monitoring / traefik"
-    ;;
-  app)
-    echo "➡ app role: bot / celery / db handled by stacks"
-    ;;
-  vpn)
-    echo "➡ vpn role: installing WireGuard + Xray + Hysteria2"
-    bash "$ROOT_DIR/wireguard/apply.sh" --install
-    bash "$ROOT_DIR/vpn/install.sh"
-    bash "$ROOT_DIR/vpn/hysteria2/install.sh"
-    ;;
-  *)
-    echo "❌ Unknown INFRA_ROLE=${INFRA_ROLE}"
-    exit 1
-    ;;
-esac
-# ==============================
-# ENSURE EXECUTABLE PERMISSIONS
-# ==============================
+# -------------------------
+# ensure executable perms FIRST (kills 'Permission denied')
+# -------------------------
 chmod +x \
-  "$ROOT_DIR/vpn/install.sh" \
-  "$ROOT_DIR/scripts/sanity-check.sh" \
-  "$ROOT_DIR/wireguard/apply.sh" \
-  "$ROOT_DIR/wireguard/manager/wireguard-manager.sh" || true
+  "${ROOT_DIR}/scripts/bootstrap.sh" \
+  "${ROOT_DIR}/scripts/sanity-check.sh" \
+  "${ROOT_DIR}/scripts/firewall.sh" \
+  "${ROOT_DIR}/vpn/install.sh" \
+  "${ROOT_DIR}/wireguard/apply.sh" \
+  "${ROOT_DIR}/wireguard/manager/wireguard-manager.sh" \
+  2>/dev/null || true
+
+# -------------------------
+# role: manager (Swarm bootstrap + configs)
+# -------------------------
+bootstrap_manager() {
+  log "Manager bootstrap: packages + swarm prechecks + network/volumes/configs"
+
+  command -v docker >/dev/null 2>&1 || die "Docker is not installed"
+
+  if ! docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null | grep -q active; then
+    die "Docker Swarm is not initialized (run: docker swarm init)"
+  fi
+
+  if ! docker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true; then
+    die "This node is not a Swarm manager (ControlAvailable=false)"
+  fi
+
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -y
+  apt-get install -y \
+    ca-certificates curl jq unzip zip \
+    wireguard wireguard-tools iproute2 iptables qrencode
+
+  echo "=== Docker Swarm bootstrap (configs-first) ==="
+
+  # -------------------------
+  # CONFIG VERSIONS (SOURCE OF TRUTH)
+  # -------------------------
+  PROMETHEUS_CONFIG_VERSION="V1_0"
+  GRAFANA_INI_VERSION="V1_0"
+  GRAFANA_DATASOURCES_VERSION="V1_0"
+  GRAFANA_DASHBOARDS_VERSION="V1_0"
+
+  # Optional: fallback index config (to make domain look real)
+  VPN_FALLBACK_INDEX_VERSION="V1_0"
+
+  # -------------------------
+  # NETWORKS
+  # -------------------------
+  log "[1/4] Ensuring traefik_swarm network"
+  docker network inspect traefik_swarm >/dev/null 2>&1 || \
+    docker network create --driver overlay --attachable traefik_swarm >/dev/null
+
+  # -------------------------
+  # VOLUMES
+  # -------------------------
+  log "[2/4] Ensuring volumes"
+  for v in traefik_acme prometheus_data grafana_data; do
+    docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v" >/dev/null
+  done
+
+  # -------------------------
+  # DOCKER CONFIGS (IMMUTABLE)
+  # -------------------------
+  log "[3/4] Ensuring docker configs (versioned)"
+
+  ensure_config() {
+    local name="$1"
+    local file="$2"
+
+    [[ -f "$file" ]] || die "Config source not found: $file"
+
+    if docker config inspect "$name" >/dev/null 2>&1; then
+      log "✔ config exists: $name"
+    else
+      log "➕ creating config: $name"
+      docker config create "$name" "$file" >/dev/null
+    fi
+  }
+
+  ensure_config "prometheus_config__${PROMETHEUS_CONFIG_VERSION}" \
+    "$ROOT_DIR/monitoring/prometheus/prometheus.yml"
+
+  ensure_config "grafana_ini__${GRAFANA_INI_VERSION}" \
+    "$ROOT_DIR/monitoring/grafana/grafana.ini"
+
+  ensure_config "grafana_datasources__${GRAFANA_DATASOURCES_VERSION}" \
+    "$ROOT_DIR/monitoring/grafana/provisioning/datasources/prometheus.yml"
+
+  ensure_config "grafana_dashboards__${GRAFANA_DASHBOARDS_VERSION}" \
+    "$ROOT_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
+
+  # fallback page for vpn domain (recommended)
+  if [[ -f "$ROOT_DIR/vpn/nginx/index.html" ]]; then
+    ensure_config "vpn_fallback_index__${VPN_FALLBACK_INDEX_VERSION}" \
+      "$ROOT_DIR/vpn/nginx/index.html"
+  else
+    warn "vpn/nginx/index.html not found; skipping vpn_fallback_index docker config"
+  fi
+
+  # -------------------------
+  # SUMMARY
+  # -------------------------
+  log "[4/4] Active docker configs:"
+  docker config ls | grep -E 'prometheus_config__|grafana_|vpn_fallback_index__' || true
+
+  log "✅ Manager bootstrap completed successfully"
+}
+
+# -------------------------
+# role: vpn (DE node) - WireGuard + Xray ONLY
+# -------------------------
+bootstrap_vpn() {
+  log "VPN bootstrap: WireGuard + Xray (Hysteria deferred)"
+
+  # WireGuard apply.sh may install packages itself; keep it explicit here
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -y
+  apt-get install -y ca-certificates curl jq wireguard wireguard-tools iproute2 iptables
+
+  bash "${ROOT_DIR}/wireguard/apply.sh" --install
+  bash "${ROOT_DIR}/vpn/install.sh"
+
+  log "✅ VPN bootstrap completed successfully"
+}
+
+# -------------------------
+# role: app (placeholder)
+# -------------------------
+bootstrap_app() {
+  log "App role: no bootstrap steps defined (ok)"
+}
+
+# -------------------------
+# main
+# -------------------------
+case "${INFRA_ROLE}" in
+  manager) bootstrap_manager ;;
+  vpn)     bootstrap_vpn ;;
+  app)     bootstrap_app ;;
+  *)       die "Unknown INFRA_ROLE=${INFRA_ROLE} (expected: manager|vpn|app|infra)" ;;
+esac
