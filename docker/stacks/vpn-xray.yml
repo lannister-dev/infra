@@ -33,6 +33,10 @@ services:
       - source: vpn_fallback_index__V1_0
         target: /usr/share/nginx/html/index.html
         mode: 0444
+
+configs:
+  vpn_fallback_index__V1_0:
+    external: true
 networks:
   traefik_swarm:
     external: true
