@@ -9,7 +9,7 @@ services:
       - source: xray_config__V1_0
         target: /etc/xray/config.json
         mode: 0400
-    command: ["xray", "run", "-config", "/etc/xray/config.json"]
+    command: ["run", "-config", "/etc/xray/config.json"]
     deploy:
       replicas: 1
       placement:
