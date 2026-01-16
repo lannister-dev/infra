@@ -125,8 +125,32 @@ bootstrap_manager() {
   ensure_config "grafana_dashboards__${GRAFANA_DASHBOARDS_VERSION}" \
     "$ROOT_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
 
-  ensure_config "xray_config__${XRAY_CONFIG_VERSION}"\
-    "$ROOT_DIR/vpn/xray/config.json"
+  # -------------------------
+  # XRAY CONFIG RENDER (FROM J2)
+  # -------------------------
+  log "Rendering Xray config from template"
+
+  XRAY_RENDER_DIR="/tmp/xray"
+  XRAY_RENDERED_CONFIG="${XRAY_RENDER_DIR}/config.json"
+
+  mkdir -p "${XRAY_RENDER_DIR}"
+
+  [[ -f "$ROOT_DIR/vpn/xray/config.json.j2" ]] \
+    || die "Xray template not found: vpn/xray/config.json.j2"
+
+  [[ -f "$ROOT_DIR/vpn/xray/clients.json" ]] \
+    || die "Xray clients file not found: vpn/xray/clients.json"
+
+  VPN_CLIENTS_JSON="$(jq -c . "$ROOT_DIR/vpn/xray/clients.json")"
+  export VPN_CLIENTS_JSON
+
+  envsubst < "$ROOT_DIR/vpn/xray/config.json.j2" > "${XRAY_RENDERED_CONFIG}"
+
+  jq . "${XRAY_RENDERED_CONFIG}" >/dev/null \
+    || die "Rendered Xray config is invalid JSON"
+
+  ensure_config "xray_config__${XRAY_CONFIG_VERSION}" \
+    "${XRAY_RENDERED_CONFIG}"
 
   # fallback page for vpn domain (recommended)
   if [[ -f "$ROOT_DIR/vpn/nginx/index.html" ]]; then
