@@ -1,8 +1,6 @@
 {
   "log": {
-    "loglevel": "warning",
-    "access": "/var/log/xray/access.log",
-    "error": "/var/log/xray/error.log"
+    "loglevel": "warning"
   },
 
   "api": {
@@ -27,26 +25,6 @@
   },
 
   "inbounds": [
-    {
-      "listen": "0.0.0.0",
-      "port": ${VPN_XRAY_PORT},
-      "protocol": "vless",
-      "tag": "vless-xhttp",
-      "settings": {
-        "clients": ${VPN_CLIENTS_JSON},
-        "decryption": "none"
-      },
-      "streamSettings": {
-        "network": "xhttp",
-        "security": "none",
-        "xhttpSettings": {
-          "path": "${VPN_WS_PATH}",
-          "mode": "auto",
-          "alpn": ["h2", "h3"]
-        }
-      }
-    },
-
     {
       "listen": "0.0.0.0",
       "port": ${VPN_XRAY_PORT},
