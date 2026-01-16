@@ -5,32 +5,33 @@ on:
     branches: [ "main" ]
 
 jobs:
-  deploy-infra:
+  deploy-monitoring:
     runs-on: self-hosted
     steps:
-      - name: Deploy infra
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Deploy monitoring to Infra server
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.MONITORING_HOST }}
           username: root
           key: ${{ secrets.MONITORING_SSH_KEY }}
           script: |
-            echo "ENV_FILE=$ENV_FILE"
-            set -e
-            cd /opt/vpn-infra
-
+            set -e  
+            cd /opt/vpn-infra || exit 1
+            
             git fetch origin
             git reset --hard origin/main
             git clean -fd
-
-            echo "${{ secrets.INFRA_ENV_MANAGER }}" > .env
-            chmod 600 .env
-
+            
+            echo "${{ secrets.INFRA_ENV_PROD }}" > .env
+            
             ./scripts/bootstrap.sh
-
+            
             docker stack deploy --with-registry-auth -c docker/stacks/traefik.yml traefik
             docker stack deploy --with-registry-auth -c docker/stacks/monitoring.yml monitoring
             docker stack deploy --with-registry-auth -c docker/stacks/swarmpit.yml swarmpit
             docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray.yml vpn
-
-            ./scripts/sanity-check.sh --role manager
+            
+            export INFRA_ROLE=manager
+            ./scripts/sanity-check.sh
