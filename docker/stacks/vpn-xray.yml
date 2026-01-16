@@ -5,8 +5,10 @@ services:
     image: ghcr.io/xtls/xray-core:latest
     networks:
       - traefik_swarm
-    volumes:
-      - ./vpn/xray/config.json:/etc/xray/config.json:ro
+    configs:
+      - source: xray_config__V1_0
+        target: /etc/xray/config.json
+        mode: 0400
     command: ["xray", "run", "-config", "/etc/xray/config.json"]
     deploy:
       replicas: 1
@@ -46,7 +48,7 @@ services:
         - traefik.enable=true
 
         # Fallback router
-        - traefik.http.routers.vpn-fallback.rule=Host(`${VPN_DOMAIN}`)
+        - traefik.http.routers.vpn-fallback.rule=Host(`vpn.lannister-dev.ru`)
         - traefik.http.routers.vpn-fallback.entrypoints=websecure
         - traefik.http.routers.vpn-fallback.tls=true
         - traefik.http.routers.vpn-fallback.priority=1
@@ -55,6 +57,8 @@ services:
 configs:
   vpn_fallback_index__V1_1:
     external: True
+  xray_config__V1_0:
+    external: true
 networks:
   traefik_swarm:
     external: true
