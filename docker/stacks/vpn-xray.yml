@@ -19,7 +19,7 @@ services:
         - traefik.enable=true
 
         # VPN WebSocket router
-        - traefik.http.routers.vpn.rule=Host(`${VPN_DOMAIN}`) && PathPrefix(`${VPN_WS_PATH}`)
+        - traefik.http.routers.vpn.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
         - traefik.http.routers.vpn.entrypoints=websecure
         - traefik.http.routers.vpn.tls=true
         - traefik.http.routers.vpn.priority=100
@@ -32,7 +32,7 @@ services:
     networks:
       - traefik_swarm
     configs:
-      - source: vpn_fallback_index__V1_0
+      - source: vpn_fallback_index__V1_1
         target: /usr/share/nginx/html/index.html
         mode: 0444
     deploy:
@@ -53,7 +53,7 @@ services:
 
         - traefik.http.services.vpn-fallback.loadbalancer.server.port=80
 configs:
-  vpn_fallback_index__V1_0:
+  vpn_fallback_index__V1_1:
     external: True
 networks:
   traefik_swarm:
