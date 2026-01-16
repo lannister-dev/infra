@@ -15,6 +15,7 @@ jobs:
           username: root
           key: ${{ secrets.MONITORING_SSH_KEY }}
           script: |
+            echo "ENV_FILE=$ENV_FILE"
             set -e
             cd /opt/vpn-infra
 
