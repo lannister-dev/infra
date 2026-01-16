@@ -1,12 +1,37 @@
 {
   "log": {
-    "loglevel": "warning"
+    "loglevel": "warning",
+    "access": "/var/log/xray/access.log",
+    "error": "/var/log/xray/error.log"
   },
+
+  "api": {
+    "tag": "api",
+    "services": ["StatsService"]
+  },
+  "stats": {},
+
+  "policy": {
+    "levels": {
+      "0": {
+        "statsUserUplink": true,
+        "statsUserDownlink": true
+      }
+    },
+    "system": {
+      "statsInboundUplink": true,
+      "statsInboundDownlink": true,
+      "statsOutboundUplink": true,
+      "statsOutboundDownlink": true
+    }
+  },
+
   "inbounds": [
     {
-      "listen": "0.0.0.0",
+      "listen": "${VPN_WG_BIND_IP}",
       "port": ${VPN_XRAY_PORT},
       "protocol": "vless",
+      "tag": "vless-in",
       "settings": {
         "clients": ${VPN_CLIENTS_JSON},
         "decryption": "none"
@@ -17,19 +42,57 @@
         "wsSettings": {
           "path": "${VPN_WS_PATH}"
         }
-      },
-      "sniffing": {
-        "enabled": true,
-        "destOverride": ["http", "tls", "quic"]
+      }
+    },
+
+    {
+      "listen": "127.0.0.1",
+      "port": ${VPN_XRAY_STATS_PORT:-10001},
+      "protocol": "dokodemo-door",
+      "tag": "api-in",
+      "settings": {
+        "address": "127.0.0.1"
       }
     }
   ],
+
   "outbounds": [
     {
       "protocol": "freedom",
+      "tag": "direct",
       "settings": {
         "domainStrategy": "UseIPv4"
       }
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "block"
     }
-  ]
+  ],
+
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": ["api-in"],
+        "outboundTag": "api"
+      },
+      {
+        "type": "field",
+        "ip": ["geoip:private"],
+        "outboundTag": "block"
+      },
+      {
+        "type": "field",
+        "protocol": ["bittorrent"],
+        "outboundTag": "block"
+      },
+      {
+        "type": "field",
+        "domain": ["geosite:category-ads-all"],
+        "outboundTag": "block"
+      }
+    ]
+  }
 }
