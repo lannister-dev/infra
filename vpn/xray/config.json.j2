@@ -4,7 +4,7 @@
   },
   "inbounds": [
     {
-      "listen": "${VPN_WG_BIND_IP}",
+      "listen": "0.0.0.0",
       "port": ${VPN_XRAY_PORT},
       "protocol": "vless",
       "settings": {
@@ -17,10 +17,19 @@
         "wsSettings": {
           "path": "${VPN_WS_PATH}"
         }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
       }
     }
   ],
   "outbounds": [
-    { "protocol": "freedom", "settings": {} }
+    {
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "UseIPv4"
+      }
+    }
   ]
 }
