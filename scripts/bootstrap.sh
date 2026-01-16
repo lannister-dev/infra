@@ -74,6 +74,7 @@ bootstrap_manager() {
   GRAFANA_INI_VERSION="V1_0"
   GRAFANA_DATASOURCES_VERSION="V1_0"
   GRAFANA_DASHBOARDS_VERSION="V1_0"
+  XRAY_CONFIG_VERSION="V1_0"
 
   # Optional: fallback index config (to make domain look real)
   VPN_FALLBACK_INDEX_VERSION="V1_1"
@@ -123,6 +124,9 @@ bootstrap_manager() {
 
   ensure_config "grafana_dashboards__${GRAFANA_DASHBOARDS_VERSION}" \
     "$ROOT_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
+
+  ensure_config "xray_config__${XRAY_CONFIG_VERSION}"\
+    "$ROOT_DIR/vpn/xray/config.json"
 
   # fallback page for vpn domain (recommended)
   if [[ -f "$ROOT_DIR/vpn/nginx/index.html" ]]; then
