@@ -75,10 +75,11 @@ bootstrap_manager() {
   GRAFANA_DATASOURCES_VERSION="V1_0"
   GRAFANA_DASHBOARDS_VERSION="V1_0"
   XRAY_CONFIG_VERSION="V1_7"
+  FALLBACK_NGINX_CONFIG="V1_0"
 
   # Optional: fallback index config (to make domain look real)
   VPN_FALLBACK_INDEX_VERSION="V1_1"
-
+  VPN_FALLBACK_NGINX_CONFIG_VERSION="V1_1"
   # -------------------------
   # NETWORKS
   # -------------------------
@@ -160,11 +161,19 @@ bootstrap_manager() {
     warn "vpn/nginx/index.html not found; skipping vpn_fallback_index docker config"
   fi
 
+  # fallback nginx.conf (CRITICAL)
+  if [[ -f "$ROOT_DIR/vpn/nginx/nginx.conf" ]]; then
+    ensure_config "vpn_fallback_nginx_conf__${VPN_FALLBACK_NGINX_CONFIG_VERSION}" \
+      "$ROOT_DIR/vpn/nginx/nginx.conf"
+  else
+    die "vpn/nginx/nginx.conf not found (required for fallback)"
+  fi
+
   # -------------------------
   # SUMMARY
   # -------------------------
   log "[4/4] Active docker configs:"
-  docker config ls | grep -E 'prometheus_config__|grafana_|vpn_fallback_index__|xray_config__' || true
+  docker config ls | grep -E 'prometheus_config__|grafana_|vpn_fallback_(index|nginx)_|xray_config__' || true
 
   log "✅ Manager bootstrap completed successfully"
 }
