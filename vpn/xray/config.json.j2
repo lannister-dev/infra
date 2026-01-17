@@ -1,67 +1,33 @@
 {
   "log": {
-    "loglevel": "warning",
-    "access": "/var/log/xray/access.log",
-    "error": "/var/log/xray/error.log"
-  },
-
-  "api": {
-    "tag": "api",
-    "services": ["StatsService"]
-  },
-
-  "stats": {},
-
-  "policy": {
-    "levels": {
-      "0": {
-        "statsUserUplink": true,
-        "statsUserDownlink": true
-      }
-    },
-    "system": {
-      "statsInboundUplink": true,
-      "statsInboundDownlink": true,
-      "statsOutboundUplink": true,
-      "statsOutboundDownlink": true
-    }
+    "loglevel": "warning"
   },
 
   "inbounds": [
     {
       "listen": "0.0.0.0",
-      "port": ${VPN_XRAY_PORT},
+      "port": 10000,
       "protocol": "vless",
-      "tag": "vless-cdn",
+      "tag": "vless-ws",
       "settings": {
-        "clients": ${VPN_CLIENTS_JSON},
+        "clients": [
+          {
+            "id": "3aee40fd-27d5-417b-9cea-d2b5e1d07a11",
+            "level": 0,
+            "email": "infra@vpn"
+          }
+        ],
         "decryption": "none"
       },
-
       "streamSettings": {
-        "security": "none",
-        "network": "xhttp",
-
-        "xhttpSettings": {
-          "path": "${VPN_WS_PATH}",
-          "mode": "auto"
+        "network": "ws",
+        "wsSettings": {
+          "path": "/api/v1/stream"
         }
       },
-
       "sniffing": {
         "enabled": true,
-        "destOverride": ["http", "tls", "quic"],
-        "metadataOnly": false
-      }
-    },
-
-    {
-      "listen": "127.0.0.1",
-      "port": 10001,
-      "protocol": "dokodemo-door",
-      "tag": "api-in",
-      "settings": {
-        "address": "127.0.0.1"
+        "destOverride": ["http", "tls", "quic"]
       }
     }
   ],
@@ -69,40 +35,9 @@
   "outbounds": [
     {
       "protocol": "freedom",
-      "tag": "direct",
       "settings": {
         "domainStrategy": "UseIPv4"
       }
-    },
-    {
-      "protocol": "blackhole",
-      "tag": "block"
     }
-  ],
-
-  "routing": {
-    "domainStrategy": "IPIfNonMatch",
-    "rules": [
-      {
-        "type": "field",
-        "inboundTag": ["api-in"],
-        "outboundTag": "api"
-      },
-      {
-        "type": "field",
-        "ip": ["geoip:private"],
-        "outboundTag": "block"
-      },
-      {
-        "type": "field",
-        "protocol": ["bittorrent"],
-        "outboundTag": "block"
-      },
-      {
-        "type": "field",
-        "domain": ["geosite:category-ads-all"],
-        "outboundTag": "block"
-      }
-    ]
-  }
+  ]
 }
