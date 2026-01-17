@@ -161,11 +161,11 @@ bootstrap_manager() {
   fi
 
   # fallback nginx.conf (CRITICAL)
-  if [[ -f "$ROOT_DIR/vpn/nginx/nginx.conf" ]]; then
+  if [[ -f "$ROOT_DIR/vpn/nginx/server.conf" ]]; then
     ensure_config "vpn_fallback_nginx_conf__${VPN_FALLBACK_NGINX_CONFIG_VERSION}" \
-      "$ROOT_DIR/vpn/nginx/nginx.conf"
+      "$ROOT_DIR/vpn/nginx/server.conf"
   else
-    die "vpn/nginx/nginx.conf not found (required for fallback)"
+    die "vpn/nginx/server.conf not found (required for fallback)"
   fi
 
   # -------------------------
