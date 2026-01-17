@@ -75,11 +75,10 @@ bootstrap_manager() {
   GRAFANA_DATASOURCES_VERSION="V1_0"
   GRAFANA_DASHBOARDS_VERSION="V1_0"
   XRAY_CONFIG_VERSION="V1_7"
-  FALLBACK_NGINX_CONFIG="V1_0"
 
   # Optional: fallback index config (to make domain look real)
   VPN_FALLBACK_INDEX_VERSION="V1_1"
-  VPN_FALLBACK_NGINX_CONFIG_VERSION="V1_1"
+  VPN_FALLBACK_NGINX_CONFIG_VERSION="V1_0"
   # -------------------------
   # NETWORKS
   # -------------------------
