@@ -120,11 +120,19 @@ check_manager() {
   log "Root HTTP status: ${code_root} (ok)"
 
   # ws path routing: should not be 404/000 at edge
-  log "Checking VPN edge (Host-only routing, XHTTP expected)"
-  code_root="$(curl -sS -o /dev/null -w '%{http_code}' "https://${vpn_domain}/" || true)"
-  [[ "${code_root}" != "000" ]] \
-    || die "VPN domain not reachable at edge"
-  log "VPN edge reachable (HTTP ${code_root})"
+  log "Checking WS route (expect NOT 404): https://${vpn_domain}${ws_path}"
+  local code_ws
+  code_ws="$(curl -sS -o /dev/null -w '%{http_code}' \
+    -H 'Connection: Upgrade' \
+    -H 'Upgrade: websocket' \
+    -H 'Sec-WebSocket-Version: 13' \
+    -H 'Sec-WebSocket-Key: SGVsbG9Xb3JsZA==' \
+    "https://${vpn_domain}${ws_path}" || true)"
+
+  if [[ "${code_ws}" == "404" || "${code_ws}" == "000" ]]; then
+    die "WS route check failed: status=${code_ws}. Traefik/CF not routing ${ws_path}"
+  fi
+  log "WS route HTTP status: ${code_ws} (ok if not 404)"
 
   # optional: upstream reachability over WG
   local upstream_ip="${VPN_UPSTREAM_WG_IP:-}"
