@@ -78,7 +78,7 @@ bootstrap_manager() {
 
   # Optional: fallback index config (to make domain look real)
   VPN_FALLBACK_INDEX_VERSION="V1_1"
-  VPN_FALLBACK_NGINX_CONFIG_VERSION="V1_0"
+  VPN_FALLBACK_NGINX_CONFIG_VERSION="V1_1"
   # -------------------------
   # NETWORKS
   # -------------------------

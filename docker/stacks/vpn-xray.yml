@@ -37,7 +37,7 @@ services:
       - source: vpn_fallback_index__V1_1
         target: /usr/share/nginx/html/index.html
         mode: 0444
-      - source: vpn_fallback_nginx_conf__V1_0
+      - source: vpn_fallback_nginx_conf__V1_1
         target: /etc/nginx/conf.d/default.conf
         mode: 0444
     deploy:
@@ -62,7 +62,7 @@ configs:
     external: true
   vpn_fallback_index__V1_1:
     external: True
-  vpn_fallback_nginx_conf__V1_0:
+  vpn_fallback_nginx_conf__V1_1:
     external: True
 networks:
   traefik_swarm:
