@@ -21,7 +21,7 @@ services:
         - traefik.enable=true
 
         # VPN WebSocket router
-        - traefik.http.routers.vpn.rule=Host(`vpn.lannister-dev.ru`) && Path(`/api/v1/stream`)
+        - traefik.http.routers.vpn.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
         - traefik.http.routers.vpn.entrypoints=websecure
         - traefik.http.routers.vpn.tls=true
         - traefik.http.routers.vpn.priority=100
