@@ -74,7 +74,7 @@ bootstrap_manager() {
   GRAFANA_INI_VERSION="V1_0"
   GRAFANA_DATASOURCES_VERSION="V1_0"
   GRAFANA_DASHBOARDS_VERSION="V1_0"
-  XRAY_CONFIG_VERSION="V1_5"
+  XRAY_CONFIG_VERSION="V1_6"
 
   # Optional: fallback index config (to make domain look real)
   VPN_FALLBACK_INDEX_VERSION="V1_1"
@@ -164,7 +164,7 @@ bootstrap_manager() {
   # SUMMARY
   # -------------------------
   log "[4/4] Active docker configs:"
-  docker config ls | grep -E 'prometheus_config__|grafana_|vpn_fallback_index__' || true
+  docker config ls | grep -E 'prometheus_config__|grafana_|vpn_fallback_index__|xray_config__' || true
 
   log "✅ Manager bootstrap completed successfully"
 }
