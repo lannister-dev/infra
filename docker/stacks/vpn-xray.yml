@@ -6,7 +6,7 @@ services:
     networks:
       - traefik_swarm
     configs:
-      - source: xray_config__V1_8
+      - source: xray_config__V1_9
         target: /etc/xray/config.json
         mode: 0444
     command: ["run", "-config", "/etc/xray/config.json"]
@@ -61,7 +61,7 @@ services:
         - traefik.http.routers.vpn-fallback.service=vpn-fallback
         - traefik.http.services.vpn-fallback.loadbalancer.server.port=80
 configs:
-  xray_config__V1_8:
+  xray_config__V1_9:
     external: true
   vpn_fallback_index__V1_1:
     external: True
