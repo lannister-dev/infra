@@ -20,14 +20,19 @@ services:
       labels:
         - traefik.enable=true
 
-        # VPN WebSocket router
+        # ===== WIFI (WS) =====
         - traefik.http.routers.vpn.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
         - traefik.http.routers.vpn.entrypoints=websecure
         - traefik.http.routers.vpn.tls=true
         - traefik.http.routers.vpn.priority=100
-
-        # Service → Xray
         - traefik.http.services.vpn.loadbalancer.server.port=10000
+
+        # ===== MOBILE (XHTTP) =====
+        - traefik.http.routers.vpn-mobile.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/mobile`)
+        - traefik.http.routers.vpn-mobile.entrypoints=websecure
+        - traefik.http.routers.vpn-mobile.tls=true
+        - traefik.http.routers.vpn-mobile.priority=90
+        - traefik.http.services.vpn-mobile.loadbalancer.server.port=10001
 
   vpn-fallback:
     image: nginx:alpine
