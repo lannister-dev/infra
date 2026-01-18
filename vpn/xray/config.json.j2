@@ -5,24 +5,45 @@
 
   "inbounds": [
     {
+      "tag": "vless-ws",
       "listen": "0.0.0.0",
       "port": 10000,
       "protocol": "vless",
-      "tag": "vless-ws",
       "settings": {
-        "clients": [
-          {
-            "id": "3aee40fd-27d5-417b-9cea-d2b5e1d07a11",
-            "level": 0,
-            "email": "infra@vpn"
-          }
-        ],
+        "clients": ${VPN_CLIENTS_JSON},
         "decryption": "none"
       },
       "streamSettings": {
         "network": "ws",
+        "security": "none",
         "wsSettings": {
-          "path": "/api/v1/stream"
+          "path": "${VPN_WS_PATH}",
+          "headers": {
+            "Host": "${VPN_DOMAIN}"
+          }
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
+    },
+
+    {
+      "tag": "vless-xhttp",
+      "listen": "0.0.0.0",
+      "port": 10001,
+      "protocol": "vless",
+      "settings": {
+        "clients": ${VPN_CLIENTS_JSON},
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "xhttp",
+        "security": "none",
+        "xhttpSettings": {
+          "path": "${VPN_XHTTP_PATH}",
+          "mode": "auto"
         }
       },
       "sniffing": {

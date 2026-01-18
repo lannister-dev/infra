@@ -23,13 +23,18 @@ else
 fi
 
 INFRA_ROLE="${INFRA_ROLE:-infra}"   # infra|manager|vpn|app
-# infra is alias for manager
 if [[ "${INFRA_ROLE}" == "infra" ]]; then
   INFRA_ROLE="manager"
 fi
 
 log "Repo: ${ROOT_DIR}"
 log "Role: ${INFRA_ROLE}"
+
+# -------------------------
+# Runtime state locations (NOT in Git)
+# -------------------------
+VPN_STATE_DIR="${VPN_STATE_DIR:-/var/lib/vpn}"
+VPN_CLIENTS_FILE="${VPN_CLIENTS_FILE:-${VPN_STATE_DIR}/clients.json}"
 
 # -------------------------
 # ensure executable perms FIRST (kills 'Permission denied')
@@ -42,6 +47,25 @@ chmod +x \
   "${ROOT_DIR}/wireguard/apply.sh" \
   "${ROOT_DIR}/wireguard/manager/wireguard-manager.sh" \
   2>/dev/null || true
+
+# -------------------------
+# helpers
+# -------------------------
+ensure_runtime_clients_file() {
+  mkdir -p "${VPN_STATE_DIR}"
+  chmod 700 "${VPN_STATE_DIR}" || true
+
+  if [[ -f "${VPN_CLIENTS_FILE}" ]]; then
+    jq . "${VPN_CLIENTS_FILE}" >/dev/null 2>&1 || die "Invalid JSON in ${VPN_CLIENTS_FILE}"
+    return 0
+  fi
+
+  warn "Runtime clients file not found: ${VPN_CLIENTS_FILE}"
+  warn "Creating empty clients.json (you can add clients later via scripts/clients.sh)"
+  echo "[]" > "${VPN_CLIENTS_FILE}"
+  chmod 600 "${VPN_CLIENTS_FILE}" || true
+  jq . "${VPN_CLIENTS_FILE}" >/dev/null 2>&1 || die "Failed to create valid ${VPN_CLIENTS_FILE}"
+}
 
 # -------------------------
 # role: manager (Swarm bootstrap + configs)
@@ -63,33 +87,36 @@ bootstrap_manager() {
   apt-get update -y
   apt-get install -y \
     ca-certificates curl jq unzip zip \
-    wireguard wireguard-tools iproute2 iptables qrencode
+    wireguard wireguard-tools iproute2 iptables qrencode gettext-base
 
   echo "=== Docker Swarm bootstrap (configs-first) ==="
 
   # -------------------------
   # CONFIG VERSIONS (SOURCE OF TRUTH)
   # -------------------------
-  PROMETHEUS_CONFIG_VERSION="V1_0"
-  GRAFANA_INI_VERSION="V1_0"
-  GRAFANA_DATASOURCES_VERSION="V1_0"
-  GRAFANA_DASHBOARDS_VERSION="V1_0"
-  XRAY_CONFIG_VERSION="V1_7"
+  PROMETHEUS_CONFIG_VERSION="${PROMETHEUS_CONFIG_VERSION:-V1_0}"
+  GRAFANA_INI_VERSION="${GRAFANA_INI_VERSION:-V1_0}"
+  GRAFANA_DATASOURCES_VERSION="${GRAFANA_DATASOURCES_VERSION:-V1_0}"
+  GRAFANA_DASHBOARDS_VERSION="${GRAFANA_DASHBOARDS_VERSION:-V1_0}"
 
-  # Optional: fallback index config (to make domain look real)
-  VPN_FALLBACK_INDEX_VERSION="V1_1"
-  VPN_FALLBACK_NGINX_CONFIG_VERSION="V1_1"
+  # XRAY CONFIG VERSION: bump this when you WANT to create a new Swarm config
+  XRAY_CONFIG_VERSION="${XRAY_CONFIG_VERSION:-V1_7}"
+
+  # Fallback assets
+  VPN_FALLBACK_INDEX_VERSION="${VPN_FALLBACK_INDEX_VERSION:-V1_1}"
+  VPN_FALLBACK_NGINX_CONFIG_VERSION="${VPN_FALLBACK_NGINX_CONFIG_VERSION:-V1_1}"
+
   # -------------------------
   # NETWORKS
   # -------------------------
-  log "[1/4] Ensuring traefik_swarm network"
+  log "[1/5] Ensuring traefik_swarm network"
   docker network inspect traefik_swarm >/dev/null 2>&1 || \
     docker network create --driver overlay --attachable traefik_swarm >/dev/null
 
   # -------------------------
   # VOLUMES
   # -------------------------
-  log "[2/4] Ensuring volumes"
+  log "[2/5] Ensuring volumes"
   for v in traefik_acme prometheus_data grafana_data; do
     docker volume inspect "$v" >/dev/null 2>&1 || docker volume create "$v" >/dev/null
   done
@@ -97,7 +124,7 @@ bootstrap_manager() {
   # -------------------------
   # DOCKER CONFIGS (IMMUTABLE)
   # -------------------------
-  log "[3/4] Ensuring docker configs (versioned)"
+  log "[3/5] Ensuring docker configs (versioned)"
 
   ensure_config() {
     local name="$1"
@@ -126,22 +153,20 @@ bootstrap_manager() {
     "$ROOT_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
 
   # -------------------------
-  # XRAY CONFIG RENDER (FROM J2)
+  # XRAY CONFIG RENDER (FROM J2) USING RUNTIME CLIENTS FILE
   # -------------------------
-  log "Rendering Xray config from template"
+  log "[4/5] Rendering Xray config from template (clients from ${VPN_CLIENTS_FILE})"
+
+  ensure_runtime_clients_file
 
   XRAY_RENDER_DIR="/tmp/xray"
   XRAY_RENDERED_CONFIG="${XRAY_RENDER_DIR}/config.json"
-
   mkdir -p "${XRAY_RENDER_DIR}"
 
   [[ -f "$ROOT_DIR/vpn/xray/config.json.j2" ]] \
     || die "Xray template not found: vpn/xray/config.json.j2"
 
-  [[ -f "$ROOT_DIR/vpn/xray/clients.json" ]] \
-    || die "Xray clients file not found: vpn/xray/clients.json"
-
-  VPN_CLIENTS_JSON="$(jq -c . "$ROOT_DIR/vpn/xray/clients.json")"
+  VPN_CLIENTS_JSON="$(jq -c . "${VPN_CLIENTS_FILE}")"
   export VPN_CLIENTS_JSON
 
   envsubst < "$ROOT_DIR/vpn/xray/config.json.j2" > "${XRAY_RENDERED_CONFIG}"
@@ -152,7 +177,9 @@ bootstrap_manager() {
   ensure_config "xray_config__${XRAY_CONFIG_VERSION}" \
     "${XRAY_RENDERED_CONFIG}"
 
-  # fallback page for vpn domain (recommended)
+  # -------------------------
+  # VPN fallback assets
+  # -------------------------
   if [[ -f "$ROOT_DIR/vpn/nginx/index.html" ]]; then
     ensure_config "vpn_fallback_index__${VPN_FALLBACK_INDEX_VERSION}" \
       "$ROOT_DIR/vpn/nginx/index.html"
@@ -160,7 +187,6 @@ bootstrap_manager() {
     warn "vpn/nginx/index.html not found; skipping vpn_fallback_index docker config"
   fi
 
-  # fallback nginx.conf (CRITICAL)
   if [[ -f "$ROOT_DIR/vpn/nginx/server.conf" ]]; then
     ensure_config "vpn_fallback_nginx_conf__${VPN_FALLBACK_NGINX_CONFIG_VERSION}" \
       "$ROOT_DIR/vpn/nginx/server.conf"
@@ -171,9 +197,10 @@ bootstrap_manager() {
   # -------------------------
   # SUMMARY
   # -------------------------
-  log "[4/4] Active docker configs:"
-  docker config ls | grep -E 'prometheus_config__|grafana_|vpn_fallback_(index|nginx)_|xray_config__' || true
+  log "[5/5] Active docker configs:"
+  docker config ls | grep -E 'prometheus_config__|grafana_|vpn_fallback_(index|nginx)_conf__|xray_config__' || true
 
+  log "Runtime clients file: ${VPN_CLIENTS_FILE}"
   log "✅ Manager bootstrap completed successfully"
 }
 
@@ -183,7 +210,6 @@ bootstrap_manager() {
 bootstrap_vpn() {
   log "VPN bootstrap: WireGuard + Xray (Hysteria deferred)"
 
-  # WireGuard apply.sh may install packages itself; keep it explicit here
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -y
   apt-get install -y ca-certificates curl jq wireguard wireguard-tools iproute2 iptables
