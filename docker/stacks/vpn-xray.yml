@@ -24,14 +24,14 @@ services:
         - traefik.http.routers.vpn-ws.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
         - traefik.http.routers.vpn-ws.entrypoints=websecure
         - traefik.http.routers.vpn-ws.tls=true
-        - traefik.http.routers.vpn-ws.priority=300
+        - traefik.http.routers.vpn-ws.priority=500
         - traefik.http.services.vpn-ws.loadbalancer.server.port=10000
 
         # ================= XHTTP (Mobile) ==============
         - traefik.http.routers.vpn-xhttp.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/mobile`)
         - traefik.http.routers.vpn-xhttp.entrypoints=websecure
         - traefik.http.routers.vpn-xhttp.tls=true
-        - traefik.http.routers.vpn-xhttp.priority=290
+        - traefik.http.routers.vpn-xhttp.priority=490
         - traefik.http.services.vpn-xhttp.loadbalancer.server.port=10001
 
   vpn-fallback:
@@ -54,7 +54,7 @@ services:
         condition: on-failure
       labels:
         - traefik.enable=true
-        - traefik.http.routers.vpn-fallback.rule=Host(`vpn.lannister-dev.ru`)
+        - traefik.http.routers.vpn-fallback.rule=Host(`vpn.lannister-dev.ru`) && !PathPrefix(`/api/v1/`)
         - traefik.http.routers.vpn-fallback.entrypoints=websecure
         - traefik.http.routers.vpn-fallback.tls=true
         - traefik.http.routers.vpn-fallback.priority=1
