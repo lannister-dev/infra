@@ -20,19 +20,19 @@ services:
       labels:
         - traefik.enable=true
 
-        # ===== WIFI (WS) =====
-        - traefik.http.routers.vpn.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
-        - traefik.http.routers.vpn.entrypoints=websecure
-        - traefik.http.routers.vpn.tls=true
-        - traefik.http.routers.vpn.priority=100
-        - traefik.http.services.vpn.loadbalancer.server.port=10000
+        # WS (wifi)
+        - traefik.http.routers.vpn-ws.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
+        - traefik.http.routers.vpn-ws.entrypoints=websecure
+        - traefik.http.routers.vpn-ws.tls=true
+        - traefik.http.routers.vpn-ws.priority=200
+        - traefik.http.services.vpn-ws.loadbalancer.server.port=10000
 
-        # ===== MOBILE (XHTTP) =====
-        - traefik.http.routers.vpn-mobile.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/mobile`)
-        - traefik.http.routers.vpn-mobile.entrypoints=websecure
-        - traefik.http.routers.vpn-mobile.tls=true
-        - traefik.http.routers.vpn-mobile.priority=90
-        - traefik.http.services.vpn-mobile.loadbalancer.server.port=10001
+        # XHTTP (mobile)
+        - traefik.http.routers.vpn-xhttp.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/mobile`)
+        - traefik.http.routers.vpn-xhttp.entrypoints=websecure
+        - traefik.http.routers.vpn-xhttp.tls=true
+        - traefik.http.routers.vpn-xhttp.priority=190
+        - traefik.http.services.vpn-xhttp.loadbalancer.server.port=10001
 
   vpn-fallback:
     image: nginx:alpine
@@ -54,13 +54,10 @@ services:
         condition: on-failure
       labels:
         - traefik.enable=true
-
-        # ===== FALLBACK ROUTER =====
-        - traefik.http.routers.vpn-fallback.rule=Host(`vpn.lannister-dev.ru`)
+        - traefik.http.routers.vpn-fallback.rule=Host(`vpn.lannister-dev.ru`) && !PathPrefix(`/api/v1/`)
         - traefik.http.routers.vpn-fallback.entrypoints=websecure
         - traefik.http.routers.vpn-fallback.tls=true
         - traefik.http.routers.vpn-fallback.priority=1
-
         - traefik.http.services.vpn-fallback.loadbalancer.server.port=80
 configs:
   xray_config__V1_8:
