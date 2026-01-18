@@ -19,7 +19,7 @@ services:
         - traefik.enable=true
 
         # ===== WS (wifi) =====
-        - traefik.http.routers.vpn-ws.rule=Host(`vpn.lannister-dev.ru`) && Path(`/api/v1/stream`)
+        - traefik.http.routers.vpn-ws.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
         - traefik.http.routers.vpn-ws.entrypoints=websecure
         - traefik.http.routers.vpn-ws.tls=true
         - traefik.http.routers.vpn-ws.priority=200
@@ -27,7 +27,7 @@ services:
         - traefik.http.services.vpn-ws.loadbalancer.server.port=10000
 
         # ===== XHTTP (mobile) =====
-        - traefik.http.routers.vpn-xhttp.rule=Host(`vpn.lannister-dev.ru`) && Path(`/api/v1/mobile`)
+        - traefik.http.routers.vpn-xhttp.rule=Host(`vpn.lannister-dev.ru`) && PathPrefix(`/api/v1/mobile`)
         - traefik.http.routers.vpn-xhttp.entrypoints=websecure
         - traefik.http.routers.vpn-xhttp.tls=true
         - traefik.http.routers.vpn-xhttp.priority=190
