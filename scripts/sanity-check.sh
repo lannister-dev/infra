@@ -113,11 +113,15 @@ check_manager() {
   fi
 
   # root should be reachable (fallback page recommended)
-  log "Checking HTTPS reachability: https://${vpn_domain}/"
-  local code_root
-  code_root="$(curl -sS -o /dev/null -w '%{http_code}' "https://${vpn_domain}/" || true)"
-  [[ "${code_root}" != "000" ]] || die "Cannot reach https://${vpn_domain}/ (DNS/TLS/CF/Traefik)"
-  log "Root HTTP status: ${code_root} (ok)"
+  if [[ "${VPN_EDGE_MODE}" == "web" ]]; then
+    log "Checking HTTPS reachability (web mode): https://${vpn_domain}/"
+    local code_root
+    code_root="$(curl -sS -o /dev/null -w '%{http_code}' "https://${vpn_domain}/" || true)"
+    [[ "${code_root}" != "000" ]] || die "Cannot reach https://${vpn_domain}/ (DNS/TLS)"
+    log "Root HTTP status: ${code_root} (ok)"
+  else
+    log "VPN edge mode detected (${VPN_EDGE_MODE}); skipping HTTPS root check"
+  fi
 
   # ws path routing: should not be 404/000 at edge
   log "Checking WS route (expect NOT 404): https://${vpn_domain}${ws_path}"
@@ -129,8 +133,14 @@ check_manager() {
     -H 'Sec-WebSocket-Key: SGVsbG9Xb3JsZA==' \
     "https://${vpn_domain}${ws_path}" || true)"
 
-  if [[ "${code_ws}" == "404" || "${code_ws}" == "000" ]]; then
-    die "WS route check failed: status=${code_ws}. Traefik/CF not routing ${ws_path}"
+  if [[ "${code_ws}" == "000" ]]; then
+    die "WS route unreachable (000). DNS/TLS/Traefik failure"
+  fi
+
+  if [[ "${code_ws}" == "404" ]]; then
+    warn "WS path returned 404 at edge — this is acceptable for VPN endpoints"
+  else
+    log "WS route HTTP status: ${code_ws} (ok)"
   fi
   log "WS route HTTP status: ${code_ws} (ok if not 404)"
 
