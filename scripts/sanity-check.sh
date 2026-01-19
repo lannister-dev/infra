@@ -24,6 +24,8 @@ else
   warn ".env not found at ${ENV_FILE} (some checks will be skipped)"
 fi
 
+VPN_EDGE_MODE="${VPN_EDGE_MODE:-vpn}"
+
 # -------------------------
 # args
 # -------------------------
