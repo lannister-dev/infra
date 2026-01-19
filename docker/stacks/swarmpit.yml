@@ -22,6 +22,7 @@ services:
         - "traefik.http.routers.swarmpit.rule=Host(`swarmpit.lannister-dev.ru`)"
         - "traefik.http.routers.swarmpit.entrypoints=websecure"
         - "traefik.http.routers.swarmpit.tls=true"
+        - "traefik.http.routers.vpn-xhttp.tls.certresolver=cf"
         - "traefik.http.services.swarmpit.loadbalancer.server.port=8080"
       resources:
         limits:
