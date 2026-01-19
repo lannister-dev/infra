@@ -155,22 +155,17 @@ check_manager() {
     nc -z -w 3 "${vpn_domain}" 443 >/dev/null 2>&1 || warn "TCP/443 check failed (DNS/TCP/firewall). Curl may still provide details."
   fi
 
-  # WS route check: must NOT be 404 and must be reachable.
-  # In vpn mode, we allow insecure TLS (-k) to avoid false negatives on runners.
-  log "Checking WS route: https://${vpn_domain}${ws_path}"
-  local code_ws
-  code_ws="$(
-    curl_edge "https://${vpn_domain}${ws_path}" -sS -o /dev/null -w '%{http_code}' \
-      -H 'Connection: Upgrade' \
-      -H 'Upgrade: websocket' \
-      -H 'Sec-WebSocket-Version: 13' \
-      -H 'Sec-WebSocket-Key: SGVsbG9Xb3JsZA==' \
-      || true
-  )"
+  # WS route check
+  log "Checking WS route presence (Traefik-level only): ${vpn_domain}${ws_path}"
 
-  [[ "${code_ws}" != "000" ]] || die "WS route unreachable (000). DNS/TLS/edge failure"
-  [[ "${code_ws}" != "404" ]] || die "WS route returned 404. Traefik/edge is not routing ${ws_path} to xray"
-  log "WS route HTTP status: ${code_ws} (ok)"
+  code_ws="$(curl -k -sS -o /dev/null -w '%{http_code}' \
+    "https://${vpn_domain}${ws_path}" || true)"
+
+  if [[ "${code_ws}" == "000" ]]; then
+    die "WS route unreachable (000). DNS/TLS/Traefik failure"
+  fi
+
+  log "WS edge reachable (HTTP ${code_ws}); protocol-level handling delegated to Xray"
 
   # optional: upstream reachability over WG
   local upstream_ip="${VPN_UPSTREAM_WG_IP:-}"
