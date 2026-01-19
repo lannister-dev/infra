@@ -24,14 +24,12 @@ else
   warn ".env not found at ${ENV_FILE} (some checks will be skipped)"
 fi
 
-VPN_EDGE_MODE="${VPN_EDGE_MODE:-vpn}"
-
 # -------------------------
 # args
 # -------------------------
 ROLE="${INFRA_ROLE:-auto}"   # manager|vpn|app|auto
 STRICT="${STRICT:-1}"        # 1 => fail if critical vars missing
-VERBOSE="${VERBOSE:-0}"
+VERBOSE="${VERBOSE:-0}"      # 1 => extra logs
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -44,16 +42,32 @@ while [[ $# -gt 0 ]]; do
 done
 
 # -------------------------
+# edge mode: vpn|web
+# vpn: allow insecure TLS for edge checks (VPN endpoint may use any cert chain / CF state)
+# web: strict TLS checks (regular website semantics)
+# -------------------------
+VPN_EDGE_MODE="${VPN_EDGE_MODE:-vpn}"
+case "${VPN_EDGE_MODE}" in
+  vpn|web) : ;;
+  *)
+    warn "Invalid VPN_EDGE_MODE='${VPN_EDGE_MODE}', falling back to 'vpn'"
+    VPN_EDGE_MODE="vpn"
+    ;;
+esac
+
+if [[ "${VERBOSE}" == "1" ]]; then
+  log "Config: ROLE=${ROLE}, STRICT=${STRICT}, VPN_EDGE_MODE=${VPN_EDGE_MODE}"
+fi
+
+# -------------------------
 # detect role (best-effort)
 # -------------------------
 detect_role() {
-  # honor explicit role
   if [[ "${ROLE}" != "auto" ]]; then
     echo "${ROLE}"
     return
   fi
 
-  # manager if docker swarm control available
   if command -v docker >/dev/null 2>&1; then
     if docker info --format '{{.Swarm.ControlAvailable}}' 2>/dev/null | grep -q true; then
       echo "manager"
@@ -61,7 +75,6 @@ detect_role() {
     fi
   fi
 
-  # vpn if xray service exists
   if command -v systemctl >/dev/null 2>&1; then
     if systemctl list-unit-files 2>/dev/null | awk '{print $1}' | grep -q '^xray\.service$'; then
       echo "vpn"
@@ -70,6 +83,20 @@ detect_role() {
   fi
 
   echo "app"
+}
+
+# -------------------------
+# helper: curl wrapper for edge mode
+# -------------------------
+curl_edge() {
+  # usage: curl_edge <url> [extra curl args...]
+  local url="$1"; shift || true
+  if [[ "${VPN_EDGE_MODE}" == "vpn" ]]; then
+    # VPN edge: do not fail due to CA chain issues on runners; prefer WS compatibility
+    curl -k --http1.1 "$url" "$@"
+  else
+    curl "$url" "$@"
+  fi
 }
 
 # -------------------------
@@ -88,11 +115,9 @@ check_manager() {
   docker info --format '{{.Swarm.ControlAvailable}}' | grep -q true \
     || die "This node is not a Swarm manager (ControlAvailable=false)"
 
-  # overlay network
   docker network inspect traefik_swarm >/dev/null 2>&1 \
     || die "Overlay network traefik_swarm not found (run bootstrap on manager)"
 
-  # stacks presence
   local stacks
   stacks="$(docker stack ls --format '{{.Name}}' | tr '\n' ' ')"
   [[ "${stacks}" == *"traefik"* ]] || die "Stack 'traefik' not found"
@@ -100,51 +125,52 @@ check_manager() {
   [[ "${stacks}" == *"swarmpit"* ]] || warn "Stack 'swarmpit' not found"
   [[ "${stacks}" == *"vpn"* ]] || warn "Stack 'vpn' not found (vpn-xray.yml not deployed?)"
 
-  # traefik service exists
   docker service ls --format '{{.Name}} {{.Replicas}}' | grep -q '^traefik_traefik ' \
     || die "Service traefik_traefik not found (stack deploy failed?)"
 
-  # domain checks (soft if missing)
   local vpn_domain="${VPN_DOMAIN:-}"
   local ws_path="${VPN_WS_PATH:-/api/v1/stream}"
 
   if [[ -z "${vpn_domain}" ]]; then
-    warn "VPN_DOMAIN is empty; skipping HTTPS checks on manager node"
+    warn "VPN_DOMAIN is empty; skipping edge HTTPS checks"
     [[ "${STRICT}" == "1" ]] && die "Set VPN_DOMAIN in .env for full verification"
     return
   fi
 
-  # root should be reachable (fallback page recommended)
+  # In web mode, root check is meaningful; in vpn mode it is not.
   if [[ "${VPN_EDGE_MODE}" == "web" ]]; then
     log "Checking HTTPS reachability (web mode): https://${vpn_domain}/"
     local code_root
     code_root="$(curl -sS -o /dev/null -w '%{http_code}' "https://${vpn_domain}/" || true)"
-    [[ "${code_root}" != "000" ]] || die "Cannot reach https://${vpn_domain}/ (DNS/TLS)"
-    log "Root HTTP status: ${code_root} (ok)"
+    [[ "${code_root}" != "000" ]] || die "Cannot reach https://${vpn_domain}/ (DNS/TLS/edge)"
+    log "Root HTTP status: ${code_root}"
   else
-    log "VPN edge mode detected (${VPN_EDGE_MODE}); skipping HTTPS root check"
+    log "VPN edge mode: skipping HTTPS root check (not a web endpoint)"
   fi
 
-  # ws path routing: should not be 404/000 at edge
-  log "Checking WS route (expect NOT 404): https://${vpn_domain}${ws_path}"
+  # Quick TCP check: separates DNS/TCP failure from TLS/Traefik
+  # (Runs only if curl can resolve; still useful as a fast fail)
+  if command -v nc >/dev/null 2>&1; then
+    log "Checking TCP/443 reachability: ${vpn_domain}:443"
+    nc -z -w 3 "${vpn_domain}" 443 >/dev/null 2>&1 || warn "TCP/443 check failed (DNS/TCP/firewall). Curl may still provide details."
+  fi
+
+  # WS route check: must NOT be 404 and must be reachable.
+  # In vpn mode, we allow insecure TLS (-k) to avoid false negatives on runners.
+  log "Checking WS route: https://${vpn_domain}${ws_path}"
   local code_ws
-  code_ws="$(curl -sS -o /dev/null -w '%{http_code}' \
-    -H 'Connection: Upgrade' \
-    -H 'Upgrade: websocket' \
-    -H 'Sec-WebSocket-Version: 13' \
-    -H 'Sec-WebSocket-Key: SGVsbG9Xb3JsZA==' \
-    "https://${vpn_domain}${ws_path}" || true)"
+  code_ws="$(
+    curl_edge "https://${vpn_domain}${ws_path}" -sS -o /dev/null -w '%{http_code}' \
+      -H 'Connection: Upgrade' \
+      -H 'Upgrade: websocket' \
+      -H 'Sec-WebSocket-Version: 13' \
+      -H 'Sec-WebSocket-Key: SGVsbG9Xb3JsZA==' \
+      || true
+  )"
 
-  if [[ "${code_ws}" == "000" ]]; then
-    die "WS route unreachable (000). DNS/TLS/Traefik failure"
-  fi
-
-  if [[ "${code_ws}" == "404" ]]; then
-    warn "WS path returned 404 at edge — this is acceptable for VPN endpoints"
-  else
-    log "WS route HTTP status: ${code_ws} (ok)"
-  fi
-  log "WS route HTTP status: ${code_ws} (ok if not 404)"
+  [[ "${code_ws}" != "000" ]] || die "WS route unreachable (000). DNS/TLS/edge failure"
+  [[ "${code_ws}" != "404" ]] || die "WS route returned 404. Traefik/edge is not routing ${ws_path} to xray"
+  log "WS route HTTP status: ${code_ws} (ok)"
 
   # optional: upstream reachability over WG
   local upstream_ip="${VPN_UPSTREAM_WG_IP:-}"
@@ -170,14 +196,11 @@ check_vpn() {
   need_cmd ss
   need_cmd jq
 
-  # xray active
   systemctl is-active --quiet xray || die "xray service is not active"
 
-  # config path contract: /etc/xray/config.json
   [[ -f /etc/xray/config.json ]] || die "/etc/xray/config.json not found (run vpn/install.sh)"
   jq . /etc/xray/config.json >/dev/null || die "/etc/xray/config.json is not valid JSON"
 
-  # listen check
   local port="${VPN_XRAY_PORT:-10000}"
   local bind_ip="${VPN_WG_BIND_IP:-}"
   log "Checking xray listen on port=${port} (bind_ip=${bind_ip:-any})"
@@ -190,7 +213,6 @@ check_vpn() {
       || die "xray is not listening on port ${port}"
   fi
 
-  # wireguard best-effort
   if command -v wg >/dev/null 2>&1; then
     wg show >/dev/null 2>&1 || warn "wg show failed; WireGuard may be down"
   else
@@ -207,7 +229,6 @@ main() {
   local detected
   detected="$(detect_role)"
 
-  # infra alias
   if [[ "${detected}" == "infra" ]]; then
     detected="manager"
   fi
