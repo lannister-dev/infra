@@ -31,7 +31,7 @@ services:
         - traefik.http.routers.vpn-xhttp.rule=Host(`tech.lannister-dev.ru`) && PathPrefix(`/api/v1/mobile`)
         - traefik.http.routers.vpn-xhttp.entrypoints=websecure
         - traefik.http.routers.vpn-xhttp.tls=true
-        - traefik.http.routers.vpn-ws.tls.certresolver=cf
+        - traefik.http.routers.vpn-xhttp.tls.certresolver=cf
         - traefik.http.routers.vpn-xhttp.priority=190
         - traefik.http.routers.vpn-xhttp.service=vpn-xhttp
         - traefik.http.services.vpn-xhttp.loadbalancer.server.port=10001
@@ -59,7 +59,7 @@ services:
         - traefik.http.routers.vpn-fallback.rule=Host(`tech.lannister-dev.ru`)
         - traefik.http.routers.vpn-fallback.entrypoints=websecure
         - traefik.http.routers.vpn-fallback.tls=true
-        - traefik.http.routers.vpn-ws.tls.certresolver=cf
+        - traefik.http.routers.vpn-fallback.tls.certresolver=cf
         - traefik.http.routers.vpn-fallback.priority=1
         - traefik.http.routers.vpn-fallback.service=vpn-fallback
         - traefik.http.services.vpn-fallback.loadbalancer.server.port=80
