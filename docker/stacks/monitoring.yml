@@ -34,7 +34,7 @@ services:
       - prometheus_data:/prometheus
       - /var/run/docker.sock:/var/run/docker.sock:ro
     configs:
-      - source: prometheus_config__V1_2
+      - source: prometheus_config__V1_3
         target: /etc/prometheus/prometheus.yml
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:9090/-/healthy" ]
@@ -134,7 +134,7 @@ volumes:
   grafana_data:
 
 configs:
-  prometheus_config__V1_2:
+  prometheus_config__V1_3:
     external: true
   grafana_ini__V1_0:
     external: true
