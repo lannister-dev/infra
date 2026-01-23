@@ -17,10 +17,12 @@ scrape_configs:
         regex: "true"
         action: keep
 
-      - source_labels: [__meta_dockerswarm_service_label_prometheus_srape_profile]
+      - source_labels: [__meta_dockerswarm_service_label_prometheus_scrape_profile]
         regex: important
         action: keep
 
-      - source_labels: [__meta_dockerswarm_service_label_prometheus_metrics_port]
+      - source_labels:
+          - __meta_dockerswarm_task_address
+          - __meta_dockerswarm_service_label_prometheus_metrics_port
+        separator: ':'
         target_label: __address__
-        replacement: "$1"
