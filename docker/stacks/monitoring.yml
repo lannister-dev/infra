@@ -134,11 +134,11 @@ volumes:
   grafana_data:
 
 configs:
-  prometheus_config__V1_0:
+  prometheus_config__V1_1:
     external: true
   grafana_ini__V1_0:
     external: true
-  grafana_datasources__V1_0:
+  grafana_datasources__V1_1:
     external: true
   grafana_dashboards__V1_0:
     external: true
