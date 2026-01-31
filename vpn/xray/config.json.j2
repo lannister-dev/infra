@@ -71,28 +71,7 @@
     }
   ],
 
-  "routing": {
-    "domainStrategy": "AsIs",
-    "rules": [
-      {
-        "type": "field",
-        "inboundTag": ["api"],
-        "outboundTag": "api"
-      },
-      {
-      "type": "field",
-      "inboundTag": ["vless-ws", "vless-xhttp"],
-      "outboundTag": "direct"
-      }
-    ]
-  },
-
   "outbounds": [
-    {
-      "tag": "api",
-      "protocol": "freedom",
-      "settings": {}
-    },
     {
       "tag": "direct",
       "protocol": "freedom",
