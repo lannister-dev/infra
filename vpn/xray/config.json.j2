@@ -1,25 +1,18 @@
 {
-  "log": {
-    "loglevel": "info"
-  },
+  "log": { "loglevel": "info" },
 
   "api": {
-    "services": [
-      "HandlerService",
-      "StatsService"
-    ],
+    "services": ["HandlerService", "StatsService"],
     "tag": "api"
   },
 
   "inbounds": [
     {
       "tag": "api",
-      "listen": "127.0.0.1",
+      "listen": "0.0.0.0",
       "port": 10085,
       "protocol": "dokodemo-door",
-      "settings": {
-        "address": "127.0.0.1"
-      }
+      "settings": { "address": "127.0.0.1" }
     },
 
     {
@@ -36,9 +29,7 @@
         "security": "none",
         "wsSettings": {
           "path": "${VPN_WS_PATH}",
-          "headers": {
-            "Host": "${VPN_DOMAIN}"
-          }
+          "headers": { "Host": "${VPN_DOMAIN}" }
         }
       },
       "sniffing": {
@@ -64,20 +55,24 @@
           "mode": "auto"
         }
       },
-      "sniffing": {
-        "enabled": true,
-        "destOverride": ["http", "tls", "quic"]
-      }
+      "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] }
     }
   ],
 
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": ["api"],
+        "outboundTag": "api"
+      }
+    ]
+  },
+
   "outbounds": [
     {
-      "tag": "direct",
       "protocol": "freedom",
-      "settings": {
-        "domainStrategy": "UseIPv4"
-      }
+      "settings": { "domainStrategy": "UseIPv4" }
     }
   ]
 }
