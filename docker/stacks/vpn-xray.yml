@@ -6,7 +6,7 @@ services:
     networks:
       - traefik_swarm
     configs:
-      - source: xray_config__V2_7
+      - source: xray_config__V2_8
         target: /etc/xray/config.json
         mode: 0444
     command: ["run", "-config", "/etc/xray/config.json"]
