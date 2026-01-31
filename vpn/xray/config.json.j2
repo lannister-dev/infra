@@ -78,6 +78,11 @@
         "type": "field",
         "inboundTag": ["api"],
         "outboundTag": "api"
+      },
+      {
+      "type": "field",
+      "inboundTag": ["vless-ws", "vless-xhttp"],
+      "outboundTag": "direct"
       }
     ]
   },
@@ -89,6 +94,7 @@
       "settings": {}
     },
     {
+      "tag": "direct",
       "protocol": "freedom",
       "settings": {
         "domainStrategy": "UseIPv4"
