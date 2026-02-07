@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy-monitoring:
-    runs-on: [self-hosted, infra]
+    runs-on: [self-hosted, dev]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
