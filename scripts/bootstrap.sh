@@ -114,6 +114,10 @@ bootstrap_manager() {
   docker network inspect traefik_swarm >/dev/null 2>&1 || \
     docker network create --driver overlay --attachable traefik_swarm >/dev/null
 
+  log "[1/5] Ensuring monitoring network"
+  docker network inspect monitoring >/dev/null 2>&1 || \
+    docker network create --driver overlay --attachable monitoring >/dev/null
+
   # -------------------------
   # VOLUMES
   # -------------------------
