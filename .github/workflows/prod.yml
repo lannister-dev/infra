@@ -9,29 +9,32 @@ jobs:
     runs-on: [self-hosted, infra]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Deploy monitoring to Infra server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.MONITORING_HOST }}
-          username: root
-          key: ${{ secrets.MONITORING_SSH_KEY }}
-          script: |
-            set -e  
-            cd /opt/vpn-infra || exit 1
-            
-            git fetch origin
-            git reset --hard origin/main
-            git clean -fd
-            
-            echo "${{ secrets.INFRA_ENV_PROD }}" > .env
-            
-            ./scripts/bootstrap.sh
-            
-            docker stack deploy --with-registry-auth -c docker/stacks/traefik.yml traefik
-            docker stack deploy --with-registry-auth -c docker/stacks/monitoring.yml monitoring
-            docker stack deploy --with-registry-auth -c docker/stacks/swarmpit.yml swarmpit
-            docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray.yml vpn
-            
-            export INFRA_ROLE=manager
-            ./scripts/sanity-check.sh
+        uses: actions/checkout@v4
+      - name: Write infra env
+        run: |
+          echo "${{ secrets.INFRA_ENV_PROD }}" > .env
+      - name: Bootstrap infra (networks, volumes, etc)
+        run: |
+          set -e
+          cd /opt/vpn-infra     
+          git fetch origin
+          git reset --hard origin/main
+          git clean -fd 
+          ./scripts/bootstrap.sh
+      - name: Deploy Traefik
+        run: |
+          docker stack deploy --with-registry-auth -c docker/stacks/traefik.yml traefik
+      - name: Deploy Monitoring
+        run: |
+          docker stack deploy --with-registry-auth -c docker/stacks/monitoring.yml monitoring
+      - name: Deploy Swarmpit
+        run: |
+          docker stack deploy --with-registry-auth -c docker/stacks/swarmpit.yml swarmpit
+      - name: Deploy VPN stack
+        run: |
+          docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray.yml vpn
+      - name: Infra sanity check
+        env:
+          INFRA_ROLE: manager
+        run: |
+          ./scripts/sanity-check.sh
