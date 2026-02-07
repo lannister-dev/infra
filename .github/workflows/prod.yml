@@ -5,32 +5,31 @@ on:
 
 jobs:
   deploy-infra:
-    name: Deploy Infrastructure
     runs-on: [self-hosted, dev]
-    env:
-      INFRA_ROLE: manager
     steps:
-      - name: Checkout infra repository
-        uses: actions/checkout@v4
-      - name: Write infra env
+      - uses: actions/checkout@v4
+      - name: Write runtime env
         run: |
-          echo "${{ secrets.INFRA_ENV_PROD }}" > .env.infra
-      - name: Bootstrap swarm (networks, volumes, prerequisites)
+          echo "${{ secrets.INFRA_ENV_PROD }}" > .env
+      - name: Bootstrap infra
         run: |
           set -e
+          cd /opt/vpn-infra
+          git fetch origin
+          git reset --hard origin/main
+          git clean -fd
           ./scripts/bootstrap.sh
       - name: Deploy Traefik
-        run: |
-          docker stack deploy --with-registry-auth -c docker/stacks/traefik.yml traefik
+        run: docker stack deploy --with-registry-auth -c docker/stacks/traefik.yml traefik
       - name: Deploy Monitoring
-        run: |
-          docker stack deploy --with-registry-auth -c docker/stacks/monitoring.yml monitoring
+        run: docker stack deploy --with-registry-auth -c docker/stacks/monitoring.yml monitoring
       - name: Deploy Swarmpit
+        run: docker stack deploy --with-registry-auth -c docker/stacks/swarmpit.yml swarmpit
+      - name: Deploy VPN
+        run: docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray.yml vpn
+      - name: Sanity check
+        env:
+          INFRA_ROLE: manager
         run: |
-          docker stack deploy --with-registry-auth -c docker/stacks/swarmpit.yml swarmpit
-      - name: Deploy VPN stack
-        run: |
-          docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray.yml vpn
-      - name: Infra sanity check
-        run: |
+          cd /opt/vpn-infra
           ./scripts/sanity-check.sh
