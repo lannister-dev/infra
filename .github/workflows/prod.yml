@@ -6,7 +6,7 @@ on:
 jobs:
   deploy-infra:
     name: Deploy Swarm Infrastructure
-    runs-on: [self-hosted, infra]
+    runs-on: [self-hosted, dev]
     env:
       INFRA_ROLE: manager
     steps:
