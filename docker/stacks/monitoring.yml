@@ -53,7 +53,7 @@ services:
       retries: 3
     networks:
       - monitoring
-      - traefik_proxy
+      - traefik_swarm
 
   grafana:
     image: grafana/grafana:latest
@@ -86,7 +86,7 @@ services:
       retries: 3
     networks:
       - monitoring
-      - traefik_proxy
+      - traefik_swarm
 
   node-exporter:
     image: prom/node-exporter:v1.8.1
@@ -154,8 +154,7 @@ configs:
     external: true
 
 networks:
-  traefik_proxy:
+  traefik_swarm:
     external: true
-    name: traefik_swarm
   monitoring:
     external: true
