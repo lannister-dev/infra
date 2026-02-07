@@ -1,25 +1,23 @@
 name: Deploy infra Workflow
-
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  deploy-monitoring:
-    runs-on: [self-hosted, dev]
+  deploy-infra:
+    name: Deploy Swarm Infrastructure
+    runs-on: [self-hosted, infra]
+    env:
+      INFRA_ROLE: manager
     steps:
-      - name: Checkout repository
+      - name: Checkout infra repository
         uses: actions/checkout@v4
       - name: Write infra env
         run: |
           echo "${{ secrets.INFRA_ENV_PROD }}" > .env
-      - name: Bootstrap infra (networks, volumes, etc)
+      - name: Bootstrap swarm (networks, volumes, prerequisites)
         run: |
           set -e
-          cd /opt/vpn-infra     
-          git fetch origin
-          git reset --hard origin/main
-          git clean -fd 
           ./scripts/bootstrap.sh
       - name: Deploy Traefik
         run: |
@@ -34,7 +32,5 @@ jobs:
         run: |
           docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray.yml vpn
       - name: Infra sanity check
-        env:
-          INFRA_ROLE: manager
         run: |
           ./scripts/sanity-check.sh
