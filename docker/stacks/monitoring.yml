@@ -18,7 +18,7 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=15d"
+      - "--storage.tsdb.retention.time=14d"
       - "--web.enable-lifecycle"
     deploy:
       replicas: 1
@@ -29,6 +29,16 @@ services:
       placement:
         constraints:
           - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.prometheus.rule=Host(`prometheus.lannister-dev.ru`)"
+        - "traefik.http.routers.prometheus.entrypoints=websecure"
+        - "traefik.http.routers.prometheus.service=prometheus"
+        - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+        # ============ BASIC AUTH =======================
+        - "traefik.http.middlewares.prometheus-auth.basicauth.users=admin:$$apr1$$rlCItKuZ$$g75Ksb8Q6kiIOoiQVOhrf/"
+        - "traefik.http.routers.prometheus.middlewares=prometheus-auth@swarm"
     user: "0"
     volumes:
       - prometheus_data:/prometheus
