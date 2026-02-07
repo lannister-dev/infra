@@ -148,5 +148,4 @@ networks:
     external: true
     name: traefik_swarm
   monitoring:
-    driver: overlay
-    attachable: true
+    external: true
