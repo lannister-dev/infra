@@ -33,7 +33,7 @@ services:
         - "traefik.enable=true"
         - "traefik.http.routers.prometheus.rule=Host(`prometheus.lannister-dev.ru`)"
         - "traefik.http.routers.prometheus.entrypoints=websecure"
-        - "traefik.http.routers.prometheus.service=prometheus"
+        - "traefik.http.routers.prometheus.service=monitoring_prometheus"
         - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
         # ============ BASIC AUTH =======================
