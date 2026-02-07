@@ -1,4 +1,5 @@
-name: Deploy infra Workflow
+name: Deploy Infra
+
 on:
   push:
     branches: [ "main" ]
@@ -6,30 +7,37 @@ on:
 jobs:
   deploy-infra:
     runs-on: [self-hosted, dev]
+    defaults:
+      run:
+        working-directory: /opt/vpn-infra
     steps:
-      - uses: actions/checkout@v4
-      - name: Write runtime env
+      - name: Pull latest
         run: |
-          echo "${{ secrets.INFRA_ENV_PROD }}" > .env
-      - name: Bootstrap infra
-        run: |
-          set -e
-          cd /opt/vpn-infra
           git fetch origin
           git reset --hard origin/main
-          git clean -fd
-          ./scripts/bootstrap.sh
+          git clean -fd -e .env
+
+      - name: Write env
+        run: |
+          echo "${{ secrets.INFRA_ENV_PROD }}" > .env
+          chmod 600 .env
+
+      - name: Bootstrap infra
+        run: ./scripts/bootstrap.sh
+
       - name: Deploy Traefik
         run: docker stack deploy --with-registry-auth -c docker/stacks/traefik.yml traefik
+
       - name: Deploy Monitoring
         run: docker stack deploy --with-registry-auth -c docker/stacks/monitoring.yml monitoring
+
       - name: Deploy Swarmpit
         run: docker stack deploy --with-registry-auth -c docker/stacks/swarmpit.yml swarmpit
+
       - name: Deploy VPN
         run: docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray.yml vpn
+
       - name: Sanity check
         env:
           INFRA_ROLE: manager
-        run: |
-          cd /opt/vpn-infra
-          ./scripts/sanity-check.sh
+        run: ./scripts/sanity-check.sh
