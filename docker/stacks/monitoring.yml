@@ -48,7 +48,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     env_file:
-      - ../../.env.infra
+      - .env
     deploy:
       <<: *deploy-common
       placement:
