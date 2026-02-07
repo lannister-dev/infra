@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="${ROOT_DIR}/.env"
+ENV_FILE=".env"
 
 log()  { echo "[SANITY] $*"; }
 warn() { echo "[SANITY][WARN] $*" >&2; }
