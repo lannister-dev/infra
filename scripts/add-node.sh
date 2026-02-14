@@ -211,12 +211,29 @@ fi
 
 sleep 2
 
-NODE_ID=$(docker node ls --format '{{.ID}} {{.Hostname}}' | grep -i "${NODE_NAME}" | awk '{print $1}')
-[[ -n "${NODE_ID}" ]] || die "Node '${NODE_NAME}' not found in swarm (docker node ls)"
+# Derive the node ID reliably from the node itself (hostname may not match --name).
+REMOTE_NODE_ID="$(ssh_cmd "docker info --format '{{.Swarm.NodeID}}' 2>/dev/null" || true)"
+REMOTE_DOCKER_NAME="$(ssh_cmd "docker info --format '{{.Name}}' 2>/dev/null" || true)"
+
+NODE_ID="${REMOTE_NODE_ID}"
+if [[ -z "${NODE_ID}" ]]; then
+  # Fallback: best-effort match by hostname.
+  NODE_ID="$(docker node ls --format '{{.ID}} {{.Hostname}}' | grep -i "${NODE_NAME}" | awk '{print $1}' || true)"
+fi
+
+[[ -n "${NODE_ID}" ]] || die "Cannot determine node ID (remote docker name='${REMOTE_DOCKER_NAME}', peer name='${NODE_NAME}')"
+
+# Wait until the manager sees the node (eventual consistency right after join).
+for _ in {1..30}; do
+  docker node inspect "${NODE_ID}" >/dev/null 2>&1 && break
+  sleep 1
+done
+docker node inspect "${NODE_ID}" >/dev/null 2>&1 || die "Node '${NODE_ID}' not visible in swarm yet (docker node inspect)"
 
 docker node update --label-add role=vpn "${NODE_ID}" >/dev/null
 docker node update --label-add channel="${NODE_CHANNEL}" "${NODE_ID}" >/dev/null
-log "Labeled ${NODE_NAME}: role=vpn, channel=${NODE_CHANNEL}"
+docker node update --label-add peer_name="${NODE_NAME}" "${NODE_ID}" >/dev/null || true
+log "Labeled ${NODE_NAME} (docker name='${REMOTE_DOCKER_NAME}', node id=${NODE_ID}): role=vpn, channel=${NODE_CHANNEL}"
 
 # ---------- 5. Registry auth ----------
 log "[5/5] Pushing registry auth..."
