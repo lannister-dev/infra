@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import importlib
 import logging
 import re
 from pathlib import Path
 from typing import Any
 
+_YAML_IMPORT_ERROR: ModuleNotFoundError | None = None
+yaml: Any | None = None
 try:
-    import yaml  # type: ignore[import-untyped]
+    yaml = importlib.import_module("yaml")
 except ModuleNotFoundError as exc:  # pragma: no cover - depends on runtime env
-    yaml = None
     _YAML_IMPORT_ERROR = exc
 from pydantic import ValidationError
 

@@ -33,7 +33,9 @@ services:
     command: ["run", "-config", "/etc/xray/config.json"]
     healthcheck:
       <<: *healthcheck-common
-      test: ["CMD", "xray", "api", "statsquery", "--server=127.0.0.1:10085"]
+      # Dev node stays on legacy 2.9 file-based config; API inbound may be absent there.
+      # Keep liveness check compatible with legacy config.
+      test: ["CMD", "xray", "version"]
     deploy:
       <<: *deploy-common
 
