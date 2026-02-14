@@ -8,6 +8,7 @@
 │   ├── stacks
 │   │   ├── __init__.py
 │   │   ├── monitoring.yml
+│   │   ├── node-agent.yml
 │   │   ├── swarmpit.yml
 │   │   ├── traefik.yml
 │   │   ├── vpn-xray.yml
@@ -15,7 +16,6 @@
 │   │   ├── dynamic
 │   │   │   ├── __init__.py
 │   │   │   ├── harbor.yml
-│   │   │   ├── vpn.yml
 │   │   ├── __init__.py
 │   ├── __init__.py
 ├── docs
@@ -40,9 +40,12 @@
 ├── scripts
 │   ├── __init__.py
 │   ├── bootstrap.sh
+│   ├── export_client_profiles.py
 │   ├── firewall.sh
+│   ├── generate_xray_config.py
 │   ├── sanity-check.sh
 │   ├── test
+│   ├── validate_profiles.py
 ├── vpn
 │   ├── cloudflare
 │   │   ├── __init__.py
@@ -58,7 +61,6 @@
 │   │   ├── server.conf
 │   ├── xray
 │   │   ├── __init__.py
-│   │   ├── clients.json
 │   │   ├── config.json.j2
 │   │   ├── README.md
 │   ├── __init__.py
@@ -75,5 +77,7 @@
 ├── .env.infra
 ├── .gitattributes
 ├── .gitignore
+├── CLAUDE.md
+├── nul
 ├── project_structure.txt
 ├── README.md

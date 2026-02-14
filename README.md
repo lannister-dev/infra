@@ -12,6 +12,7 @@ for the platform, including:
 
 ## Infrastructure Docs
 - [Harbor Registry](docs/harbor.md)
+- [Profiles Artifact Pipeline](docs/profiles-artifact.md)
 
 Current state:
 - 
@@ -36,3 +37,4 @@ using:
 ```bash
 git update-index --chmod=+x scripts/bootstrap.sh
 git commit -m "Make bootstrap script executable"
+```

@@ -1,0 +1,6 @@
+PyYAML==6.0.2
+pydantic==2.7.1
+pytest==7.4.0
+ruff==0.8.6
+mypy==1.14.1
+types-PyYAML==6.0.12.20241230
