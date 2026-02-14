@@ -5,7 +5,8 @@
 Profiles artifact is generated from:
 
 - `vpn/xray/config.json.j2` (Xray inbounds)
-- `vpn/xray/artifact.overrides.yml` (explicit mapping/overrides)
+- `vpn/xray/artifact.overrides.yml` (prod mapping/overrides)
+- `vpn/xray/artifact.overrides.dev.yml` (dev mapping/overrides)
 
 `config.json.j2` is the canonical source for server transport configuration.
 
@@ -59,21 +60,29 @@ Payload shape matches Control Plane contract:
 
 ## CI behavior
 
-Workflow `.github/workflows/profiles.yml` runs on changes in:
+Workflows:
 
-- `vpn/xray/config.json.j2`
-- `vpn/xray/artifact.overrides.yml`
-- `scripts/profiles/**/*.py`
+- `.github/workflows/profiles.yml` (prod artifact pipeline)
+- `.github/workflows/profiles-dev.yml` (dev artifact pipeline)
 
 Pipeline stages:
 
-1. Validate generated artifact against schema.
-2. Build payload artifact.
-3. Publish artifact to Control Plane (`/profiles/publish` relative to `CONTROL_PLANE_URL`).
+1. Prod workflow validates/builds `artifact.overrides.yml` and publishes via `CONTROL_PLANE_URL` + `ADMIN_API_KEY`.
+2. Dev workflow validates/builds `artifact.overrides.dev.yml` and publishes via `CONTROL_PLANE_URL_DEV` + `ADMIN_API_KEY_DEV`.
+3. Dev publish is skipped when dev secrets are not configured.
 
 `CONTROL_PLANE_URL` should point to the artifacts API base, for example:
 
 - `https://api.lannister-dev.ru/api/v1/artifacts`
+
+Dev publish expects separate secrets:
+
+- `CONTROL_PLANE_URL_DEV`
+- `ADMIN_API_KEY_DEV`
+
+## Why these workflows exist
+
+`profiles.yml` and `profiles-dev.yml` are dedicated CI/CD workflows for profile artifacts. They isolate profile validation/publish from infra deploy and separate prod/dev overrides, endpoints, and secrets.
 
 ## Module architecture
 
