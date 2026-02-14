@@ -42,7 +42,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "${NODE_NAME}" ]] || usage
-[[ "${NODE_CHANNEL}" == "dev" || "${NODE_CHANNEL}" == "prod" ]] || die "--channel must be dev or prod"
+[[ "${NODE_CHANNEL}" == "dev" || "${NODE_CHANNEL}" == "prod" ]] || {
+  echo "[ADD-NODE][FAIL] --channel must be dev or prod" >&2
+  usage
+}
 
 # ---------- Helpers ----------
 log()  { echo "[ADD-NODE] $*"; }
@@ -73,11 +76,34 @@ ssh_cmd "true" || die "Cannot SSH into ${SSH_USER}@${REMOTE_IP}:${SSH_PORT}"
 # ---------- 2. Docker ----------
 log "[2/5] Installing Docker..."
 ssh_cmd bash <<'EOF'
+wait_for_apt_idle() {
+  local waited=0
+  local timeout=600
+  while pgrep -f 'apt-get|apt.systemd.daily|unattended-upgrade|dpkg' >/dev/null 2>&1; do
+    if (( waited >= timeout )); then
+      echo "Timed out waiting for apt/dpkg lock holders"
+      return 1
+    fi
+    echo "Waiting for apt/dpkg to become available... (${waited}s)"
+    sleep 5
+    waited=$((waited + 5))
+  done
+}
+
 if command -v docker >/dev/null 2>&1; then
   echo "Docker already installed"
 else
   export DEBIAN_FRONTEND=noninteractive
-  curl -fsSL https://get.docker.com | sh
+  for attempt in 1 2 3 4 5; do
+    wait_for_apt_idle || exit 1
+    if curl -fsSL https://get.docker.com | sh; then
+      exit 0
+    fi
+    echo "Docker install attempt ${attempt}/5 failed, retrying..."
+    sleep 10
+  done
+  echo "Docker install failed after retries"
+  exit 1
 fi
 EOF
 
@@ -99,10 +125,37 @@ log "WG IP: ${WG_NODE_IP}"
 
 # Install WG on remote, push config, start
 ssh_cmd bash <<'EOF'
+wait_for_apt_idle() {
+  local waited=0
+  local timeout=600
+  while pgrep -f 'apt-get|apt.systemd.daily|unattended-upgrade|dpkg' >/dev/null 2>&1; do
+    if (( waited >= timeout )); then
+      echo "Timed out waiting for apt/dpkg lock holders"
+      return 1
+    fi
+    echo "Waiting for apt/dpkg to become available... (${waited}s)"
+    sleep 5
+    waited=$((waited + 5))
+  done
+}
+
+apt_install() {
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    wait_for_apt_idle || return 1
+    if apt-get -o DPkg::Lock::Timeout=120 update -y \
+      && apt-get -o DPkg::Lock::Timeout=120 install -y "$@"; then
+      return 0
+    fi
+    echo "apt install attempt ${attempt}/5 failed, retrying..."
+    sleep 5
+  done
+  return 1
+}
+
 export DEBIAN_FRONTEND=noninteractive
 if ! command -v wg >/dev/null 2>&1; then
-  apt-get update -y
-  apt-get install -y wireguard wireguard-tools
+  apt_install wireguard wireguard-tools
 fi
 mkdir -p /etc/wireguard
 EOF
