@@ -69,7 +69,11 @@ Pipeline stages:
 
 1. Validate generated artifact against schema.
 2. Build payload artifact.
-3. Publish artifact to Control Plane (`/api/v1/artifacts/profiles/publish`).
+3. Publish artifact to Control Plane (`/profiles/publish` relative to `CONTROL_PLANE_URL`).
+
+`CONTROL_PLANE_URL` should point to the artifacts API base, for example:
+
+- `https://api.lannister-dev.ru/api/v1/artifacts`
 
 ## Module architecture
 

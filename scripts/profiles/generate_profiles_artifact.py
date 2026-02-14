@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -13,6 +12,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.profiles.api import ControlPlaneClient
+from scripts.profiles.config import settings
 from scripts.profiles.core.errors import ArtifactPublishError
 from scripts.profiles.core.publish import ArtifactPublisher
 from scripts.profiles.xray_artifact import (
@@ -65,8 +65,8 @@ def main() -> None:
     log.info("Artifact written to %s (%d profile(s))", args.output, len(artifact))
 
     if args.publish:
-        base_url = os.environ.get("CONTROL_PLANE_URL")
-        api_key = os.environ.get("ADMIN_API_KEY")
+        base_url = settings.control_plane.url
+        api_key = settings.control_plane.admin_api_key
         if not base_url or not api_key:
             log.error("CONTROL_PLANE_URL and ADMIN_API_KEY env vars required for --publish")
             sys.exit(1)

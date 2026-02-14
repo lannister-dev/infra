@@ -27,7 +27,7 @@ class ControlPlaneClient(BaseApiClient):
     def publish_artifact(self, artifact: dict[str, Any]) -> dict[str, Any]:
         try:
             result = self.post(
-                "/api/v1/artifacts/profiles/publish",
+                "/profiles/publish",
                 body={"artifact": artifact},
             )
             if not isinstance(result, dict):
@@ -50,7 +50,7 @@ class ControlPlaneClient(BaseApiClient):
     def reload_registry(self) -> dict[str, Any]:
         """Trigger registry reload after publish."""
         try:
-            result = self.post("/api/v1/artifacts/profiles/reload")
+            result = self.post("/profiles/reload")
             if not isinstance(result, dict):
                 raise NonRetryableApiError(
                     f"Reload returned non-JSON object response: {type(result).__name__}"
