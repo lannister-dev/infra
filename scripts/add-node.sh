@@ -52,9 +52,29 @@ log()  { echo "[ADD-NODE] $*"; }
 warn() { echo "[ADD-NODE][WARN] $*" >&2; }
 die()  { echo "[ADD-NODE][FAIL] $*" >&2; exit 1; }
 
-SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -p ${SSH_PORT}"
-ssh_cmd()  { ssh ${SSH_OPTS} "${SSH_USER}@${REMOTE_IP}" "$@"; }
-scp_to()   { scp ${SSH_OPTS} "$1" "${SSH_USER}@${REMOTE_IP}:$2"; }
+# Reuse the same SSH connection to avoid repeated password prompts (works for ssh + scp).
+SSH_CONTROL_PATH="/tmp/vpn-infra-ssh-%r@%h:%p"
+SSH_OPTS_COMMON=(
+  -o StrictHostKeyChecking=accept-new
+  -o ConnectTimeout=10
+  -o ControlMaster=auto
+  -o ControlPersist=10m
+  -o "ControlPath=${SSH_CONTROL_PATH}"
+)
+
+SSH_OPTS_SSH=("${SSH_OPTS_COMMON[@]}" -p "${SSH_PORT}")
+SSH_OPTS_SCP=("${SSH_OPTS_COMMON[@]}" -P "${SSH_PORT}")
+
+ssh_cmd()  { ssh "${SSH_OPTS_SSH[@]}" "${SSH_USER}@${REMOTE_IP}" "$@"; }
+scp_to()   {
+  local src="$1"
+  local dst="$2"
+  local dst_dir
+  # scp cannot create parent directories; ensure they exist first.
+  dst_dir="$(dirname -- "${dst}")"
+  ssh_cmd "install -d -m 700 -- '${dst_dir}'"
+  scp "${SSH_OPTS_SCP[@]}" "${src}" "${SSH_USER}@${REMOTE_IP}:${dst}"
+}
 
 WG_INTERFACE="wg0"
 WG_CLIENT_CONF="/etc/wireguard/clients/${NODE_NAME}-${WG_INTERFACE}.conf"
