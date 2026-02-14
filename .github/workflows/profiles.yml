@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
     paths:
+      - ".github/workflows/profiles.yml"
+      - "pyproject.toml"
+      - "requirements/profiles-ci.txt"
       - "vpn/xray/config.json.j2"
       - "vpn/xray/artifact.overrides.yml"
       - "scripts/profiles/**/*.py"
@@ -13,8 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
       - name: Install deps
-        run: pip install -r requirements/profiles-ci.txt
+        run: python -m pip install -r requirements/profiles-ci.txt
       - name: Lint profiles package
         run: ruff check scripts/profiles
       - name: Type check profiles package
@@ -31,8 +37,11 @@ jobs:
     runs-on: [self-hosted, dev]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
       - name: Install deps
-        run: pip install -r requirements/profiles-ci.txt
+        run: python -m pip install -r requirements/profiles-ci.txt
       - name: Publish artifact to control plane
         env:
           CONTROL_PLANE_URL: ${{ secrets.CONTROL_PLANE_URL }}
