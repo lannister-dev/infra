@@ -1,0 +1,60 @@
+name: Publish VPN Profiles Dev
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/profiles-dev.yml"
+      - "pyproject.toml"
+      - "requirements/profiles-ci.txt"
+      - "vpn/xray/config.json.j2"
+      - "vpn/xray/artifact.overrides.dev.yml"
+      - "scripts/profiles/**/*.py"
+  workflow_dispatch:
+
+jobs:
+  validate-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install deps
+        run: python -m pip install -r requirements/profiles-ci.txt
+      - name: Validate dev profiles
+        run: python -m scripts.profiles.validate_profiles --overrides vpn/xray/artifact.overrides.dev.yml
+      - name: Build dev artifact payload
+        run: python -m scripts.profiles.generate_profiles_artifact --overrides vpn/xray/artifact.overrides.dev.yml --output artifacts/profiles/artifact.dev.json --print
+
+  publish-dev:
+    needs: validate-dev
+    runs-on: [self-hosted, dev]
+    steps:
+      - name: Decide whether to publish dev artifact
+        id: dev_secrets
+        env:
+          CONTROL_PLANE_URL_DEV: ${{ secrets.CONTROL_PLANE_URL_DEV }}
+          ADMIN_API_KEY_DEV: ${{ secrets.ADMIN_API_KEY_DEV }}
+        run: |
+          if [ -z "$CONTROL_PLANE_URL_DEV" ] || [ -z "$ADMIN_API_KEY_DEV" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping dev publish: secrets CONTROL_PLANE_URL_DEV/ADMIN_API_KEY_DEV are not set"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.dev_secrets.outputs.publish == 'true'
+      - uses: actions/setup-python@v5
+        if: steps.dev_secrets.outputs.publish == 'true'
+        with:
+          python-version: "3.10"
+      - name: Install deps
+        if: steps.dev_secrets.outputs.publish == 'true'
+        run: python -m pip install -r requirements/profiles-ci.txt
+      - name: Publish dev artifact to control plane
+        if: steps.dev_secrets.outputs.publish == 'true'
+        env:
+          CONTROL_PLANE_URL: ${{ secrets.CONTROL_PLANE_URL_DEV }}
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY_DEV }}
+        run: python -m scripts.profiles.generate_profiles_artifact --overrides vpn/xray/artifact.overrides.dev.yml --output artifacts/profiles/artifact.dev.json --publish

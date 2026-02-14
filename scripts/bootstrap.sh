@@ -75,7 +75,7 @@ bootstrap_manager() {
 
 
   # XRAY CONFIG VERSION: bump this when you WANT to create a new Swarm config
-  XRAY_CONFIG_VERSION="${XRAY_CONFIG_VERSION:-V3_0}"
+  XRAY_CONFIG_VERSION="${XRAY_CONFIG_VERSION:-V3_1}"
 
   # Fallback assets
   VPN_FALLBACK_INDEX_VERSION="${VPN_FALLBACK_INDEX_VERSION:-V1_1}"
