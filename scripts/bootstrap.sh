@@ -31,41 +31,15 @@ log "Repo: ${ROOT_DIR}"
 log "Role: ${INFRA_ROLE}"
 
 # -------------------------
-# Runtime state locations (NOT in Git)
-# -------------------------
-VPN_STATE_DIR="${VPN_STATE_DIR:-/var/lib/vpn}"
-VPN_CLIENTS_FILE="${VPN_CLIENTS_FILE:-${VPN_STATE_DIR}/clients.json}"
-
-# -------------------------
 # ensure executable perms FIRST (kills 'Permission denied')
 # -------------------------
 chmod +x \
   "${ROOT_DIR}/scripts/bootstrap.sh" \
   "${ROOT_DIR}/scripts/sanity-check.sh" \
   "${ROOT_DIR}/scripts/firewall.sh" \
-  "${ROOT_DIR}/vpn/install.sh" \
   "${ROOT_DIR}/wireguard/apply.sh" \
   "${ROOT_DIR}/wireguard/manager/wireguard-manager.sh" \
   2>/dev/null || true
-
-# -------------------------
-# helpers
-# -------------------------
-ensure_runtime_clients_file() {
-  mkdir -p "${VPN_STATE_DIR}"
-  chmod 700 "${VPN_STATE_DIR}" || true
-
-  if [[ -f "${VPN_CLIENTS_FILE}" ]]; then
-    jq . "${VPN_CLIENTS_FILE}" >/dev/null 2>&1 || die "Invalid JSON in ${VPN_CLIENTS_FILE}"
-    return 0
-  fi
-
-  warn "Runtime clients file not found: ${VPN_CLIENTS_FILE}"
-  warn "Creating empty clients.json (you can add clients later via scripts/clients.sh)"
-  echo "[]" > "${VPN_CLIENTS_FILE}"
-  chmod 600 "${VPN_CLIENTS_FILE}" || true
-  jq . "${VPN_CLIENTS_FILE}" >/dev/null 2>&1 || die "Failed to create valid ${VPN_CLIENTS_FILE}"
-}
 
 # -------------------------
 # role: manager (Swarm bootstrap + configs)
@@ -101,7 +75,7 @@ bootstrap_manager() {
 
 
   # XRAY CONFIG VERSION: bump this when you WANT to create a new Swarm config
-  XRAY_CONFIG_VERSION="${XRAY_CONFIG_VERSION:-V2_9}"
+  XRAY_CONFIG_VERSION="${XRAY_CONFIG_VERSION:-V3_0}"
 
   # Fallback assets
   VPN_FALLBACK_INDEX_VERSION="${VPN_FALLBACK_INDEX_VERSION:-V1_1}"
@@ -117,6 +91,10 @@ bootstrap_manager() {
   log "[1/5] Ensuring monitoring network"
   docker network inspect monitoring >/dev/null 2>&1 || \
     docker network create --driver overlay --attachable monitoring >/dev/null
+
+  log "[1/5] Ensuring vpn-net network"
+  docker network inspect vpn-net >/dev/null 2>&1 || \
+    docker network create --driver overlay --attachable vpn-net >/dev/null
 
   # -------------------------
   # VOLUMES
@@ -158,11 +136,9 @@ bootstrap_manager() {
     "$ROOT_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
 
   # -------------------------
-  # XRAY CONFIG RENDER (FROM J2) USING RUNTIME CLIENTS FILE
+  # XRAY CONFIG RENDER (FROM J2)
   # -------------------------
-  log "[4/5] Rendering Xray config from template (clients from ${VPN_CLIENTS_FILE})"
-
-  ensure_runtime_clients_file
+  log "[4/5] Rendering Xray config from template (clients managed via Xray API)"
 
   XRAY_RENDER_DIR="/tmp/xray"
   XRAY_RENDERED_CONFIG="${XRAY_RENDER_DIR}/config.json"
@@ -170,9 +146,6 @@ bootstrap_manager() {
 
   [[ -f "$ROOT_DIR/vpn/xray/config.json.j2" ]] \
     || die "Xray template not found: vpn/xray/config.json.j2"
-
-  VPN_CLIENTS_JSON="$(jq -c . "${VPN_CLIENTS_FILE}")"
-  export VPN_CLIENTS_JSON
 
   envsubst < "$ROOT_DIR/vpn/xray/config.json.j2" > "${XRAY_RENDERED_CONFIG}"
 
@@ -205,7 +178,6 @@ bootstrap_manager() {
   log "[5/5] Active docker configs:"
   docker config ls | grep -E 'prometheus_config__|grafana_|vpn_fallback_(index|nginx)_conf__|xray_config__' || true
 
-  log "Runtime clients file: ${VPN_CLIENTS_FILE}"
   log "✅ Manager bootstrap completed successfully"
 }
 
@@ -213,14 +185,13 @@ bootstrap_manager() {
 # role: vpn (DE node) - WireGuard + Xray ONLY
 # -------------------------
 bootstrap_vpn() {
-  log "VPN bootstrap: WireGuard + Xray (Hysteria deferred)"
+  log "VPN bootstrap: WireGuard (Xray runs as Swarm service)"
 
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -y
   apt-get install -y ca-certificates curl jq wireguard wireguard-tools iproute2 iptables
 
   bash "${ROOT_DIR}/wireguard/apply.sh" --install
-  bash "${ROOT_DIR}/vpn/install.sh"
 
   log "✅ VPN bootstrap completed successfully"
 }

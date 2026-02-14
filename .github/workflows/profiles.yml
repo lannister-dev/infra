@@ -1,0 +1,40 @@
+name: Publish VPN Profiles
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "vpn/xray/config.json.j2"
+      - "vpn/xray/artifact.overrides.yml"
+      - "scripts/profiles/**/*.py"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: pip install -r requirements/profiles-ci.txt
+      - name: Lint profiles package
+        run: ruff check scripts/profiles
+      - name: Type check profiles package
+        run: mypy scripts/profiles
+      - name: Run tests
+        run: pytest scripts/profiles/tests -q
+      - name: Validate profiles
+        run: python -m scripts.profiles.validate_profiles
+      - name: Build artifact payload
+        run: python -m scripts.profiles.generate_profiles_artifact --print
+
+  publish:
+    needs: validate
+    runs-on: [self-hosted, dev]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: pip install -r requirements/profiles-ci.txt
+      - name: Publish artifact to control plane
+        env:
+          CONTROL_PLANE_URL: ${{ secrets.CONTROL_PLANE_URL }}
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+        run: python -m scripts.profiles.generate_profiles_artifact --publish

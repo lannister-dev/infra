@@ -185,27 +185,22 @@ check_manager() {
 # checks: vpn node (DE)
 # -------------------------
 check_vpn() {
-  log "Role=vpn checks (Xray node / systemd / bind / WireGuard presence)"
+  log "Role=vpn checks (Xray Swarm service / WireGuard presence)"
 
-  need_cmd systemctl
-  need_cmd ss
   need_cmd jq
 
-  systemctl is-active --quiet xray || die "xray service is not active"
-
-  [[ -f /etc/xray/config.json ]] || die "/etc/xray/config.json not found (run vpn/install.sh)"
-  jq . /etc/xray/config.json >/dev/null || die "/etc/xray/config.json is not valid JSON"
-
-  local port="${VPN_XRAY_PORT:-10000}"
-  local bind_ip="${VPN_WG_BIND_IP:-}"
-  log "Checking xray listen on port=${port} (bind_ip=${bind_ip:-any})"
-
-  if [[ -n "${bind_ip}" ]]; then
-    ss -lntp | grep -E ":${port}\b" | grep -q "${bind_ip}" \
-      || die "xray is not listening on ${bind_ip}:${port} (check config listen/bind)"
+  # Xray runs as a Swarm service — verify container is running on this node
+  if docker ps --filter "name=vpn_xray" --format '{{.Status}}' 2>/dev/null | grep -qi "up"; then
+    log "Xray container is running"
   else
-    ss -lntp | grep -E ":${port}\b" >/dev/null \
-      || die "xray is not listening on port ${port}"
+    die "Xray container is not running on this node (check: docker service ps vpn_xray)"
+  fi
+
+  # Check node-agent container
+  if docker ps --filter "name=vpn_node-agent" --format '{{.Status}}' 2>/dev/null | grep -qi "up"; then
+    log "node-agent container is running"
+  else
+    warn "node-agent container is not running on this node"
   fi
 
   if command -v wg >/dev/null 2>&1; then

@@ -1,0 +1,48 @@
+version: "3.9"
+
+x-healthcheck-common: &healthcheck-common
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 10s
+
+x-deploy-common: &deploy-common
+  mode: global
+  placement:
+    constraints:
+      - node.labels.role == vpn
+      - node.labels.channel == dev
+  update_config:
+    order: start-first
+    failure_action: rollback
+  rollback_config:
+    order: start-first
+  restart_policy:
+    condition: on-failure
+
+services:
+  xray:
+    image: ghcr.io/xtls/xray-core:latest
+    networks:
+      - vpn-net
+      - monitoring
+    configs:
+      - source: xray_config_dev__V2_9
+        target: /etc/xray/config.json
+        mode: 0444
+    command: ["run", "-config", "/etc/xray/config.json"]
+    healthcheck:
+      <<: *healthcheck-common
+      test: ["CMD", "xray", "api", "statsquery", "--server=127.0.0.1:10085"]
+    deploy:
+      <<: *deploy-common
+
+configs:
+  xray_config_dev__V2_9:
+    external: true
+
+networks:
+  vpn-net:
+    external: true
+  monitoring:
+    external: true

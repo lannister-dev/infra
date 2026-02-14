@@ -37,6 +37,14 @@ jobs:
       - name: Deploy VPN
         run: docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray.yml vpn
 
+      - name: Deploy VPN Dev (if config exists)
+        run: |
+          if docker config inspect xray_config_dev__V2_9 >/dev/null 2>&1; then
+            docker stack deploy --with-registry-auth -c docker/stacks/vpn-xray-dev.yml vpn-dev
+          else
+            echo "xray_config_dev__V2_9 not found; skipping vpn-dev deploy"
+          fi
+
       - name: Sanity check
         env:
           INFRA_ROLE: manager

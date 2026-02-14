@@ -1,0 +1,12 @@
+profiles:
+  vless-ws:
+    key: ws_tls_v1
+    display_name: CDN WS TLS
+    type: ws_tls
+    client:
+      path: /api/v1/stream
+      host: tech.lannister-dev.ru
+      sni: tech.lannister-dev.ru
+
+  vless-xhttp:
+    enabled: false
