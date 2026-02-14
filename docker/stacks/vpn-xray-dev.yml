@@ -24,6 +24,7 @@ services:
   xray:
     image: ghcr.io/xtls/xray-core:latest
     networks:
+      - traefik_swarm
       - vpn-net
       - monitoring
     configs:
@@ -33,17 +34,37 @@ services:
     command: ["run", "-config", "/etc/xray/config.json"]
     healthcheck:
       <<: *healthcheck-common
-      # Dev node stays on legacy 2.9 file-based config; API inbound may be absent there.
-      # Keep liveness check compatible with legacy config.
       test: ["CMD", "xray", "version"]
     deploy:
       <<: *deploy-common
+      labels:
+        - traefik.enable=true
+
+        # ===== DEV WS =====
+        - traefik.http.routers.vpn-dev-ws.rule=Host(`tech.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
+        - traefik.http.routers.vpn-dev-ws.entrypoints=websecure
+        - traefik.http.routers.vpn-dev-ws.tls=true
+        - traefik.http.routers.vpn-dev-ws.tls.certresolver=cf
+        - traefik.http.routers.vpn-dev-ws.priority=200
+        - traefik.http.routers.vpn-dev-ws.service=vpn-dev-ws
+        - traefik.http.services.vpn-dev-ws.loadbalancer.server.port=10000
+
+        # ===== DEV XHTTP =====
+        - traefik.http.routers.vpn-dev-xhttp.rule=Host(`tech.lannister-dev.ru`) && PathPrefix(`/api/v1/mobile`)
+        - traefik.http.routers.vpn-dev-xhttp.entrypoints=websecure
+        - traefik.http.routers.vpn-dev-xhttp.tls=true
+        - traefik.http.routers.vpn-dev-xhttp.tls.certresolver=cf
+        - traefik.http.routers.vpn-dev-xhttp.priority=190
+        - traefik.http.routers.vpn-dev-xhttp.service=vpn-dev-xhttp
+        - traefik.http.services.vpn-dev-xhttp.loadbalancer.server.port=10001
 
 configs:
   xray_config_dev__V2_9:
     external: true
 
 networks:
+  traefik_swarm:
+    external: true
   vpn-net:
     external: true
   monitoring:

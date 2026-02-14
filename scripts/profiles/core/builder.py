@@ -6,12 +6,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-_YAML_IMPORT_ERROR: ModuleNotFoundError | None = None
-yaml: Any | None = None
-try:
-    yaml = importlib.import_module("yaml")
-except ModuleNotFoundError as exc:  # pragma: no cover - depends on runtime env
-    _YAML_IMPORT_ERROR = exc
 from pydantic import ValidationError
 
 from .constants import SUPPORTED_PROFILE_TYPES, XRAY_OVERRIDES_DEFAULT, XRAY_TEMPLATE_DEFAULT
@@ -30,6 +24,13 @@ from .models import (
     parse_overrides_map,
 )
 from .template import find_placeholder_fields, load_xray_template
+
+_YAML_IMPORT_ERROR: ModuleNotFoundError | None = None
+yaml: Any | None = None
+try:
+    yaml = importlib.import_module("yaml")
+except ModuleNotFoundError as exc:  # pragma: no cover - depends on runtime env
+    _YAML_IMPORT_ERROR = exc
 
 log = logging.getLogger("profiles.builder")
 
