@@ -41,7 +41,7 @@ services:
         - traefik.enable=true
 
         # ===== WS =====
-        - traefik.http.routers.vpn-ws.rule=Host(`tech.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
+        - traefik.http.routers.vpn-ws.rule=Host(`prod.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
         - traefik.http.routers.vpn-ws.entrypoints=websecure
         - traefik.http.routers.vpn-ws.tls=true
         - traefik.http.routers.vpn-ws.tls.certresolver=cf
@@ -50,7 +50,7 @@ services:
         - traefik.http.services.vpn-ws.loadbalancer.server.port=10000
 
         # ===== XHTTP =====
-        - traefik.http.routers.vpn-xhttp.rule=Host(`tech.lannister-dev.ru`) && PathPrefix(`/api/v1/mobile`)
+        - traefik.http.routers.vpn-xhttp.rule=Host(`prod.lannister-dev.ru`) && PathPrefix(`/api/v1/mobile`)
         - traefik.http.routers.vpn-xhttp.entrypoints=websecure
         - traefik.http.routers.vpn-xhttp.tls=true
         - traefik.http.routers.vpn-xhttp.tls.certresolver=cf
