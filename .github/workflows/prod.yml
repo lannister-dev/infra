@@ -35,7 +35,7 @@ jobs:
         run: docker stack deploy --with-registry-auth -c docker/stacks/swarmpit.yml swarmpit
 
       - name: Deploy VPN
-        run: docker stack deploy --with-registry-auth --prune -c docker/stacks/vpn-xray.yml vpn
+        run: docker stack deploy --with-registry-auth --resolve-image=always --prune -c docker/stacks/vpn-xray.yml vpn
 
       - name: Deploy VPN Dev (if config exists)
         run: |
