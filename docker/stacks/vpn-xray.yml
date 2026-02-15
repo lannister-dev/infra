@@ -68,8 +68,8 @@ services:
       - -c
       - "import os, runpy, pathlib; os.environ['AGENT_CONTROL_API_TOKEN']=pathlib.Path('/run/secrets/bootstrap_token').read_text().strip(); runpy.run_module('app', run_name='__main__')"
     networks:
-      - vpn-net
       - monitoring
+      - vpn-net
     secrets:
       - bootstrap_token
     volumes:
@@ -81,6 +81,15 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/healthz', timeout=2).read(); print('ok')"]
     deploy:
       <<: *deploy-common
+      labels:
+        # -------- Prometheus (service labels; required for dockerswarm_sd_configs meta labels) --------
+        - "prometheus-scrape=true"
+        - "prometheus-app=node-agent"
+        - "prometheus-env=node-agent"
+        # node-agent exposes /metrics on the health server (see node-agent.env: AGENT_HEALTH_PORT=9000).
+        - "prometheus-metrics-port=9000"
+        - "prometheus-metrics-path=/metrics"
+        - "prometheus-scrape-profile=important"
 
   vpn-fallback:
     image: nginx:alpine
