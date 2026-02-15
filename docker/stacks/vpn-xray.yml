@@ -60,7 +60,8 @@ services:
 
   node-agent:
     image: harbor.lannister-dev.ru/vpn-service/node-agent:prod
-    command: ["sh", "-lc", "export AGENT_CONTROL_API_TOKEN=\"$(cat /run/secrets/bootstrap_token)\"; exec python -m app"]
+    # NOTE: docker stack deploy performs variable interpolation; escape $ as $$ to pass through.
+    command: ["sh", "-lc", "export AGENT_CONTROL_API_TOKEN=\"$$(cat /run/secrets/bootstrap_token)\"; exec python -m app"]
     networks:
       - vpn-net
       - monitoring
