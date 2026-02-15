@@ -29,7 +29,7 @@ services:
       - traefik_swarm
       - vpn-net
     configs:
-      - source: xray_config__V3_1
+      - source: xray_config__V3_2
         target: /etc/xray/config.json
         mode: 0444
     command: ["run", "-config", "/etc/xray/config.json"]
