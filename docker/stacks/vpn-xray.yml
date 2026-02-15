@@ -59,7 +59,8 @@ services:
         - traefik.http.services.vpn-xhttp.loadbalancer.server.port=10001
 
   node-agent:
-    image: harbor.lannister-dev.ru/vpn-service/node-agent:latest
+    image: harbor.lannister-dev.ru/vpn-service/node-agent:prod
+    command: ["sh", "-lc", "export AGENT_CONTROL_API_TOKEN=\"$(cat /run/secrets/bootstrap_token)\"; exec python -m app"]
     networks:
       - vpn-net
       - monitoring
@@ -71,7 +72,7 @@ services:
       - ../../node-agent.env
     healthcheck:
       <<: *healthcheck-common
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9000/healthz"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/healthz', timeout=2).read(); print('ok')"]
     deploy:
       <<: *deploy-common
 
