@@ -60,8 +60,12 @@ services:
 
   node-agent:
     image: harbor.lannister-dev.ru/vpn-service/node-agent:prod
-    # NOTE: docker stack deploy performs variable interpolation; escape $ as $$ to pass through.
-    command: ["sh", "-lc", "export AGENT_CONTROL_API_TOKEN=\"$$(cat /run/secrets/bootstrap_token)\"; exec python -m app"]
+    # The image reads AGENT_CONTROL_API_TOKEN from env (not *_TOKEN_FILE).
+    # Inject token from Swarm secret without relying on /bin/sh.
+    command:
+      - python
+      - -c
+      - "import os, runpy, pathlib; os.environ['AGENT_CONTROL_API_TOKEN']=pathlib.Path('/run/secrets/bootstrap_token').read_text().strip(); runpy.run_module('app', run_name='__main__')"
     networks:
       - vpn-net
       - monitoring
