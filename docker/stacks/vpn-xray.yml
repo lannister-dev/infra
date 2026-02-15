@@ -18,7 +18,8 @@ x-deploy-common: &deploy-common
   rollback_config:
     order: start-first
   restart_policy:
-    condition: on-failure
+    # xray may exit with code 0 on SIGTERM or other graceful shutdowns; keep it running.
+    condition: any
 
 
 services:
