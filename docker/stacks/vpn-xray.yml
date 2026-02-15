@@ -111,7 +111,7 @@ services:
         - traefik.http.services.vpn-fallback.loadbalancer.server.port=80
 
 configs:
-  xray_config__V3_1:
+  xray_config__V3_2:
     external: true
   vpn_fallback_index__V1_1:
     external: true
