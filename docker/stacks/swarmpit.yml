@@ -6,6 +6,7 @@ services:
     environment:
       - SWARMPIT_DB=http://db:5984
       - SWARMPIT_INFLUXDB=http://influxdb:8086
+      - SWARMPIT_DOCKER_API=1.44
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:
@@ -72,6 +73,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - net
+    environment:
+      - DOCKER_API_VERSION=1.44
     deploy:
       mode: global
       labels:
