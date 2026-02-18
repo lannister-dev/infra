@@ -64,6 +64,7 @@ services:
       placement:
         constraints:
           - node.role == manager
+          - node.labels.kind == prod
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)"
