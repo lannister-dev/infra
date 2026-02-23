@@ -29,11 +29,19 @@ provider "openstack" {
   password     = trimspace(var.hostvds_os_password) != "" ? var.hostvds_os_password : null
   tenant_name  = trimspace(var.hostvds_os_project_name) != "" ? var.hostvds_os_project_name : null
 
-  user_domain_id   = trimspace(var.hostvds_os_user_domain_id) != "" ? var.hostvds_os_user_domain_id : null
-  user_domain_name = trimspace(var.hostvds_os_user_domain_id) == "" && trimspace(var.hostvds_os_user_domain_name) != "" ? var.hostvds_os_user_domain_name : null
+  user_domain_id = trimspace(var.hostvds_os_user_domain_id) != "" ? var.hostvds_os_user_domain_id : null
+  user_domain_name = (
+    trimspace(var.hostvds_os_user_domain_id) == "" && trimspace(var.hostvds_os_user_domain_name) != ""
+    ? var.hostvds_os_user_domain_name
+    : null
+  )
 
-  project_domain_id   = trimspace(var.hostvds_os_project_domain_id) != "" ? var.hostvds_os_project_domain_id : null
-  project_domain_name = trimspace(var.hostvds_os_project_domain_id) == "" && trimspace(var.hostvds_os_project_domain_name) != "" ? var.hostvds_os_project_domain_name : null
+  project_domain_id = trimspace(var.hostvds_os_project_domain_id) != "" ? var.hostvds_os_project_domain_id : null
+  project_domain_name = (
+    trimspace(var.hostvds_os_project_domain_id) == "" && trimspace(var.hostvds_os_project_domain_name) != ""
+    ? var.hostvds_os_project_domain_name
+    : null
+  )
 
   region        = trimspace(var.hostvds_os_region_name) != "" ? var.hostvds_os_region_name : null
   endpoint_type = trimspace(var.hostvds_os_interface) != "" ? var.hostvds_os_interface : null
