@@ -62,41 +62,41 @@ resource "docker_volume" "agent_data" {
 
 resource "docker_config" "prometheus_config" {
   name = local.prometheus_config_name
-  data = filebase64("${local.root_dir}/monitoring/prometheus/prometheus.yml")
+  data = local.prometheus_config_data
 }
 
 resource "docker_config" "grafana_ini_config" {
   name = local.grafana_ini_config_name
-  data = filebase64("${local.root_dir}/monitoring/grafana/grafana.ini")
+  data = local.grafana_ini_config_data
 }
 
 resource "docker_config" "grafana_datasources_config" {
   name = local.grafana_datasources_config_name
-  data = filebase64("${local.root_dir}/monitoring/grafana/provisioning/datasources/prometheus.yml")
+  data = local.grafana_datasources_config_data
 }
 
 resource "docker_config" "grafana_dashboards_config" {
   name = local.grafana_dashboards_config_name
-  data = filebase64("${local.root_dir}/monitoring/grafana/provisioning/dashboards/dashboards.yml")
+  data = local.grafana_dashboards_config_data
 }
 
 resource "docker_config" "xray_config" {
   name = local.xray_config_name
-  data = base64encode(local.xray_config_rendered)
+  data = local.xray_config_data
 }
 
 resource "docker_config" "xray_config_dev" {
   count = var.enable_vpn_dev_stack ? 1 : 0
   name  = local.xray_config_dev_name
-  data  = base64encode(local.xray_config_dev_rendered)
+  data  = local.xray_config_dev_data
 }
 
 resource "docker_config" "vpn_fallback_index" {
   name = local.vpn_fallback_index_config_name
-  data = filebase64("${local.root_dir}/vpn/nginx/index.html")
+  data = local.vpn_fallback_index_data
 }
 
 resource "docker_config" "vpn_fallback_nginx_conf" {
   name = local.vpn_fallback_nginx_config_name
-  data = filebase64("${local.root_dir}/vpn/nginx/server.conf")
+  data = local.vpn_fallback_nginx_data
 }
