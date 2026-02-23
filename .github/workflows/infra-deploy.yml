@@ -85,11 +85,12 @@ jobs:
         env:
           APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
         run: |
-          set -Eeuo pipefail
+          set -Eeo pipefail
 
           set -a
           source "${INFRA_ENV_FILE}"
           set +a
+          set -u
 
           : "${TF_STATE_BUCKET:?TF_STATE_BUCKET is required}"
           : "${TF_STATE_REGION:?TF_STATE_REGION is required}"
@@ -201,20 +202,22 @@ jobs:
       - name: Reconcile VPN nodes (Ansible)
         if: ${{ inputs.reconcile_nodes == true }}
         run: |
-          set -Eeuo pipefail
+          set -Eeo pipefail
           set -a
           source "${INFRA_ENV_FILE}"
           set +a
+          set -u
           export REPO_ROOT="$(pwd)"
           export ANSIBLE_CONFIG="$(pwd)/ansible/ansible.cfg"
           ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/reconcile-vpn-nodes.yml
 
       - name: Deploy stacks (Ansible)
         run: |
-          set -Eeuo pipefail
+          set -Eeo pipefail
           set -a
           source "${INFRA_ENV_FILE}"
           set +a
+          set -u
           export REPO_ROOT="$(pwd)"
           export RUN_SANITY_CHECK="true"
           export ANSIBLE_CONFIG="$(pwd)/ansible/ansible.cfg"
