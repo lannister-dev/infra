@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   traefik:
-    image: traefik:v3.6
+    image: traefik:${TRAEFIK_IMAGE_TAG}
 
     ports:
       - target: 80
@@ -68,7 +68,7 @@ services:
         - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
         # ============ BASIC AUTH =======================
-        - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$apr1$RWsuY3iD$W3qlQsMXCi0hWoEZf0Kdz/"
+        - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
         - "traefik.http.routers.traefik.middlewares=dashboard-auth@swarm"
 
         # ===== PROMETHEUS =====

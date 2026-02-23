@@ -1,0 +1,23 @@
+services:
+  probe:
+    image: harbor.lannister-dev.ru/vpn-service/probe:prod
+    command:
+      - python
+      - -c
+      - "import os, runpy, pathlib; os.environ['PROBE_TOKEN']=pathlib.Path('/run/secrets/probe_token').read_text().strip(); runpy.run_module('app', run_name='__main__')"
+    env_file:
+      - ../../.env
+    secrets:
+      - probe_token
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+           - node.role == manager
+           - node.labels.kind == dev
+      restart_policy:
+        condition: any
+
+secrets:
+  probe_token:
+    external: true

@@ -1,0 +1,61 @@
+# Manual VPN catalog (optional)
+# vpn_nodes = {
+#   "vpn-amsterdam-01" = {
+#     public_ip = "203.0.113.10"
+#     channel   = "prod"
+#     ssh_user  = "root"
+#     ssh_port  = 22
+#     enabled   = true
+#     provider  = "manual"
+#     region    = "eu-nl"
+#   }
+# }
+
+# Safety guard: keep false for normal runs.
+# Set true only for intentional full decommission.
+# allow_empty_vpn_nodes = false
+
+# Optional provider API enrichment and compute provisioning.
+# provider_api_enabled    = true
+# hostvds_compute_enabled = true
+#
+# NOTE: In this root module API mode is only for VPN nodes (HostVDS).
+# Timeweb non-VPN infrastructure nodes should be managed by a dedicated compute root.
+#
+# HostVDS OpenStack credentials (use HOSTVDS_OS_* in .env/CI and map to TF_VAR_hostvds_os_*):
+# hostvds_os_auth_url = "https://<keystone-host>/identity/v3"
+# hostvds_os_username = "hostvds-..."
+# hostvds_os_password = "..."
+# hostvds_os_project_name = "..."
+# hostvds_os_user_domain_name = "Default"
+# hostvds_os_user_domain_id = ""
+# hostvds_os_project_domain_name = "Default"
+# hostvds_os_project_domain_id = "default"
+# hostvds_os_region_name = ""
+# hostvds_os_interface = "public"
+#
+# hostvds_vpn_nodes = {
+#   "vpn-hv-main-01" = {
+#     server_id = "98765"
+#     channel   = "prod"
+#     ssh_user  = "root"
+#     ssh_port  = 22
+#     enabled   = true
+#     region    = "de-fra"
+#   }
+# }
+
+# HostVDS compute provisioning (create/destroy VPS via OpenStack):
+# hostvds_provisioned_vpn_nodes = {
+#   "vpn-hv-main-01" = {
+#     image_id    = "2c6a2df7-8207-488d-abe9-77df29422ab1"
+#     flavor_id   = "3ce84631-91df-4ff2-bf59-d549909232dc"
+#     network_ids = ["76920584-3a19-4c67-bcc1-01407bedf558"]
+#     key_pair    = "main-key"
+#     channel     = "prod"
+#     ssh_user    = "root"
+#     ssh_port    = 22
+#     enabled     = true
+#     region      = "eu-west2"
+#   }
+# }

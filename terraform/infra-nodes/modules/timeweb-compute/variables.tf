@@ -1,0 +1,21 @@
+variable "nodes" {
+  description = "Timeweb infra nodes to provision."
+  type = map(object({
+    name              = optional(string, "")
+    os_id             = number
+    preset_id         = number
+    location          = optional(string, "")
+    availability_zone = optional(string, "")
+    project_id        = optional(number)
+    software_id       = optional(number)
+    ssh_keys_ids      = optional(list(number), [])
+    cloud_init        = optional(string, "")
+    role              = optional(string, "worker")
+    kind              = optional(string, "prod")
+    ssh_user          = optional(string, "root")
+    ssh_port          = optional(number, 22)
+    enabled           = optional(bool, true)
+    region            = optional(string, "")
+  }))
+  default = {}
+}

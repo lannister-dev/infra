@@ -1,0 +1,17 @@
+bucket = "vpn-infra-terraform-state"
+key    = "prod/foundation.tfstate"
+region = "ru-central1"
+
+# Optional lock table (recommended for AWS S3):
+# dynamodb_table = "vpn-infra-terraform-locks"
+
+# Optional for S3-compatible endpoints (Yandex/MinIO/Ceph):
+# endpoints = { s3 = "https://storage.yandexcloud.net" }
+# force_path_style            = true
+# skip_credentials_validation = true
+# skip_region_validation      = true
+# skip_requesting_account_id  = true
+# skip_metadata_api_check     = true
+# skip_s3_checksum            = true
+# access_key                  = "..."
+# secret_key                  = "..."

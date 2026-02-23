@@ -7,7 +7,7 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.mypy]
 python_version = "3.10"
-files = ["scripts/profiles"]
+files = ["services", "shared"]
 ignore_missing_imports = true
 check_untyped_defs = true
 warn_redundant_casts = true
@@ -15,5 +15,5 @@ warn_unused_ignores = true
 warn_return_any = false
 
 [tool.pytest.ini_options]
-testpaths = ["scripts/profiles/tests"]
+testpaths = ["tests"]
 pythonpath = ["."]

@@ -1,0 +1,16 @@
+vpn_domain     = "prod.lannister-dev.ru"
+vpn_ws_path    = "/api/v1/stream"
+vpn_xhttp_path = "/api/v1/mobile"
+
+# Optional:
+# enable_vpn_dev_stack = true
+
+# Bump these when config content changes (docker config is immutable).
+prometheus_config_version         = "V1_4"
+grafana_ini_version               = "V1_0"
+grafana_datasources_version       = "V1_1"
+grafana_dashboards_version        = "V1_0"
+xray_config_version               = "V3_2"
+xray_config_dev_version           = "V2_9"
+vpn_fallback_index_version        = "V1_1"
+vpn_fallback_nginx_config_version = "V1_1"

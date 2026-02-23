@@ -1,0 +1,35 @@
+name: Infra CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/infra-ci.yml"
+      - ".github/workflows/infra-deploy.yml"
+      - ".github/workflows/infra-checks-reusable.yml"
+      - "ansible/**"
+      - "terraform/**"
+      - "docker/stacks/**"
+      - "monitoring/**"
+      - "vpn/**"
+      - "scripts/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/infra-ci.yml"
+      - ".github/workflows/infra-deploy.yml"
+      - ".github/workflows/infra-checks-reusable.yml"
+      - "ansible/**"
+      - "terraform/**"
+      - "docker/stacks/**"
+      - "monitoring/**"
+      - "vpn/**"
+      - "scripts/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/infra-checks-reusable.yml

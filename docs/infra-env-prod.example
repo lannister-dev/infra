@@ -1,0 +1,73 @@
+# Backend (required)
+TF_STATE_BUCKET=your-state-bucket
+TF_STATE_REGION=ru-central1
+TF_STATE_KEY_PREFIX=vpn-infra/prod
+
+# Backend (optional for S3-compatible/object-storage)
+# TF_STATE_DYNAMODB_TABLE=terraform-locks
+# TF_STATE_ENDPOINT=https://storage.yandexcloud.net
+# TF_STATE_FORCE_PATH_STYLE=true
+# TF_STATE_ACCESS_KEY=...
+# TF_STATE_SECRET_KEY=...
+
+# Foundation TF vars (required)
+TF_VAR_vpn_domain=example.com
+TF_VAR_vpn_ws_path=/api/v1/stream
+TF_VAR_vpn_xhttp_path=/api/v1/mobile
+
+# Foundation TF vars (optional)
+TF_VAR_enable_vpn_dev_stack=false
+TF_VAR_vpn_dev_domain=
+TF_VAR_vpn_dev_ws_path=
+TF_VAR_vpn_dev_xhttp_path=
+
+# Immutable config versions (optional, keep pinned)
+TF_VAR_prometheus_config_version=V1_4
+TF_VAR_grafana_ini_version=V1_0
+TF_VAR_grafana_datasources_version=V1_1
+TF_VAR_grafana_dashboards_version=V1_0
+TF_VAR_xray_config_version=V3_2
+TF_VAR_xray_config_dev_version=V2_9
+TF_VAR_vpn_fallback_index_version=V1_1
+TF_VAR_vpn_fallback_nginx_config_version=V1_1
+
+# Optional output paths
+# TF_VAR_inventory_output_path=
+# INFRA_NODES_OUTPUT_PATH=
+# INVENTORY_OUTPUT_PATH=
+
+# ---- Provider credentials (optional; only if corresponding mode is enabled in tfvars) ----
+
+# HostVDS / OpenStack (terraform/nodes)
+# TF_VAR_hostvds_os_auth_url=https://os-api.hostvds.com/identity
+# TF_VAR_hostvds_os_username=hostvds-...
+# TF_VAR_hostvds_os_password=...
+# TF_VAR_hostvds_os_project_name=hostvds-...
+# TF_VAR_hostvds_os_user_domain_name=Default
+# TF_VAR_hostvds_os_user_domain_id=
+# TF_VAR_hostvds_os_project_domain_name=
+# TF_VAR_hostvds_os_project_domain_id=default
+# TF_VAR_hostvds_os_region_name=eu-west2
+# TF_VAR_hostvds_os_interface=public
+
+# Timeweb (terraform/infra-nodes)
+# TF_VAR_timeweb_api_url=https://api.timeweb.cloud/api/v1
+# TF_VAR_timeweb_api_token=...
+# TF_VAR_timeweb_auth_header=Authorization
+# TF_VAR_timeweb_auth_scheme=Bearer
+# TF_VAR_timeweb_endpoint_template=/servers/{server_id}
+
+# ---- Ansible runtime toggles (not Terraform vars) ----
+RUN_SANITY_CHECK=true
+DEPLOY_PROBE_STACK=true
+ENABLE_VPN_DEV_STACK=false
+
+# Optional stack image/version env (if you manage via env)
+# TRAEFIK_IMAGE_TAG=v3.6
+# PROMETHEUS_IMAGE_TAG=v2.55.1
+# GRAFANA_IMAGE_TAG=11.5.2
+# XRAY_IMAGE_TAG=v1.8.24
+
+# ---- Generic alias style (alternative to TF_VAR_*) ----
+# IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
+# IAC_TFVAR_TIMEWEB_API_TOKEN=...

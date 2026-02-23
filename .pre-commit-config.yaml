@@ -1,0 +1,50 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+        args: ["-c", ".yamllint.yml"]
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.11.0
+    hooks:
+      - id: shellcheck
+        files: ^(scripts/|wireguard/).+\.sh$
+  - repo: local
+    hooks:
+      - id: terraform-fmt-check
+        name: terraform fmt check
+        entry: terraform fmt -check -recursive terraform
+        language: system
+        pass_filenames: false
+        files: ^terraform/
+      - id: tflint-foundation
+        name: tflint foundation
+        entry: tflint --config .tflint.hcl --chdir terraform/foundation
+        language: system
+        pass_filenames: false
+        files: ^terraform/foundation/
+      - id: tflint-nodes
+        name: tflint nodes
+        entry: tflint --config .tflint.hcl --chdir terraform/nodes
+        language: system
+        pass_filenames: false
+        files: ^terraform/nodes/
+      - id: tflint-infra-nodes
+        name: tflint infra-nodes
+        entry: tflint --config .tflint.hcl --chdir terraform/infra-nodes
+        language: system
+        pass_filenames: false
+        files: ^terraform/infra-nodes/
+      - id: ansible-lint-playbooks
+        name: ansible-lint playbooks
+        entry: ansible-lint -c .ansible-lint.yml ansible/playbooks/reconcile-vpn-nodes.yml ansible/playbooks/deploy-stacks.yml
+        language: system
+        pass_filenames: false
+        files: ^ansible/

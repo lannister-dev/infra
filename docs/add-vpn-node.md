@@ -1,72 +1,43 @@
-# Adding a new VPN node
+# Add VPN Node
 
-## One command from manager
+Primary flow is fully declarative.
+
+## 1. Update topology
+
+Edit `terraform/nodes/catalog.auto.tfvars`:
+- `vpn_nodes` for manual IP,
+- or `hostvds_vpn_nodes` for existing server IDs,
+- or `hostvds_provisioned_vpn_nodes` for Terraform-managed compute.
+
+## 2. Apply Terraform nodes state
 
 ```bash
-./scripts/add-node.sh <IP> --name <peer-name> [--channel dev|prod]
+set -a
+source .env
+set +a
+
+terraform -chdir=terraform/nodes init -input=false -backend-config="$(pwd)/terraform/backends/nodes.hcl"
+terraform -chdir=terraform/nodes apply -input=false
 ```
 
-Example:
+## 3. Reconcile and deploy
 
 ```bash
-./scripts/add-node.sh 31.58.78.202 --name server-fin --channel prod
+export REPO_ROOT="$(pwd)"
+export ANSIBLE_CONFIG="$(pwd)/ansible/ansible.cfg"
+
+ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/reconcile-vpn-nodes.yml
+ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-stacks.yml
 ```
 
-Options: `--channel dev|prod` (default: `prod`), `--user root` (default), `--port 22` (default).
-
-## What it does
-
-1. SSH into the server, installs Docker
-2. Creates WireGuard peer on manager, pushes config to node, starts mesh
-3. Joins node to Swarm, labels `role=vpn` + `channel=dev|prod`
-4. Pushes Harbor registry auth to Swarm services
-
-Scheduling rules:
-
-- `docker/stacks/vpn-xray.yml` runs on `role=vpn` and `channel!=dev` (prod pool, xray + node-agent)
-- `docker/stacks/vpn-xray-dev.yml` runs on `role=vpn` and `channel=dev` (dev pool, xray only)
-
-## Prerequisites
-
-- Root access on manager
-- SSH key-based access to the new server (as root)
-- Manager is logged into Harbor (`docker login harbor.lannister-dev.ru`)
-
-## Verify
+## 4. Verify
 
 ```bash
 docker node ls
 docker node inspect <node> --format '{{ json .Spec.Labels }}'
-docker service ps vpn_xray --filter desired-state=running
-docker service ps vpn-dev_xray --filter desired-state=running
+wg show wg0
 ```
 
-## Deploy stacks
+## Emergency fallback
 
-```bash
-docker stack deploy -c docker/stacks/vpn-xray.yml vpn
-docker stack deploy -c docker/stacks/vpn-xray-dev.yml vpn-dev
-```
-
-Notes:
-
-- prod stack expects external Docker config `xray_config__V3_0` (created by `scripts/bootstrap.sh`).
-- dev stack expects external Docker config `xray_config_dev__V2_9`.
-
-## Troubleshooting
-
-```bash
-# Service not starting?
-docker service ps vpn_xray --no-trunc
-docker service ps vpn_node-agent --no-trunc
-docker service ps vpn-dev_xray --no-trunc
-
-# Logs
-docker service logs vpn_xray --tail 50
-docker service logs vpn_node-agent --tail 50
-docker service logs vpn-dev_xray --tail 50
-
-# WireGuard
-wg show
-ping 10.100.0.<X>
-```
+`scripts/legacy/add-node.sh` is kept only for emergency/manual recovery.
