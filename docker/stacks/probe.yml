@@ -16,6 +16,13 @@ services:
         constraints:
           - node.role == manager
           - node.labels.kind == dev
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
       restart_policy:
         condition: any
 
