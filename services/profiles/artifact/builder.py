@@ -29,7 +29,7 @@ _YAML_IMPORT_ERROR: ModuleNotFoundError | None = None
 yaml: Any | None = None
 try:
     yaml = importlib.import_module("yaml")
-except ModuleNotFoundError as exc:  # pragma: no cover - depends on runtime env
+except ModuleNotFoundError as exc:
     _YAML_IMPORT_ERROR = exc
 
 log = logging.getLogger("profiles.builder")
