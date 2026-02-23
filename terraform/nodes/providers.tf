@@ -27,13 +27,14 @@ provider "openstack" {
   auth_url     = trimspace(var.hostvds_os_auth_url) != "" ? var.hostvds_os_auth_url : null
   user_name    = trimspace(var.hostvds_os_username) != "" ? var.hostvds_os_username : null
   password     = trimspace(var.hostvds_os_password) != "" ? var.hostvds_os_password : null
-  project_name = trimspace(var.hostvds_os_project_name) != "" ? var.hostvds_os_project_name : null
+  # The OpenStack Terraform provider expects tenant_* keys even with Keystone v3.
+  tenant_name = trimspace(var.hostvds_os_project_name) != "" ? var.hostvds_os_project_name : null
 
-  user_domain_name = trimspace(var.hostvds_os_user_domain_name) != "" ? var.hostvds_os_user_domain_name : null
   user_domain_id   = trimspace(var.hostvds_os_user_domain_id) != "" ? var.hostvds_os_user_domain_id : null
+  user_domain_name = trimspace(var.hostvds_os_user_domain_id) == "" && trimspace(var.hostvds_os_user_domain_name) != "" ? var.hostvds_os_user_domain_name : null
 
-  project_domain_name = trimspace(var.hostvds_os_project_domain_name) != "" ? var.hostvds_os_project_domain_name : null
   project_domain_id   = trimspace(var.hostvds_os_project_domain_id) != "" ? var.hostvds_os_project_domain_id : null
+  project_domain_name = trimspace(var.hostvds_os_project_domain_id) == "" && trimspace(var.hostvds_os_project_domain_name) != "" ? var.hostvds_os_project_domain_name : null
 
   region        = trimspace(var.hostvds_os_region_name) != "" ? var.hostvds_os_region_name : null
   endpoint_type = trimspace(var.hostvds_os_interface) != "" ? var.hostvds_os_interface : null
