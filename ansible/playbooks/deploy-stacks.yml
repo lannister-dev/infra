@@ -201,9 +201,6 @@
           - probe
       args:
         chdir: "{{ repo_root }}"
-      environment:
-        CONTROL_PLANE_URL: "{{ control_plane_url }}"
-        VPN_DOMAIN: "{{ vpn_domain }}"
       when: deploy_probe_stack
       changed_when: false
 
