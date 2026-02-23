@@ -5,8 +5,9 @@ services:
       - python
       - -c
       - "import os, runpy, pathlib; os.environ['PROBE_TOKEN']=pathlib.Path('/run/secrets/probe_token').read_text().strip(); runpy.run_module('app', run_name='__main__')"
-    env_file:
-      - ../../.env
+    environment:
+      CONTROL_PLANE_URL: "${CONTROL_PLANE_URL}"
+      VPN_DOMAIN: "${VPN_DOMAIN}"
     secrets:
       - probe_token
     deploy:
