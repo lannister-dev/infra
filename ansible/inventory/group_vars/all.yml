@@ -31,5 +31,3 @@ xray_image_tag: "{{ lookup('env', 'XRAY_IMAGE_TAG') | default('v1.8.24', true) }
 nginx_alpine_image_tag: "{{ lookup('env', 'NGINX_ALPINE_IMAGE_TAG') | default('1.27.5-alpine', true) }}"
 swarmpit_image_tag: "{{ lookup('env', 'SWARMPIT_IMAGE_TAG') | default('1.10.2', true) }}"
 swarmpit_agent_image_tag: "{{ lookup('env', 'SWARMPIT_AGENT_IMAGE_TAG') | default('1.9.2', true) }}"
-
-prometheus_basic_auth: "{{ lookup('env', 'PROMETHEUS_BASIC_AUTH') | default('', true) }}"
