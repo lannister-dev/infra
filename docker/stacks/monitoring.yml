@@ -1,5 +1,3 @@
-version: "3.9"
-
 # ======= deploy services ========
 x-deploy-common: &deploy-common
   replicas: 1

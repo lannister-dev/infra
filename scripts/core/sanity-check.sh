@@ -136,35 +136,33 @@ check_manager() {
     return
   fi
 
-  # In web mode, root check is meaningful; in vpn mode it is not.
-  if [[ "${VPN_EDGE_MODE}" == "web" ]]; then
-    log "Checking HTTPS reachability (web mode): https://${vpn_domain}/"
-    local code_root
-    code_root="$(curl -sS -o /dev/null -w '%{http_code}' "https://${vpn_domain}/" || true)"
-    [[ "${code_root}" != "000" ]] || die "Cannot reach https://${vpn_domain}/ (DNS/TLS/edge)"
-    log "Root HTTP status: ${code_root}"
-  else
-    log "VPN edge mode: skipping HTTPS root check (not a web endpoint)"
+  # Use localhost with Host header to avoid hairpin NAT / Cloudflare proxy issues.
+  # The server often cannot reach itself via the external domain.
+  log "Checking Traefik HTTPS on localhost (Host: ${vpn_domain})"
+
+  local code_local
+  code_local="$(curl -k -sS -o /dev/null -w '%{http_code}' \
+    --resolve "${vpn_domain}:443:127.0.0.1" \
+    "https://${vpn_domain}/" 2>/dev/null || true)"
+
+  if [[ "${code_local}" == "000" ]]; then
+    die "Traefik not responding on localhost:443 (service down?)"
   fi
+  log "Traefik local HTTPS: HTTP ${code_local}"
 
-  # Quick TCP check: separates DNS/TCP failure from TLS/Traefik
-  # (Runs only if curl can resolve; still useful as a fast fail)
-  if command -v nc >/dev/null 2>&1; then
-    log "Checking TCP/443 reachability: ${vpn_domain}:443"
-    nc -z -w 3 "${vpn_domain}" 443 >/dev/null 2>&1 || warn "TCP/443 check failed (DNS/TCP/firewall). Curl may still provide details."
-  fi
+  # WS route check via localhost
+  log "Checking WS route (local): ${vpn_domain}${ws_path}"
 
-  # WS route check
-  log "Checking WS route presence (Traefik-level only): ${vpn_domain}${ws_path}"
-
+  local code_ws
   code_ws="$(curl -k -sS -o /dev/null -w '%{http_code}' \
-    "https://${vpn_domain}${ws_path}" || true)"
+    --resolve "${vpn_domain}:443:127.0.0.1" \
+    "https://${vpn_domain}${ws_path}" 2>/dev/null || true)"
 
   if [[ "${code_ws}" == "000" ]]; then
-    die "WS route unreachable (000). DNS/TLS/Traefik failure"
+    die "WS route unreachable on localhost. Traefik routing broken"
   fi
 
-  log "WS edge reachable (HTTP ${code_ws}); protocol-level handling delegated to Xray"
+  log "WS route reachable (HTTP ${code_ws}); protocol-level handling delegated to Xray"
 
   # optional: upstream reachability over WG
   local upstream_ip="${VPN_UPSTREAM_WG_IP:-}"
