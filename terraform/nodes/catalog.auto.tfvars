@@ -7,8 +7,7 @@ allow_empty_vpn_nodes = false
 # 1) Manual nodes by public IP (optional fallback mode)
 vpn_nodes = {}
 
-# 2) Existing HostVDS node(s) by server_id (recommended current mode)
-# Set provider_api_enabled=true after replacing server_id placeholders below.
+# 2) Existing HostVDS node(s) by server_id
 provider_api_enabled = true
 hostvds_vpn_nodes = {
   "vpn-hostvds-main-01" = {
