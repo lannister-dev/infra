@@ -365,6 +365,7 @@
           - "{{ hostvars[groups['swarm_managers'][0]].swarm_worker_join_token.stdout | trim }}"
           - "{{ hostvars[groups['swarm_managers'][0]].swarm_manager_addr.stdout | trim }}"
       when: swarm_local_state.stdout | trim != "active"
+      changed_when: true
       no_log: true
 
     - name: Read node id after swarm join
@@ -412,9 +413,9 @@
         WANT_CHANNEL="{{ hostvars[item].node_channel }}"
         WANT_PEER="{{ hostvars[item].peer_name }}"
 
-        cur_role="$(docker node inspect --format '{{ "{{ index .Spec.Labels \"role\" }}" }}' "${NODE_ID}" 2>/dev/null || true)"
-        cur_channel="$(docker node inspect --format '{{ "{{ index .Spec.Labels \"channel\" }}" }}' "${NODE_ID}" 2>/dev/null || true)"
-        cur_peer="$(docker node inspect --format '{{ "{{ index .Spec.Labels \"peer_name\" }}" }}' "${NODE_ID}" 2>/dev/null || true)"
+        cur_role="$(docker node inspect --format '{% raw %}{{ index .Spec.Labels "role" }}{% endraw %}' "${NODE_ID}" 2>/dev/null || true)"
+        cur_channel="$(docker node inspect --format '{% raw %}{{ index .Spec.Labels "channel" }}{% endraw %}' "${NODE_ID}" 2>/dev/null || true)"
+        cur_peer="$(docker node inspect --format '{% raw %}{{ index .Spec.Labels "peer_name" }}{% endraw %}' "${NODE_ID}" 2>/dev/null || true)"
 
         if [ "${cur_role}" = "vpn" ] && [ "${cur_channel}" = "${WANT_CHANNEL}" ] && [ "${cur_peer}" = "${WANT_PEER}" ]; then
           echo "CHANGED=0"
