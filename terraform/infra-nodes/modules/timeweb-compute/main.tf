@@ -12,13 +12,11 @@ resource "twc_server" "infra" {
   name              = trimspace(each.value.name) != "" ? each.value.name : each.key
   os_id             = each.value.os_id
   preset_id         = each.value.preset_id
-  availability_zone = trimspace(each.value.availability_zone) != "" ? each.value.availability_zone : (
-    trimspace(each.value.location) != "" ? each.value.location : null
-  )
-  project_id   = try(each.value.project_id, null)
-  software_id  = try(each.value.software_id, null)
-  ssh_keys_ids = each.value.ssh_keys_ids
-  cloud_init   = trimspace(each.value.cloud_init) != "" ? each.value.cloud_init : null
+  availability_zone = trimspace(each.value.availability_zone) != "" ? each.value.availability_zone : (trimspace(each.value.location) != "" ? each.value.location : null)
+  project_id        = try(each.value.project_id, null)
+  software_id       = try(each.value.software_id, null)
+  ssh_keys_ids      = each.value.ssh_keys_ids
+  cloud_init        = trimspace(each.value.cloud_init) != "" ? each.value.cloud_init : null
 }
 
 locals {

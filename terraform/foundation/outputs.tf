@@ -15,18 +15,18 @@ output "docker_config_names" {
 output "network_names" {
   description = "Swarm overlay networks created by Terraform foundation."
   value = {
-    traefik = docker_network.traefik_swarm.name
+    traefik    = docker_network.traefik_swarm.name
     monitoring = docker_network.monitoring.name
-    vpn = docker_network.vpn_net.name
+    vpn        = docker_network.vpn_net.name
   }
 }
 
 output "volume_names" {
   description = "Persistent volumes created by Terraform foundation."
   value = {
-    traefik_acme = docker_volume.traefik_acme.name
+    traefik_acme    = docker_volume.traefik_acme.name
     prometheus_data = docker_volume.prometheus_data.name
-    grafana_data = docker_volume.grafana_data.name
-    agent_data = docker_volume.agent_data.name
+    grafana_data    = docker_volume.grafana_data.name
+    agent_data      = docker_volume.agent_data.name
   }
 }
