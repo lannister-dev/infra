@@ -85,9 +85,8 @@
     - name: Ensure required auth variables are set
       ansible.builtin.assert:
         that:
-          - traefik_dashboard_auth | length > 0
           - prometheus_basic_auth | length > 0
-        fail_msg: "TRAEFIK_DASHBOARD_AUTH and PROMETHEUS_BASIC_AUTH must be set in environment/.env."
+        fail_msg: "PROMETHEUS_BASIC_AUTH must be set in environment/.env."
 
     - name: Deploy traefik stack
       ansible.builtin.command:
@@ -103,7 +102,6 @@
         chdir: "{{ repo_root }}"
       environment:
         TRAEFIK_IMAGE_TAG: "{{ traefik_image_tag }}"
-        TRAEFIK_DASHBOARD_AUTH: "{{ traefik_dashboard_auth }}"
       changed_when: false
 
     - name: Deploy monitoring stack

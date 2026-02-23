@@ -111,7 +111,7 @@ services:
       - "traefik.http.routers.traefik.service=api@internal"
 
       # ============ BASIC AUTH =======================
-      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$S0jUBQKB$$mp.UG1NBoK.vFVjTc3Jby/"
       - "traefik.http.routers.traefik.middlewares=traefik-auth@docker"
     networks:
       - traefik_proxy

@@ -40,5 +40,4 @@ nginx_alpine_image_tag: "{{ lookup('env', 'NGINX_ALPINE_IMAGE_TAG') | default('1
 swarmpit_image_tag: "{{ lookup('env', 'SWARMPIT_IMAGE_TAG') | default('1.10.2', true) }}"
 swarmpit_agent_image_tag: "{{ lookup('env', 'SWARMPIT_AGENT_IMAGE_TAG') | default('1.9.2', true) }}"
 
-traefik_dashboard_auth: "{{ lookup('env', 'TRAEFIK_DASHBOARD_AUTH') | default('', true) }}"
 prometheus_basic_auth: "{{ lookup('env', 'PROMETHEUS_BASIC_AUTH') | default('', true) }}"
