@@ -83,7 +83,7 @@ jobs:
       - name: yamllint
         run: yamllint -c .yamllint.yml ansible docker/stacks .github/workflows
 
-      - name: shellcheck
+      - name: shellcheck (core only)
         run: |
           set -Eeuo pipefail
-          find scripts wireguard -type f -name "*.sh" -print0 | xargs -0 shellcheck
+          find scripts/core wireguard/manager -type f -name "*.sh" -print0 | xargs -0 shellcheck

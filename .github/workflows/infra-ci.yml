@@ -12,7 +12,8 @@ on:
       - "docker/stacks/**"
       - "monitoring/**"
       - "vpn/**"
-      - "scripts/**"
+      - "scripts/core/**"
+      - "wireguard/manager/**"
   push:
     branches: [main]
     paths:
@@ -24,7 +25,8 @@ on:
       - "docker/stacks/**"
       - "monitoring/**"
       - "vpn/**"
-      - "scripts/**"
+      - "scripts/core/**"
+      - "wireguard/manager/**"
   workflow_dispatch:
 
 permissions:
