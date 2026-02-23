@@ -33,7 +33,6 @@ concurrency:
 
 env:
   TF_IN_AUTOMATION: "true"
-  TERRAFORM_VERSION: "1.8.5"
   PYTHON_VERSION: "3.10"
 
 jobs:
@@ -50,24 +49,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ensure Terraform CLI exists on self-hosted runner
+      - name: Ensure Terraform CLI exists
         run: |
           set -Eeuo pipefail
           if command -v terraform >/dev/null 2>&1; then
-            terraform version
-            exit 0
+            terraform version; exit 0
           fi
-
           if command -v tofu >/dev/null 2>&1; then
             mkdir -p "${RUNNER_TEMP}/bin"
             printf '#!/usr/bin/env bash\nexec tofu "$@"\n' > "${RUNNER_TEMP}/bin/terraform"
             chmod +x "${RUNNER_TEMP}/bin/terraform"
             echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
-            terraform version
-            exit 0
+            terraform version; exit 0
           fi
-
-          echo "::error::Neither terraform nor tofu is installed on self-hosted runner"
+          echo "::error::Neither terraform nor tofu found on runner"
           exit 1
 
       - name: Write runtime env
@@ -75,130 +70,21 @@ jobs:
           INFRA_ENV_PROD: ${{ secrets.INFRA_ENV_PROD }}
         run: |
           set -Eeuo pipefail
-          test -n "${INFRA_ENV_PROD}" || (echo "::error::Missing secret INFRA_ENV_PROD" && exit 1)
+          test -n "${INFRA_ENV_PROD}" || { echo "::error::Missing secret INFRA_ENV_PROD"; exit 1; }
           ENV_FILE="${RUNNER_TEMP}/infra.env"
           printf '%s\n' "${INFRA_ENV_PROD}" > "${ENV_FILE}"
           chmod 600 "${ENV_FILE}"
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
+          cp "${ENV_FILE}" "${GITHUB_WORKSPACE}/.env"
+          chmod 600 "${GITHUB_WORKSPACE}/.env"
 
-      - name: Terraform apply roots
+      - name: Terraform apply
         env:
           APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
         run: |
           set -Eeo pipefail
-
-          set -a
-          source "${INFRA_ENV_FILE}"
-          set +a
-          set -u
-
-          : "${TF_STATE_BUCKET:?TF_STATE_BUCKET is required}"
-          : "${TF_STATE_REGION:?TF_STATE_REGION is required}"
-          : "${TF_STATE_KEY_PREFIX:?TF_STATE_KEY_PREFIX is required}"
-
-          # Optional: force Terraform/OpenTofu provider installation through mirror.
-          # Supported envs in INFRA_ENV_PROD:
-          # - TF_CLI_CONFIG_CONTENT_B64 (highest priority)
-          # - TF_CLI_CONFIG_CONTENT
-          # - TF_PROVIDER_MIRROR_URL
-          tf_cli_cfg_tmp=""
-          if [ -n "${TF_CLI_CONFIG_CONTENT_B64:-}" ]; then
-            tf_cli_cfg_tmp="$(mktemp)"
-            printf '%s' "${TF_CLI_CONFIG_CONTENT_B64}" | base64 -d > "${tf_cli_cfg_tmp}"
-            chmod 600 "${tf_cli_cfg_tmp}"
-            export TF_CLI_CONFIG_FILE="${tf_cli_cfg_tmp}"
-            export TOFU_CONFIG_FILE="${tf_cli_cfg_tmp}"
-          elif [ -n "${TF_CLI_CONFIG_CONTENT:-}" ]; then
-            tf_cli_cfg_tmp="$(mktemp)"
-            printf '%s\n' "${TF_CLI_CONFIG_CONTENT}" > "${tf_cli_cfg_tmp}"
-            chmod 600 "${tf_cli_cfg_tmp}"
-            export TF_CLI_CONFIG_FILE="${tf_cli_cfg_tmp}"
-            export TOFU_CONFIG_FILE="${tf_cli_cfg_tmp}"
-          elif [ -z "${TF_CLI_CONFIG_FILE:-}" ] && [ -n "${TF_PROVIDER_MIRROR_URL:-}" ]; then
-            tf_cli_cfg_tmp="$(mktemp)"
-            printf 'provider_installation {\n  network_mirror {\n    url = "%s"\n    include = ["registry.terraform.io/*/*"]\n  }\n  direct {\n    exclude = ["registry.terraform.io/*/*"]\n  }\n}\n' \
-              "${TF_PROVIDER_MIRROR_URL}" > "${tf_cli_cfg_tmp}"
-            chmod 600 "${tf_cli_cfg_tmp}"
-            export TF_CLI_CONFIG_FILE="${tf_cli_cfg_tmp}"
-            export TOFU_CONFIG_FILE="${tf_cli_cfg_tmp}"
-          fi
-
-          # Provider/env variables are loaded centrally from TF_VAR_* or IAC_TFVAR_*.
-          # No provider-specific exports should be hardcoded in workflow.
-          source ./scripts/core/prepare-terraform-env.sh
-
-          write_backend_config() {
-            local state_key="$1"
-            local output_file="$2"
-            {
-              echo "bucket = \"${TF_STATE_BUCKET}\""
-              echo "key = \"${TF_STATE_KEY_PREFIX}/${state_key}\""
-              echo "region = \"${TF_STATE_REGION}\""
-
-              if [ -n "${TF_STATE_DYNAMODB_TABLE:-}" ]; then
-                echo "dynamodb_table = \"${TF_STATE_DYNAMODB_TABLE}\""
-              fi
-
-              if [ -n "${TF_STATE_ENDPOINT:-}" ]; then
-                echo "endpoints = { s3 = \"${TF_STATE_ENDPOINT}\" }"
-                echo "force_path_style = ${TF_STATE_FORCE_PATH_STYLE:-true}"
-                echo "skip_credentials_validation = true"
-                echo "skip_region_validation = true"
-                echo "skip_requesting_account_id = true"
-                echo "skip_metadata_api_check = true"
-                echo "skip_s3_checksum = true"
-              fi
-
-              if [ -n "${TF_STATE_ACCESS_KEY:-}" ]; then
-                echo "access_key = \"${TF_STATE_ACCESS_KEY}\""
-              fi
-
-              if [ -n "${TF_STATE_SECRET_KEY:-}" ]; then
-                echo "secret_key = \"${TF_STATE_SECRET_KEY}\""
-              fi
-            } > "${output_file}"
-            chmod 600 "${output_file}"
-          }
-
-          roots=(foundation nodes)
-          if [ "${APPLY_INFRA_NODES}" = "true" ]; then
-            roots+=(infra-nodes)
-          fi
-
-          for root in "${roots[@]}"; do
-            backend_file="$(mktemp)"
-            write_backend_config "${root}.tfstate" "${backend_file}"
-
-            unset TF_VAR_inventory_output_path
-            if [ "${root}" = "nodes" ]; then
-              export TF_VAR_inventory_output_path="${INVENTORY_OUTPUT_PATH:-}"
-            elif [ "${root}" = "infra-nodes" ]; then
-              export TF_VAR_inventory_output_path="${INFRA_NODES_OUTPUT_PATH:-}"
-            fi
-
-            terraform -chdir="terraform/${root}" init -input=false -backend-config="${backend_file}"
-            terraform -chdir="terraform/${root}" plan -input=false -out=tfplan
-            terraform -chdir="terraform/${root}" apply -input=false -auto-approve tfplan
-
-            # After foundation apply, export docker config names for Ansible
-            if [ "${root}" = "foundation" ]; then
-              config_names=$(terraform -chdir="terraform/${root}" output -json docker_config_names)
-              echo "PROMETHEUS_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["prometheus"])')" >> "${GITHUB_ENV}"
-              echo "GRAFANA_INI_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["grafana_ini"])')" >> "${GITHUB_ENV}"
-              echo "GRAFANA_DATASOURCES_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["grafana_datasources"])')" >> "${GITHUB_ENV}"
-              echo "GRAFANA_DASHBOARDS_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["grafana_dashboards"])')" >> "${GITHUB_ENV}"
-              echo "XRAY_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["xray"])')" >> "${GITHUB_ENV}"
-              echo "XRAY_CONFIG_DEV_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("xray_dev",""))')" >> "${GITHUB_ENV}"
-              echo "VPN_FALLBACK_INDEX_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["vpn_fallback_index"])')" >> "${GITHUB_ENV}"
-              echo "VPN_FALLBACK_NGINX_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["vpn_fallback_nginx"])')" >> "${GITHUB_ENV}"
-            fi
-
-            rm -f "${backend_file}" "terraform/${root}/tfplan"
-          done
-
-          if [ -n "${tf_cli_cfg_tmp}" ] && [ -f "${tf_cli_cfg_tmp}" ]; then
-            rm -f "${tf_cli_cfg_tmp}"
-          fi
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          bash ./scripts/ci/apply-terraform.sh
 
       - uses: actions/setup-python@v5
         with:
@@ -216,30 +102,22 @@ jobs:
         if: ${{ inputs.reconcile_nodes == true }}
         run: |
           set -Eeo pipefail
-          set -a
-          source "${INFRA_ENV_FILE}"
-          set +a
-          set -u
-          export REPO_ROOT="$(pwd)"
-          export ANSIBLE_CONFIG="$(pwd)/ansible/ansible.cfg"
-          ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/reconcile-vpn-nodes.yml
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export REPO_ROOT="${GITHUB_WORKSPACE}"
+          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          ansible-playbook -i ansible/inventory/production.ini \
+            ansible/playbooks/reconcile-vpn-nodes.yml
 
       - name: Deploy stacks (Ansible)
         run: |
           set -Eeo pipefail
-          set -a
-          source "${INFRA_ENV_FILE}"
-          set +a
-          set -u
-          export REPO_ROOT="$(pwd)"
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export REPO_ROOT="${GITHUB_WORKSPACE}"
           export RUN_SANITY_CHECK="true"
-          export ANSIBLE_CONFIG="$(pwd)/ansible/ansible.cfg"
-          ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-stacks.yml
+          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          ansible-playbook -i ansible/inventory/production.ini \
+            ansible/playbooks/deploy-stacks.yml
 
-      - name: Cleanup runtime env file
+      - name: Cleanup
         if: always()
-        run: |
-          set -Eeuo pipefail
-          if [ -n "${INFRA_ENV_FILE:-}" ] && [ -f "${INFRA_ENV_FILE}" ]; then
-            rm -f "${INFRA_ENV_FILE}"
-          fi
+        run: rm -f "${INFRA_ENV_FILE:-}" "${GITHUB_WORKSPACE}/.env"
