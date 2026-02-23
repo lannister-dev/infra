@@ -36,5 +36,5 @@ prometheus_image_tag: "{{ lookup('env', 'PROMETHEUS_IMAGE_TAG') | default('v2.55
 grafana_image_tag: "{{ lookup('env', 'GRAFANA_IMAGE_TAG') | default('11.5.2', true) }}"
 xray_image_tag: "{{ lookup('env', 'XRAY_IMAGE_TAG') | default('v1.8.24', true) }}"
 nginx_alpine_image_tag: "{{ lookup('env', 'NGINX_ALPINE_IMAGE_TAG') | default('1.27.5-alpine', true) }}"
-swarmpit_image_tag: "{{ lookup('env', 'SWARMPIT_IMAGE_TAG') | default('1.10.2', true) }}"
-swarmpit_agent_image_tag: "{{ lookup('env', 'SWARMPIT_AGENT_IMAGE_TAG') | default('1.9.2', true) }}"
+swarmpit_image_tag: "{{ lookup('env', 'SWARMPIT_IMAGE_TAG') | default('latest', true) }}"
+swarmpit_agent_image_tag: "{{ lookup('env', 'SWARMPIT_AGENT_IMAGE_TAG') | default('2.2', true) }}"
