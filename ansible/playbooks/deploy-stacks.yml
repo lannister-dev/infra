@@ -82,12 +82,6 @@
       when: deploy_probe_stack
       changed_when: false
 
-    - name: Ensure required auth variables are set
-      ansible.builtin.assert:
-        that:
-          - prometheus_basic_auth | length > 0
-        fail_msg: "PROMETHEUS_BASIC_AUTH must be set in environment/.env."
-
     - name: Deploy traefik stack
       ansible.builtin.command:
         argv:
@@ -123,7 +117,6 @@
         GRAFANA_DASHBOARDS_CONFIG_NAME: "{{ grafana_dashboards_config_name }}"
         PROMETHEUS_IMAGE_TAG: "{{ prometheus_image_tag }}"
         GRAFANA_IMAGE_TAG: "{{ grafana_image_tag }}"
-        PROMETHEUS_BASIC_AUTH: "{{ prometheus_basic_auth }}"
       changed_when: false
 
     - name: Deploy swarmpit stack
