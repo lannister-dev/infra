@@ -47,7 +47,7 @@ TF_VAR_vpn_dev_xhttp_path=
 # TF_VAR_hostvds_os_user_domain_id=
 # TF_VAR_hostvds_os_project_domain_name=
 # TF_VAR_hostvds_os_project_domain_id=default
-# TF_VAR_hostvds_os_region_name=eu-west2
+# TF_VAR_hostvds_os_region_name=eu-north1b
 # TF_VAR_hostvds_os_interface=public
 
 # Timeweb (terraform/infra-nodes)
