@@ -11,18 +11,6 @@ This directory is split into:
   Converts `IAC_TFVAR_*` aliases to `TF_VAR_*` for Terraform in CI/deploy.
 - `scripts/core/sanity-check.sh`
   Post-deploy sanity checks (called by Ansible deploy playbook).
-- `scripts/core/install-terraform.ps1`
-  Windows helper to install Terraform (with OpenTofu fallback).
-- `scripts/core/terraform-init-all.ps1`
-  Initializes all Terraform root modules on Windows.
-- `scripts/core/load-dotenv.ps1`
-  Loads `.env` values into current PowerShell process.
-- `scripts/core/import-hostvds-openrc-to-env.ps1`
-  Imports HostVDS OpenStack creds from `openrc.sh` into `.env`.
-- `scripts/core/get-hostvds-server-id.ps1`
-  Lists HostVDS servers to get `server_id` for catalogs.
-- `scripts/core/load-openrc.ps1`
-  Loads raw `openrc.sh` exports into current process.
 - `scripts/core/update-terraform-locks.sh`
   Updates provider lock files (`.terraform.lock.hcl`) for all roots.
 

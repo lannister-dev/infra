@@ -91,7 +91,13 @@ terraform -chdir=terraform/infra-nodes apply -input=false
 Windows PowerShell:
 
 ```powershell
-.\scripts\core\load-dotenv.ps1 -Path .\.env
+Get-Content .\.env | ForEach-Object {
+  if ($_ -match '^\s*#' -or $_ -match '^\s*$') { return }
+  $pair = $_ -split '=', 2
+  if ($pair.Length -eq 2) {
+    [Environment]::SetEnvironmentVariable($pair[0], $pair[1], 'Process')
+  }
+}
 
 terraform -chdir=terraform/foundation init -input=false -backend-config="$PWD/terraform/backends/foundation.hcl"
 terraform -chdir=terraform/foundation apply -input=false
@@ -105,14 +111,9 @@ terraform -chdir=terraform/infra-nodes apply -input=false
 
 ## Tooling
 
-Windows setup:
-
-```powershell
-.\scripts\core\install-terraform.ps1 -Version 1.8.5 -AddToUserPath -AllowOpenTofuFallback
-.\scripts\core\terraform-init-all.ps1
-```
-
-If Terraform download is region-blocked, installer can fall back to OpenTofu.
+Use preinstalled `terraform` (or `tofu`) on the target runner/host.
+In restricted regions, configure provider mirror via `TF_PROVIDER_MIRROR_URL`
+or full CLI config vars (`TF_CLI_CONFIG_CONTENT*`) in deploy environment.
 
 If IDE shows `Unknown resource` or `Unresolved reference` for provider resources
 (`twc_server`, `openstack_compute_instance_v2`), run init in each root so provider
@@ -138,6 +139,9 @@ TF_STATE_BUCKET=...
 TF_STATE_REGION=...
 TF_STATE_KEY_PREFIX=...
 
+# Provider mirror in restricted regions (recommended)
+TF_PROVIDER_MIRROR_URL=https://terraform-mirror.yandexcloud.net/
+
 TF_VAR_vpn_domain=example.com
 TF_VAR_vpn_ws_path=/api/v1/stream
 TF_VAR_vpn_xhttp_path=/api/v1/mobile
@@ -146,6 +150,13 @@ TF_VAR_vpn_xhttp_path=/api/v1/mobile
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
 # IAC_TFVAR_HOSTVDS_OS_USERNAME=...
 ```
+
+Mirror behavior in deploy workflow:
+- if `TF_CLI_CONFIG_CONTENT_B64` is set, it is used as full Terraform/OpenTofu CLI config;
+- else if `TF_CLI_CONFIG_CONTENT` is set, it is used as full config;
+- else if `TF_PROVIDER_MIRROR_URL` is set, workflow generates `provider_installation` config
+  with mirror for `registry.terraform.io/*/*` and direct fallback for non-registry providers
+  (for example, `tf.timeweb.cloud`).
 
 Full example template:
 - `docs/infra-env-prod.example`
