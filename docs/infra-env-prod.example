@@ -3,6 +3,13 @@ TF_STATE_BUCKET=your-state-bucket
 TF_STATE_REGION=ru-central1
 TF_STATE_KEY_PREFIX=vpn-infra/prod
 
+# Terraform provider mirror (recommended in restricted regions)
+# Yandex mirror for registry.terraform.io providers:
+# TF_PROVIDER_MIRROR_URL=https://terraform-mirror.yandexcloud.net/
+# Alternative (advanced): pass full CLI config as text/base64
+# TF_CLI_CONFIG_CONTENT=
+# TF_CLI_CONFIG_CONTENT_B64=
+
 # Backend (optional for S3-compatible/object-storage)
 # TF_STATE_DYNAMODB_TABLE=terraform-locks
 # TF_STATE_ENDPOINT=https://storage.yandexcloud.net

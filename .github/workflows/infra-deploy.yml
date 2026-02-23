@@ -50,11 +50,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
+      - name: Ensure Terraform CLI exists on self-hosted runner
+        run: |
+          set -Eeuo pipefail
+          if command -v terraform >/dev/null 2>&1; then
+            terraform version
+            exit 0
+          fi
+
+          if command -v tofu >/dev/null 2>&1; then
+            mkdir -p "${RUNNER_TEMP}/bin"
+            printf '#!/usr/bin/env bash\nexec tofu "$@"\n' > "${RUNNER_TEMP}/bin/terraform"
+            chmod +x "${RUNNER_TEMP}/bin/terraform"
+            echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+            terraform version
+            exit 0
+          fi
+
+          echo "::error::Neither terraform nor tofu is installed on self-hosted runner"
+          exit 1
 
       - name: Write runtime env
         env:
@@ -80,6 +94,33 @@ jobs:
           : "${TF_STATE_BUCKET:?TF_STATE_BUCKET is required}"
           : "${TF_STATE_REGION:?TF_STATE_REGION is required}"
           : "${TF_STATE_KEY_PREFIX:?TF_STATE_KEY_PREFIX is required}"
+
+          # Optional: force Terraform/OpenTofu provider installation through mirror.
+          # Supported envs in INFRA_ENV_PROD:
+          # - TF_CLI_CONFIG_CONTENT_B64 (highest priority)
+          # - TF_CLI_CONFIG_CONTENT
+          # - TF_PROVIDER_MIRROR_URL
+          tf_cli_cfg_tmp=""
+          if [ -n "${TF_CLI_CONFIG_CONTENT_B64:-}" ]; then
+            tf_cli_cfg_tmp="$(mktemp)"
+            printf '%s' "${TF_CLI_CONFIG_CONTENT_B64}" | base64 -d > "${tf_cli_cfg_tmp}"
+            chmod 600 "${tf_cli_cfg_tmp}"
+            export TF_CLI_CONFIG_FILE="${tf_cli_cfg_tmp}"
+            export TOFU_CONFIG_FILE="${tf_cli_cfg_tmp}"
+          elif [ -n "${TF_CLI_CONFIG_CONTENT:-}" ]; then
+            tf_cli_cfg_tmp="$(mktemp)"
+            printf '%s\n' "${TF_CLI_CONFIG_CONTENT}" > "${tf_cli_cfg_tmp}"
+            chmod 600 "${tf_cli_cfg_tmp}"
+            export TF_CLI_CONFIG_FILE="${tf_cli_cfg_tmp}"
+            export TOFU_CONFIG_FILE="${tf_cli_cfg_tmp}"
+          elif [ -z "${TF_CLI_CONFIG_FILE:-}" ] && [ -n "${TF_PROVIDER_MIRROR_URL:-}" ]; then
+            tf_cli_cfg_tmp="$(mktemp)"
+            printf 'provider_installation {\n  network_mirror {\n    url = "%s"\n    include = ["registry.terraform.io/*/*"]\n  }\n  direct {\n    exclude = ["registry.terraform.io/*/*"]\n  }\n}\n' \
+              "${TF_PROVIDER_MIRROR_URL}" > "${tf_cli_cfg_tmp}"
+            chmod 600 "${tf_cli_cfg_tmp}"
+            export TF_CLI_CONFIG_FILE="${tf_cli_cfg_tmp}"
+            export TOFU_CONFIG_FILE="${tf_cli_cfg_tmp}"
+          fi
 
           # Provider/env variables are loaded centrally from TF_VAR_* or IAC_TFVAR_*.
           # No provider-specific exports should be hardcoded in workflow.
@@ -140,6 +181,10 @@ jobs:
 
             rm -f "${backend_file}" "terraform/${root}/tfplan"
           done
+
+          if [ -n "${tf_cli_cfg_tmp}" ] && [ -f "${tf_cli_cfg_tmp}" ]; then
+            rm -f "${tf_cli_cfg_tmp}"
+          fi
 
       - uses: actions/setup-python@v5
         with:
