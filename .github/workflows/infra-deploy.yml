@@ -125,7 +125,7 @@ jobs:
 
           # Provider/env variables are loaded centrally from TF_VAR_* or IAC_TFVAR_*.
           # No provider-specific exports should be hardcoded in workflow.
-          bash ./scripts/core/prepare-terraform-env.sh
+          source ./scripts/core/prepare-terraform-env.sh
 
           write_backend_config() {
             local state_key="$1"
