@@ -1,14 +1,13 @@
 locals {
   root_dir = "${path.module}/../.."
 
-  prometheus_config_name          = "prometheus_config__${var.prometheus_config_version}"
-  grafana_ini_config_name         = "grafana_ini__${var.grafana_ini_version}"
-  grafana_datasources_config_name = "grafana_datasources__${var.grafana_datasources_version}"
-  grafana_dashboards_config_name  = "grafana_dashboards__${var.grafana_dashboards_version}"
-  xray_config_name                = "xray_config__${var.xray_config_version}"
-  xray_config_dev_name            = "xray_config_dev__${var.xray_config_dev_version}"
-  vpn_fallback_index_config_name  = "vpn_fallback_index__${var.vpn_fallback_index_version}"
-  vpn_fallback_nginx_config_name  = "vpn_fallback_nginx_conf__${var.vpn_fallback_nginx_config_version}"
+  # Raw file content (used for both hashing and docker_config data)
+  prometheus_config_data          = filebase64("${local.root_dir}/monitoring/prometheus/prometheus.yml")
+  grafana_ini_config_data         = filebase64("${local.root_dir}/monitoring/grafana/grafana.ini")
+  grafana_datasources_config_data = filebase64("${local.root_dir}/monitoring/grafana/provisioning/datasources/prometheus.yml")
+  grafana_dashboards_config_data  = filebase64("${local.root_dir}/monitoring/grafana/provisioning/dashboards/dashboards.yml")
+  vpn_fallback_index_data         = filebase64("${local.root_dir}/vpn/nginx/index.html")
+  vpn_fallback_nginx_data         = filebase64("${local.root_dir}/vpn/nginx/server.conf")
 
   vpn_dev_domain     = trimspace(var.vpn_dev_domain) != "" ? var.vpn_dev_domain : var.vpn_domain
   vpn_dev_ws_path    = trimspace(var.vpn_dev_ws_path) != "" ? var.vpn_dev_ws_path : var.vpn_ws_path
@@ -25,4 +24,17 @@ locals {
     VPN_WS_PATH    = local.vpn_dev_ws_path
     VPN_XHTTP_PATH = local.vpn_dev_xhttp_path
   })
+
+  xray_config_data     = base64encode(local.xray_config_rendered)
+  xray_config_dev_data = base64encode(local.xray_config_dev_rendered)
+
+  # Content-hash based config names: auto-rotate on any file change
+  prometheus_config_name          = "prometheus_config__${substr(sha256(local.prometheus_config_data), 0, 8)}"
+  grafana_ini_config_name         = "grafana_ini__${substr(sha256(local.grafana_ini_config_data), 0, 8)}"
+  grafana_datasources_config_name = "grafana_datasources__${substr(sha256(local.grafana_datasources_config_data), 0, 8)}"
+  grafana_dashboards_config_name  = "grafana_dashboards__${substr(sha256(local.grafana_dashboards_config_data), 0, 8)}"
+  xray_config_name                = "xray_config__${substr(sha256(local.xray_config_data), 0, 8)}"
+  xray_config_dev_name            = "xray_config_dev__${substr(sha256(local.xray_config_dev_data), 0, 8)}"
+  vpn_fallback_index_config_name  = "vpn_fallback_index__${substr(sha256(local.vpn_fallback_index_data), 0, 8)}"
+  vpn_fallback_nginx_config_name  = "vpn_fallback_nginx_conf__${substr(sha256(local.vpn_fallback_nginx_data), 0, 8)}"
 }

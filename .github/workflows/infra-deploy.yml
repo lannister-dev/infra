@@ -180,6 +180,19 @@ jobs:
             terraform -chdir="terraform/${root}" plan -input=false -out=tfplan
             terraform -chdir="terraform/${root}" apply -input=false -auto-approve tfplan
 
+            # After foundation apply, export docker config names for Ansible
+            if [ "${root}" = "foundation" ]; then
+              config_names=$(terraform -chdir="terraform/${root}" output -json docker_config_names)
+              echo "PROMETHEUS_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["prometheus"])')" >> "${GITHUB_ENV}"
+              echo "GRAFANA_INI_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["grafana_ini"])')" >> "${GITHUB_ENV}"
+              echo "GRAFANA_DATASOURCES_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["grafana_datasources"])')" >> "${GITHUB_ENV}"
+              echo "GRAFANA_DASHBOARDS_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["grafana_dashboards"])')" >> "${GITHUB_ENV}"
+              echo "XRAY_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["xray"])')" >> "${GITHUB_ENV}"
+              echo "XRAY_CONFIG_DEV_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("xray_dev",""))')" >> "${GITHUB_ENV}"
+              echo "VPN_FALLBACK_INDEX_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["vpn_fallback_index"])')" >> "${GITHUB_ENV}"
+              echo "VPN_FALLBACK_NGINX_CONFIG_NAME=$(echo "${config_names}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["vpn_fallback_nginx"])')" >> "${GITHUB_ENV}"
+            fi
+
             rm -f "${backend_file}" "terraform/${root}/tfplan"
           done
 
