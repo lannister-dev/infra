@@ -30,7 +30,7 @@ services:
     configs:
       - source: xray_config_dev
         target: /etc/xray/config.json
-        mode: "0444"
+        mode: 0444
     command: ["run", "-config", "/etc/xray/config.json"]
     healthcheck:
       <<: *healthcheck-common
