@@ -43,9 +43,10 @@ jobs:
       - name: TFLint roots
         run: |
           set -Eeuo pipefail
-          tflint --init --config .tflint.hcl
+          TFLINT_CONFIG="${GITHUB_WORKSPACE}/.tflint.hcl"
+          tflint --init --config "${TFLINT_CONFIG}"
           for root in foundation nodes infra-nodes; do
-            tflint --config .tflint.hcl --chdir "terraform/${root}"
+            tflint --config "${TFLINT_CONFIG}" --chdir "terraform/${root}"
           done
 
       - uses: actions/setup-python@v5
