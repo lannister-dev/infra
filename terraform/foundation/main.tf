@@ -1,7 +1,7 @@
 resource "docker_network" "traefik_swarm" {
-  name            = "traefik_swarm"
-  driver          = "overlay"
-  attachable      = true
+  name       = "traefik_swarm"
+  driver     = "overlay"
+  attachable = true
 
   lifecycle {
     prevent_destroy = true
@@ -9,9 +9,9 @@ resource "docker_network" "traefik_swarm" {
 }
 
 resource "docker_network" "monitoring" {
-  name            = "monitoring"
-  driver          = "overlay"
-  attachable      = true
+  name       = "monitoring"
+  driver     = "overlay"
+  attachable = true
 
   lifecycle {
     prevent_destroy = true
@@ -19,9 +19,9 @@ resource "docker_network" "monitoring" {
 }
 
 resource "docker_network" "vpn_net" {
-  name            = "vpn-net"
-  driver          = "overlay"
-  attachable      = true
+  name       = "vpn-net"
+  driver     = "overlay"
+  attachable = true
 
   lifecycle {
     prevent_destroy = true

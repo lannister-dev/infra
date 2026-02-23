@@ -1,7 +1,7 @@
 locals {
   root_dir = "${path.module}/../.."
 
-  default_inventory_output_path = "${local.root_dir}/ansible/inventory/generated/vpn_nodes.yml"
+  default_inventory_output_path  = "${local.root_dir}/ansible/inventory/generated/vpn_nodes.yml"
   resolved_inventory_output_path = trimspace(var.inventory_output_path) != "" ? var.inventory_output_path : local.default_inventory_output_path
 
   hostvds_compute_vpn_nodes = var.hostvds_compute_enabled ? module.hostvds_compute[0].vpn_nodes : {}
