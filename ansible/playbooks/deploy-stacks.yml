@@ -96,6 +96,7 @@
         chdir: "{{ repo_root }}"
       environment:
         TRAEFIK_IMAGE_TAG: "{{ traefik_image_tag }}"
+        CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
       changed_when: false
 
     - name: Deploy monitoring stack
@@ -117,6 +118,9 @@
         GRAFANA_DASHBOARDS_CONFIG_NAME: "{{ grafana_dashboards_config_name }}"
         PROMETHEUS_IMAGE_TAG: "{{ prometheus_image_tag }}"
         GRAFANA_IMAGE_TAG: "{{ grafana_image_tag }}"
+        GF_SECURITY_ADMIN_USER: "{{ gf_security_admin_user }}"
+        GF_SECURITY_ADMIN_PASSWORD: "{{ gf_security_admin_password }}"
+        GF_USERS_ALLOW_SIGN_UP: "{{ gf_users_allow_sign_up }}"
       changed_when: false
 
     - name: Deploy swarmpit stack
@@ -197,6 +201,9 @@
           - probe
       args:
         chdir: "{{ repo_root }}"
+      environment:
+        CONTROL_PLANE_URL: "{{ control_plane_url }}"
+        VPN_DOMAIN: "{{ vpn_domain }}"
       when: deploy_probe_stack
       changed_when: false
 

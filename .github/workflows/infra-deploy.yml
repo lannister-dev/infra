@@ -75,8 +75,6 @@ jobs:
           printf '%s\n' "${INFRA_ENV_PROD}" > "${ENV_FILE}"
           chmod 600 "${ENV_FILE}"
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
-          cp "${ENV_FILE}" "${GITHUB_WORKSPACE}/.env"
-          chmod 600 "${GITHUB_WORKSPACE}/.env"
 
       - name: Terraform apply
         env:
@@ -120,4 +118,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "${INFRA_ENV_FILE:-}" "${GITHUB_WORKSPACE}/.env"
+        run: rm -f "${INFRA_ENV_FILE:-}"

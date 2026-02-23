@@ -24,6 +24,13 @@ vpn_dev_ws_path: "{{ lookup('env', 'VPN_DEV_WS_PATH') | default(vpn_ws_path, tru
 vpn_dev_xhttp_path: "{{ lookup('env', 'VPN_DEV_XHTTP_PATH') | default(vpn_xhttp_path, true) }}"
 vpn_fallback_domain: "{{ lookup('env', 'VPN_FALLBACK_DOMAIN') | default(vpn_dev_domain, true) }}"
 
+# Service-specific credentials (passed as explicit env to containers, not via env_file)
+cf_dns_api_token: "{{ lookup('env', 'CF_DNS_API_TOKEN') }}"
+gf_security_admin_user: "{{ lookup('env', 'GF_SECURITY_ADMIN_USER') | default('admin', true) }}"
+gf_security_admin_password: "{{ lookup('env', 'GF_SECURITY_ADMIN_PASSWORD') }}"
+gf_users_allow_sign_up: "{{ lookup('env', 'GF_USERS_ALLOW_SIGN_UP') | default('false', true) }}"
+control_plane_url: "{{ lookup('env', 'CONTROL_PLANE_URL') | default('', true) }}"
+
 traefik_image_tag: "{{ lookup('env', 'TRAEFIK_IMAGE_TAG') | default('v3.6', true) }}"
 prometheus_image_tag: "{{ lookup('env', 'PROMETHEUS_IMAGE_TAG') | default('v2.55.1', true) }}"
 grafana_image_tag: "{{ lookup('env', 'GRAFANA_IMAGE_TAG') | default('11.5.2', true) }}"
