@@ -65,6 +65,7 @@ SSH_OPTS_COMMON=(
 SSH_OPTS_SSH=("${SSH_OPTS_COMMON[@]}" -p "${SSH_PORT}")
 SSH_OPTS_SCP=("${SSH_OPTS_COMMON[@]}" -P "${SSH_PORT}")
 
+# shellcheck disable=SC2029
 ssh_cmd()  { ssh "${SSH_OPTS_SSH[@]}" "${SSH_USER}@${REMOTE_IP}" "$@"; }
 scp_to()   {
   local src="$1"
