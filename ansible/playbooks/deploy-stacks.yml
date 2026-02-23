@@ -1,0 +1,227 @@
+---
+- name: Deploy Swarm stacks
+  hosts: swarm_managers
+  gather_facts: false
+
+  vars:
+    required_networks:
+      - traefik_swarm
+      - monitoring
+      - vpn-net
+    required_volumes:
+      - traefik_acme
+      - prometheus_data
+      - grafana_data
+      - agent-data
+    required_configs:
+      - "{{ prometheus_config_name }}"
+      - "{{ grafana_ini_config_name }}"
+      - "{{ grafana_datasources_config_name }}"
+      - "{{ grafana_dashboards_config_name }}"
+      - "{{ xray_config_name }}"
+      - "{{ vpn_fallback_index_config_name }}"
+      - "{{ vpn_fallback_nginx_config_name }}"
+
+  tasks:
+    - name: Check required networks
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - inspect
+          - "{{ item }}"
+      loop: "{{ required_networks }}"
+      changed_when: false
+
+    - name: Check required volumes
+      ansible.builtin.command:
+        argv:
+          - docker
+          - volume
+          - inspect
+          - "{{ item }}"
+      loop: "{{ required_volumes }}"
+      changed_when: false
+
+    - name: Check required docker configs
+      ansible.builtin.command:
+        argv:
+          - docker
+          - config
+          - inspect
+          - "{{ item }}"
+      loop: "{{ required_configs }}"
+      changed_when: false
+
+    - name: Check dev docker config when vpn-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - config
+          - inspect
+          - "{{ xray_config_dev_name }}"
+      when: enable_vpn_dev_stack
+      changed_when: false
+
+    - name: Check required swarm secret bootstrap_token
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - bootstrap_token
+      changed_when: false
+
+    - name: Check required swarm secret probe_token when probe is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - probe_token
+      when: deploy_probe_stack
+      changed_when: false
+
+    - name: Ensure required auth variables are set
+      ansible.builtin.assert:
+        that:
+          - traefik_dashboard_auth | length > 0
+          - prometheus_basic_auth | length > 0
+        fail_msg: "TRAEFIK_DASHBOARD_AUTH and PROMETHEUS_BASIC_AUTH must be set in environment/.env."
+
+    - name: Deploy traefik stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - -c
+          - docker/stacks/traefik.yml
+          - traefik
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        TRAEFIK_IMAGE_TAG: "{{ traefik_image_tag }}"
+        TRAEFIK_DASHBOARD_AUTH: "{{ traefik_dashboard_auth }}"
+      changed_when: false
+
+    - name: Deploy monitoring stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - -c
+          - docker/stacks/monitoring.yml
+          - monitoring
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        PROMETHEUS_CONFIG_NAME: "{{ prometheus_config_name }}"
+        GRAFANA_INI_CONFIG_NAME: "{{ grafana_ini_config_name }}"
+        GRAFANA_DATASOURCES_CONFIG_NAME: "{{ grafana_datasources_config_name }}"
+        GRAFANA_DASHBOARDS_CONFIG_NAME: "{{ grafana_dashboards_config_name }}"
+        PROMETHEUS_IMAGE_TAG: "{{ prometheus_image_tag }}"
+        GRAFANA_IMAGE_TAG: "{{ grafana_image_tag }}"
+        PROMETHEUS_BASIC_AUTH: "{{ prometheus_basic_auth }}"
+      changed_when: false
+
+    - name: Deploy swarmpit stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - -c
+          - docker/stacks/swarmpit.yml
+          - swarmpit
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        SWARMPIT_IMAGE_TAG: "{{ swarmpit_image_tag }}"
+        SWARMPIT_AGENT_IMAGE_TAG: "{{ swarmpit_agent_image_tag }}"
+      changed_when: false
+
+    - name: Deploy vpn stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --resolve-image=always
+          - --prune
+          - -c
+          - docker/stacks/vpn-xray.yml
+          - vpn
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        XRAY_CONFIG_NAME: "{{ xray_config_name }}"
+        VPN_FALLBACK_INDEX_CONFIG_NAME: "{{ vpn_fallback_index_config_name }}"
+        VPN_FALLBACK_NGINX_CONFIG_NAME: "{{ vpn_fallback_nginx_config_name }}"
+        VPN_DOMAIN: "{{ vpn_domain }}"
+        VPN_WS_PATH: "{{ vpn_ws_path }}"
+        VPN_XHTTP_PATH: "{{ vpn_xhttp_path }}"
+        VPN_FALLBACK_DOMAIN: "{{ vpn_fallback_domain }}"
+        XRAY_IMAGE_TAG: "{{ xray_image_tag }}"
+        NGINX_ALPINE_IMAGE_TAG: "{{ nginx_alpine_image_tag }}"
+      changed_when: false
+
+    - name: Deploy vpn-dev stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/vpn-xray-dev.yml
+          - vpn-dev
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        XRAY_CONFIG_DEV_NAME: "{{ xray_config_dev_name }}"
+        VPN_DEV_DOMAIN: "{{ vpn_dev_domain }}"
+        VPN_DEV_WS_PATH: "{{ vpn_dev_ws_path }}"
+        VPN_DEV_XHTTP_PATH: "{{ vpn_dev_xhttp_path }}"
+        XRAY_IMAGE_TAG: "{{ xray_image_tag }}"
+      when: enable_vpn_dev_stack
+      changed_when: false
+
+    - name: Deploy probe stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/probe.yml
+          - probe
+      args:
+        chdir: "{{ repo_root }}"
+      when: deploy_probe_stack
+      changed_when: false
+
+    - name: Ensure sanity check script is executable
+      ansible.builtin.file:
+        path: "{{ repo_root }}/scripts/core/sanity-check.sh"
+        mode: "0755"
+      when: run_sanity_check
+
+    - name: Execute sanity check
+      ansible.builtin.command:
+        argv:
+          - ./scripts/core/sanity-check.sh
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        INFRA_ROLE: manager
+      when: run_sanity_check
+      changed_when: false

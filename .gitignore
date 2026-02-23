@@ -7,4 +7,24 @@ __pycache__/
 
 .env
 .env.infra
+openrc.sh
+openrc*.sh
+env.nodes
 artifacts/
+
+# Terraform
+.terraform/
+terraform/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+terraform.tfvars
+terraform/terraform.tfvars
+terraform/**/terraform.tfvars
+terraform/backends/*.hcl
+!terraform/backends/*.example
+
+# Generated Ansible inventory artifacts
+ansible/inventory/generated/*.yml
+!ansible/inventory/generated/.gitkeep

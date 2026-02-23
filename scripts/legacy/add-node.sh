@@ -11,10 +11,10 @@ set -Eeuo pipefail
 #   4. Push registry auth → Swarm schedules xray + node-agent
 #
 # Usage:
-#   ./scripts/add-node.sh <IP> --name <peer-name> [--channel dev|prod] [--user root] [--port 22]
+#   ./scripts/legacy/add-node.sh <IP> --name <peer-name> [--channel dev|prod] [--user root] [--port 22]
 # ============================================================
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 # ---------- Parse args ----------
 usage() {

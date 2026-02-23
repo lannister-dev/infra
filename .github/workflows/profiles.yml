@@ -9,7 +9,9 @@ on:
       - "requirements/profiles-ci.txt"
       - "vpn/xray/config.json.j2"
       - "vpn/xray/artifact.overrides.yml"
-      - "scripts/profiles/**/*.py"
+      - "services/profiles/**/*.py"
+      - "shared/api/**/*.py"
+      - "tests/profiles/**/*.py"
   workflow_dispatch:
 
 jobs:
@@ -23,15 +25,15 @@ jobs:
       - name: Install deps
         run: python -m pip install -r requirements/profiles-ci.txt
       - name: Lint profiles package
-        run: ruff check scripts/profiles
+        run: ruff check services/profiles shared/api tests/profiles
       - name: Type check profiles package
-        run: mypy scripts/profiles
+        run: mypy services/profiles shared/api
       - name: Run tests
-        run: pytest scripts/profiles/tests -q
+        run: pytest tests/profiles -q
       - name: Validate prod profiles
-        run: python -m scripts.profiles.validate_profiles --overrides vpn/xray/artifact.overrides.yml
+        run: python -m services.profiles.cli.validate --overrides vpn/xray/artifact.overrides.yml
       - name: Build prod artifact payload
-        run: python -m scripts.profiles.generate_profiles_artifact --overrides vpn/xray/artifact.overrides.yml --output artifacts/profiles/artifact.prod.json --print
+        run: python -m services.profiles.cli.build --overrides vpn/xray/artifact.overrides.yml --output artifacts/profiles/artifact.prod.json --print
 
   publish-prod:
     needs: validate-prod
@@ -54,4 +56,4 @@ jobs:
         env:
           CONTROL_PLANE_URL: ${{ secrets.CONTROL_PLANE_URL }}
           ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-        run: python -m scripts.profiles.generate_profiles_artifact --overrides vpn/xray/artifact.overrides.yml --output artifacts/profiles/artifact.prod.json --publish
+        run: python -m services.profiles.cli.build --overrides vpn/xray/artifact.overrides.yml --output artifacts/profiles/artifact.prod.json --publish

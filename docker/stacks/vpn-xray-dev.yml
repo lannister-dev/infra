@@ -22,13 +22,13 @@ x-deploy-common: &deploy-common
 
 services:
   xray:
-    image: ghcr.io/xtls/xray-core:latest
+    image: ghcr.io/xtls/xray-core:${XRAY_IMAGE_TAG}
     networks:
       - traefik_swarm
       - vpn-net
       - monitoring
     configs:
-      - source: xray_config_dev__V2_9
+      - source: xray_config_dev
         target: /etc/xray/config.json
         mode: 0444
     command: ["run", "-config", "/etc/xray/config.json"]
@@ -41,7 +41,7 @@ services:
         - traefik.enable=true
 
         # ===== DEV WS =====
-        - traefik.http.routers.vpn-dev-ws.rule=Host(`tech.lannister-dev.ru`) && PathPrefix(`/api/v1/stream`)
+        - traefik.http.routers.vpn-dev-ws.rule=Host(`${VPN_DEV_DOMAIN}`) && PathPrefix(`${VPN_DEV_WS_PATH}`)
         - traefik.http.routers.vpn-dev-ws.entrypoints=websecure
         - traefik.http.routers.vpn-dev-ws.tls=true
         - traefik.http.routers.vpn-dev-ws.tls.certresolver=cf
@@ -50,7 +50,7 @@ services:
         - traefik.http.services.vpn-dev-ws.loadbalancer.server.port=10000
 
         # ===== DEV XHTTP =====
-        - traefik.http.routers.vpn-dev-xhttp.rule=Host(`tech.lannister-dev.ru`) && PathPrefix(`/api/v1/mobile`)
+        - traefik.http.routers.vpn-dev-xhttp.rule=Host(`${VPN_DEV_DOMAIN}`) && PathPrefix(`${VPN_DEV_XHTTP_PATH}`)
         - traefik.http.routers.vpn-dev-xhttp.entrypoints=websecure
         - traefik.http.routers.vpn-dev-xhttp.tls=true
         - traefik.http.routers.vpn-dev-xhttp.tls.certresolver=cf
@@ -59,8 +59,9 @@ services:
         - traefik.http.services.vpn-dev-xhttp.loadbalancer.server.port=10001
 
 configs:
-  xray_config_dev__V2_9:
+  xray_config_dev:
     external: true
+    name: ${XRAY_CONFIG_DEV_NAME}
 
 networks:
   traefik_swarm:

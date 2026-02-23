@@ -1,0 +1,86 @@
+name: Infra Checks Reusable
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TERRAFORM_VERSION: "1.8.5"
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  infra-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform fmt check
+        run: terraform -chdir=terraform fmt -check -recursive
+
+      - name: Terraform validate roots
+        run: |
+          set -Eeuo pipefail
+          for root in foundation nodes infra-nodes; do
+            terraform -chdir="terraform/${root}" init -backend=false -input=false
+            terraform -chdir="terraform/${root}" validate -no-color
+          done
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.55.1
+
+      - name: TFLint roots
+        run: |
+          set -Eeuo pipefail
+          tflint --init --config .tflint.hcl
+          for root in foundation nodes infra-nodes; do
+            tflint --config .tflint.hcl --chdir "terraform/${root}"
+          done
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements/dev.txt
+            requirements/base.txt
+
+      - name: Install lint toolchain
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --upgrade pip ansible ansible-lint yamllint pytest
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Pytest
+        run: pytest -q tests
+
+      - name: Ansible syntax check
+        run: |
+          set -Eeuo pipefail
+          export ANSIBLE_CONFIG="$(pwd)/ansible/ansible.cfg"
+          ansible-playbook --syntax-check -i ansible/inventory/production.ini ansible/playbooks/reconcile-vpn-nodes.yml
+          ansible-playbook --syntax-check -i ansible/inventory/production.ini ansible/playbooks/deploy-stacks.yml
+
+      - name: ansible-lint
+        run: ansible-lint -c .ansible-lint.yml ansible/playbooks/reconcile-vpn-nodes.yml ansible/playbooks/deploy-stacks.yml
+
+      - name: yamllint
+        run: yamllint -c .yamllint.yml ansible docker/stacks .github/workflows
+
+      - name: shellcheck
+        run: |
+          set -Eeuo pipefail
+          find scripts wireguard -type f -name "*.sh" -print0 | xargs -0 shellcheck

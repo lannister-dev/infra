@@ -14,7 +14,7 @@ x-deploy-common: &deploy-common
 
 services:
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:${PROMETHEUS_IMAGE_TAG}
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -37,14 +37,14 @@ services:
         - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
         # ============ BASIC AUTH =======================
-        - "traefik.http.middlewares.prometheus-auth.basicauth.users=admin:$$apr1$$rlCItKuZ$$g75Ksb8Q6kiIOoiQVOhrf/"
+        - "traefik.http.middlewares.prometheus-auth.basicauth.users=${PROMETHEUS_BASIC_AUTH}"
         - "traefik.http.routers.prometheus.middlewares=prometheus-auth@swarm"
     user: "0"
     volumes:
       - prometheus_data:/prometheus
       - /var/run/docker.sock:/var/run/docker.sock:ro
     configs:
-      - source: prometheus_config__V1_4
+      - source: prometheus_config
         target: /etc/prometheus/prometheus.yml
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:9090/-/healthy" ]
@@ -56,7 +56,7 @@ services:
       - traefik_swarm
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:${GRAFANA_IMAGE_TAG}
     env_file:
       - ../../.env
     deploy:
@@ -74,11 +74,11 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     configs:
-      - source: grafana_ini__V1_0
+      - source: grafana_ini
         target: /etc/grafana/grafana.ini
-      - source: grafana_datasources__V1_1
+      - source: grafana_datasources
         target: /etc/grafana/provisioning/datasources/prometheus.yml
-      - source: grafana_dashboards__V1_0
+      - source: grafana_dashboards
         target: /etc/grafana/provisioning/dashboards/dashboards.yml
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:3000/api/health" ]
@@ -145,14 +145,18 @@ volumes:
   grafana_data:
 
 configs:
-  prometheus_config__V1_4:
+  prometheus_config:
     external: true
-  grafana_ini__V1_0:
+    name: ${PROMETHEUS_CONFIG_NAME}
+  grafana_ini:
     external: true
-  grafana_datasources__V1_1:
+    name: ${GRAFANA_INI_CONFIG_NAME}
+  grafana_datasources:
     external: true
-  grafana_dashboards__V1_0:
+    name: ${GRAFANA_DATASOURCES_CONFIG_NAME}
+  grafana_dashboards:
     external: true
+    name: ${GRAFANA_DASHBOARDS_CONFIG_NAME}
 
 networks:
   traefik_swarm:

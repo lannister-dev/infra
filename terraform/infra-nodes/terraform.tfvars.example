@@ -1,0 +1,59 @@
+# Manual catalog (optional)
+# infra_nodes = {
+#   "mgr-a" = {
+#     public_ip = "203.0.113.10"
+#     role      = "manager"
+#     kind      = "prod"
+#     ssh_user  = "root"
+#     ssh_port  = 22
+#     enabled   = true
+#     provider  = "manual"
+#     region    = "ru-msk"
+#   }
+# }
+
+# Timeweb API enrichment for infra nodes
+# provider_api_enabled  = true
+# timeweb_compute_enabled = true
+# timeweb_api_url       = "https://api.timeweb.cloud/api/v1"
+# timeweb_api_token     = "..."
+# timeweb_auth_header   = "Authorization"
+# timeweb_auth_scheme   = "Bearer"
+# timeweb_endpoint_template = "/servers/{server_id}"
+# timeweb_infra_nodes = {
+#   "mgr-a" = {
+#     server_id = "123456"
+#     role      = "manager"
+#     kind      = "prod"
+#     ssh_user  = "root"
+#     ssh_port  = 22
+#     enabled   = true
+#     region    = "ru-msk"
+#   }
+#   "wrk-a" = {
+#     server_id = "123457"
+#     role      = "worker"
+#     kind      = "prod"
+#   }
+# }
+
+# Timeweb compute provisioning:
+# timeweb_provisioned_infra_nodes = {
+#   "mgr-a" = {
+#     os_id             = 42
+#     preset_id         = 7
+#     availability_zone = "ru-1a"
+#     # location can be kept only as metadata fallback for region:
+#     location          = "ru-1"
+#     ssh_keys_ids      = [12345]
+#     role              = "manager"
+#     kind              = "prod"
+#     ssh_user          = "root"
+#     ssh_port          = 22
+#     enabled           = true
+#     region            = "ru-1"
+#   }
+# }
+
+# Optional override:
+# inventory_output_path = "ansible/inventory/generated/infra_nodes.yml"

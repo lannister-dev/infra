@@ -1,0 +1,151 @@
+# Terraform Infrastructure
+
+Terraform is the source of truth for infrastructure state in this repository.
+
+## Root modules
+
+- `terraform/foundation`: Swarm foundation (networks, volumes, Docker configs).
+- `terraform/nodes`: VPN node catalog and HostVDS provider modules.
+- `terraform/infra-nodes`: non-VPN infra nodes (Timeweb).
+
+Each root has its own remote state key:
+- `foundation.tfstate`
+- `nodes.tfstate`
+- `infra-nodes.tfstate`
+
+## Topology source of truth
+
+Topology is declared in versioned tfvars files:
+
+- `terraform/nodes/catalog.auto.tfvars`
+- `terraform/infra-nodes/catalog.auto.tfvars`
+
+Do not keep topology in JSON env variables anymore.
+
+Credentials/tokens remain in local `.env` or CI secrets and are passed as `TF_VAR_*`.
+
+CI convention for variables:
+- preferred: define `TF_VAR_<terraform_variable_name>` directly in secret env.
+- alias supported: `IAC_TFVAR_<UPPER_SNAKE_NAME>` (auto-converted to `TF_VAR_<lower_snake_name>`).
+- conversion is done by `scripts/core/prepare-terraform-env.sh`.
+
+This keeps workflow provider-agnostic: adding/removing providers does not require
+editing workflow `export` lists.
+
+## Provider modes
+
+`terraform/nodes` supports:
+- Manual catalog: `vpn_nodes`
+- HostVDS API lookup for existing servers: `hostvds_vpn_nodes`
+- HostVDS compute create/destroy: `hostvds_provisioned_vpn_nodes`
+
+`terraform/infra-nodes` supports:
+- Manual catalog: `infra_nodes`
+- Timeweb API lookup: `timeweb_infra_nodes`
+- Timeweb compute create/destroy: `timeweb_provisioned_infra_nodes`
+
+Provider extensibility contract:
+- each provider module should return normalized node maps with the same fields
+  (`public_ip`, `ssh_user`, `ssh_port`, `enabled`, `provider`, `region`, plus role/channel).
+- template: `terraform/nodes/modules/provider-template/README.md`
+
+Important semantics:
+- `enabled = false` removes node from desired cluster state, but does not destroy VPS.
+- VPS destroy is done by removing node entry from the corresponding `*_provisioned_*` map.
+
+## Required runtime credentials
+
+HostVDS (OpenStack) for `terraform/nodes` provider modes:
+- `HOSTVDS_OS_AUTH_URL`
+- `HOSTVDS_OS_USERNAME`
+- `HOSTVDS_OS_PASSWORD`
+- `HOSTVDS_OS_PROJECT_NAME`
+- `HOSTVDS_OS_USER_DOMAIN_NAME` or `HOSTVDS_OS_USER_DOMAIN_ID`
+- `HOSTVDS_OS_PROJECT_DOMAIN_NAME` or `HOSTVDS_OS_PROJECT_DOMAIN_ID`
+- `HOSTVDS_OS_REGION_NAME`
+- `HOSTVDS_OS_INTERFACE`
+
+Timeweb for `terraform/infra-nodes` provider modes:
+- `TIMEWEB_API_TOKEN`
+- optional overrides: `TIMEWEB_API_URL`, `TIMEWEB_AUTH_HEADER`, `TIMEWEB_AUTH_SCHEME`, `TIMEWEB_ENDPOINT_TEMPLATE`
+
+## Local run
+
+Linux/macOS:
+
+```bash
+set -a
+source .env
+set +a
+
+terraform -chdir=terraform/foundation init -input=false -backend-config="$(pwd)/terraform/backends/foundation.hcl"
+terraform -chdir=terraform/foundation apply -input=false
+
+terraform -chdir=terraform/nodes init -input=false -backend-config="$(pwd)/terraform/backends/nodes.hcl"
+terraform -chdir=terraform/nodes apply -input=false
+
+terraform -chdir=terraform/infra-nodes init -input=false -backend-config="$(pwd)/terraform/backends/infra-nodes.hcl"
+terraform -chdir=terraform/infra-nodes apply -input=false
+```
+
+Windows PowerShell:
+
+```powershell
+.\scripts\core\load-dotenv.ps1 -Path .\.env
+
+terraform -chdir=terraform/foundation init -input=false -backend-config="$PWD/terraform/backends/foundation.hcl"
+terraform -chdir=terraform/foundation apply -input=false
+
+terraform -chdir=terraform/nodes init -input=false -backend-config="$PWD/terraform/backends/nodes.hcl"
+terraform -chdir=terraform/nodes apply -input=false
+
+terraform -chdir=terraform/infra-nodes init -input=false -backend-config="$PWD/terraform/backends/infra-nodes.hcl"
+terraform -chdir=terraform/infra-nodes apply -input=false
+```
+
+## Tooling
+
+Windows setup:
+
+```powershell
+.\scripts\core\install-terraform.ps1 -Version 1.8.5 -AddToUserPath -AllowOpenTofuFallback
+.\scripts\core\terraform-init-all.ps1
+```
+
+If Terraform download is region-blocked, installer can fall back to OpenTofu.
+
+If IDE shows `Unknown resource` or `Unresolved reference` for provider resources
+(`twc_server`, `openstack_compute_instance_v2`), run init in each root so provider
+schemas are downloaded.
+
+## CI
+
+Workflows:
+- `.github/workflows/infra-ci.yml`: checks on `pull_request`/`push`.
+- `.github/workflows/infra-deploy.yml`: production deploy via `workflow_dispatch`.
+- `.github/workflows/infra-checks-reusable.yml`: shared checks job.
+
+Deploy gate:
+- `workflow_dispatch` + `confirm_apply=APPLY`.
+- Optional input `apply_infra_nodes=true`: also applies `terraform/infra-nodes`.
+
+Topology for CI comes from repository tfvars; secrets come from `INFRA_ENV_PROD`.
+
+Recommended `INFRA_ENV_PROD` style:
+
+```bash
+TF_STATE_BUCKET=...
+TF_STATE_REGION=...
+TF_STATE_KEY_PREFIX=...
+
+TF_VAR_vpn_domain=example.com
+TF_VAR_vpn_ws_path=/api/v1/stream
+TF_VAR_vpn_xhttp_path=/api/v1/mobile
+
+# optional generic alias style (auto-converted)
+# IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
+# IAC_TFVAR_HOSTVDS_OS_USERNAME=...
+```
+
+Full example template:
+- `docs/infra-env-prod.example`

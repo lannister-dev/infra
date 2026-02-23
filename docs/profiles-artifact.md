@@ -25,15 +25,15 @@ Some client-facing fields are not always derivable from raw Xray inbound config:
 From repository root:
 
 ```bash
-python -m scripts.profiles.validate_profiles
-python -m scripts.profiles.generate_profiles_artifact --print
-python -m scripts.profiles.generate_profiles_artifact --publish
+python -m services.profiles.cli.validate
+python -m services.profiles.cli.build --print
+python -m services.profiles.cli.build --publish
 ```
 
 Useful publish controls:
 
 ```bash
-python -m scripts.profiles.generate_profiles_artifact --publish --max-attempts 5 --base-delay-s 2.0 --timeout-s 15
+python -m services.profiles.cli.build --publish --max-attempts 5 --base-delay-s 2.0 --timeout-s 15
 ```
 
 By default, generated payload is written to:
@@ -86,14 +86,17 @@ Dev publish expects separate secrets:
 
 ## Module architecture
 
-Core logic lives in `scripts/profiles/core/`:
+Core logic lives in `services/profiles/artifact/`:
 
 - `builder.py` — typed artifact builder from template + overrides.
 - `models.py` — pydantic domain models and contract validation.
 - `template.py` — safe template rendering and placeholder detection.
-- `publish.py` — publish/reload orchestration with retry policy.
+- `publisher.py` — publish/reload orchestration with retry policy.
 
-CLI entrypoints (`validate_profiles.py`, `generate_profiles_artifact.py`) are thin wrappers over this core.
+CLI entrypoints live in `services/profiles/cli/`.
+
+Shared HTTP primitives are centralized in `shared/api/` and reused by
+`profiles` and other services.
 
 ## Dependencies
 

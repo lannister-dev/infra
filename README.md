@@ -1,40 +1,45 @@
-# Infrastructure Repository
+# vpn-infra
 
-This repository contains the full infrastructure-as-code
-for the platform, including:
+Infrastructure as Code repository for VPN platform operations.
 
-- Networking (WireGuard mesh)
-- Reverse proxy (Traefik)
-- Observability (Prometheus, Grafana, Loki)
-- Container registry (Harbor)
-- VPN infrastructure (VLESS / Xray)
-- Application stacks (bots, APIs, workers)
+## Stack
 
-## Infrastructure Docs
-- [Harbor Registry](docs/harbor.md)
-- [Profiles Artifact Pipeline](docs/profiles-artifact.md)
+- Terraform: infrastructure state and node catalogs
+- Ansible: reconciliation and deployment
+- Docker Swarm: runtime orchestration
+- WireGuard + Xray: VPN data plane
 
-Current state:
-- 
-- Swarm manager: A
-- Workers: none / partial
+## IaC model
 
-## Executable scripts and Git permissions
+Terraform is the control plane:
+- `terraform/foundation` for Swarm foundation resources
+- `terraform/nodes` for VPN nodes
+- `terraform/infra-nodes` for non-VPN infra nodes
 
-This repository follows Infrastructure as Code (IaC) principles.
-All deployment and bootstrap scripts are executed directly from Git.
+Topology source of truth:
+- `terraform/nodes/catalog.auto.tfvars`
+- `terraform/infra-nodes/catalog.auto.tfvars`
 
-### Important note about executable permissions
+Secrets and provider credentials stay in local `.env` / CI secrets.
 
-Shell scripts under the `scripts/` directory (e.g. `bootstrap.sh`) are stored
-in Git with the executable bit enabled (`100755`).
+## Docs
 
-This is intentional.
+- `docs/terraform.md`
+- `docs/ansible.md`
+- `docs/vpn-nodes-api.md`
+- `docs/infra-nodes.md`
+- `docs/add-vpn-node.md`
+- `docs/operations-runbook.md`
+- `docs/harbor.md`
+- `docs/profiles-artifact.md`
 
-The executable permission is part of the Git index and must be set **once**
-using:
+## Note on scripts
 
-```bash
-git update-index --chmod=+x scripts/bootstrap.sh
-git commit -m "Make bootstrap script executable"
-```
+Scripts are organized by lifecycle:
+- `scripts/core` for current operational helpers.
+- `scripts/legacy` for break-glass and one-time migration scripts.
+
+Reference: `scripts/README.md`.
+
+Shell scripts in `scripts/` are operational helpers and emergency fallback tools.
+Primary production flow is Terraform + Ansible.
