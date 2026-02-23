@@ -78,7 +78,7 @@ services:
         - "prometheus-metrics-port=8080"
         - "prometheus-scrape-profile=important"
     healthcheck:
-      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/ping" ]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/ping"]
       interval: 10s
       timeout: 5s
       retries: 3
