@@ -9,7 +9,7 @@ on:
         type: boolean
         default: true
       confirm_apply:
-        description: "Type APPLY to confirm production deployment"
+        description: "Type APPLY to confirm production deployment."
         required: true
         type: string
         default: ""
