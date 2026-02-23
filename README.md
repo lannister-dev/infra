@@ -36,8 +36,8 @@ Secrets and provider credentials stay in local `.env` / CI secrets.
 ## Note on scripts
 
 Scripts are organized by lifecycle:
-- `scripts/core` for current operational helpers.
-- `scripts/legacy` for break-glass and one-time migration scripts.
+- `scripts/core` for current operational helpers used in active CI/CD flow.
+- `scripts/legacy` for break-glass and one-time migration scripts (stored for reserve, not part of the main flow).
 
 Reference: `scripts/README.md`.
 

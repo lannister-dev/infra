@@ -14,11 +14,13 @@ fi
 # Export all vars from defaults
 set -a
 # shellcheck source=wireguard/manager/defaults.env
+# shellcheck disable=SC1091
 source "${DEFAULTS_FILE}"
 
 # Optional local overrides (not in git)
 if [[ -f "${LOCAL_DEFAULTS_FILE}" ]]; then
   # shellcheck source=wireguard/manager/defaults.env.local
+  # shellcheck disable=SC1091
   source "${LOCAL_DEFAULTS_FILE}"
 fi
 set +a

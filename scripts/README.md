@@ -40,3 +40,4 @@ This directory is split into:
 - New automation must go through Terraform + Ansible first.
 - Add scripts to `core` only if they are part of day-2 operations.
 - Put one-off migration and manual break-glass tools into `legacy`.
+- CI quality gates validate `scripts/core` and active `wireguard/manager` scripts; `scripts/legacy` is intentionally excluded from the main pipeline.
