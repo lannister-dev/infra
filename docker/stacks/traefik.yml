@@ -66,7 +66,7 @@ services:
         - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
         # ============ BASIC AUTH =======================
-        - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$S0jUBQKB$$mp.UG1NBoK.vFVjTc3Jby/"
+        - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$2b$$12$$NBVFexM1H5XALLmGqtapeueNALHtgUThPFj2SoUmgWBEs5mhEiksK"
         - "traefik.http.routers.traefik.middlewares=dashboard-auth@swarm"
 
         # ===== PROMETHEUS =====
