@@ -34,7 +34,7 @@ def test_extract_server_ipv4_uses_public_fixed_when_no_floating() -> None:
     assert hostvds.extract_server_ipv4(payload) == "8.8.4.4"
 
 
-def test_find_compute_endpoint_respects_region_and_interface() -> None:
+def test_find_compute_endpoints_respects_region_and_interface() -> None:
     catalog = [
         {
             "type": "compute",
@@ -46,9 +46,15 @@ def test_find_compute_endpoint_respects_region_and_interface() -> None:
         }
     ]
 
-    url, region = hostvds.find_compute_endpoint(catalog, interface="public", region="eu-west2")
-    assert url == "https://compute.eu-west2.example"
-    assert region == "eu-west2"
+    endpoints = hostvds.find_compute_endpoints(
+        catalog,
+        interface="public",
+        preferred_region="eu-west2",
+    )
+    assert endpoints == [
+        ("https://compute.eu-west2.example", "eu-west2"),
+        ("https://compute.ru-1.example", "ru-1"),
+    ]
 
 
 def test_build_keystone_auth_payload_prefers_domain_ids() -> None:

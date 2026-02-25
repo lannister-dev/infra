@@ -18,7 +18,7 @@ data "external" "node_lookup" {
     os_user_domain_id      = var.os_user_domain_id
     os_project_domain_name = var.os_project_domain_name
     os_project_domain_id   = var.os_project_domain_id
-    os_region_name         = var.os_region_name
+    os_region_name         = trimspace(var.nodes[each.key].region) != "" ? var.nodes[each.key].region : var.os_region_name
     os_interface           = var.os_interface
     server_id              = each.value
   }
