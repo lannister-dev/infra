@@ -32,17 +32,17 @@ provider_compute_vpn_nodes = {
   }
 
   "vpn-hostvds-main-02" = {
-    provider          = "hostvds"
-    image_id          = "62d4af7a-3afa-429b-b5a2-f7024a182080"
-    flavor_id         = "9f0f82ef-1a2f-46ab-b1cf-f841246a9a8b"
-    network_ids       = ["b447fbc8-155b-436b-b633-549c7e4951e8"]
-    key_pair          = "dev"
-    security_groups   = ["allow_all"]
-    channel           = "prod"
-    ssh_user          = "root"
-    ssh_port          = 22
-    enabled           = true
-    region            = "eu-north1b"
+    provider        = "hostvds"
+    image_id        = "62d4af7a-3afa-429b-b5a2-f7024a182080"
+    flavor_id       = "9f0f82ef-1a2f-46ab-b1cf-f841246a9a8b"
+    network_ids     = ["b447fbc8-155b-436b-b633-549c7e4951e8"]
+    key_pair        = "dev"
+    security_groups = ["allow_all"]
+    channel         = "prod"
+    ssh_user        = "root"
+    ssh_port        = 22
+    enabled         = true
+    region          = "eu-north1b"
   }
 }
 
