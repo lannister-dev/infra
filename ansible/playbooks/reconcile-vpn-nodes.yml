@@ -177,6 +177,19 @@
       changed_when: "false"
       failed_when: "false"
 
+    - name: Wait for SSH port to become reachable on desired nodes
+      ansible.builtin.wait_for:
+        host: "{{ item.public_ip }}"
+        port: "{{ item.ssh_port | int }}"
+        state: started
+        timeout: 300
+        delay: 3
+        sleep: 5
+      loop: "{{ desired_enabled_nodes }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.public_ip }}:{{ item.ssh_port }}"
+      changed_when: "false"
+
     - name: Scan SSH host keys for desired nodes
       ansible.builtin.command:
         argv:
@@ -190,6 +203,9 @@
       loop_control:
         label: "{{ item.name }} -> {{ item.public_ip }}:{{ item.ssh_port }}"
       register: scan_known_host_result
+      retries: 12
+      delay: 5
+      until: scan_known_host_result.rc == 0 and (scan_known_host_result.stdout | trim) != ""
       changed_when: "false"
       failed_when: scan_known_host_result.rc != 0 or (scan_known_host_result.stdout | trim) == ""
 
