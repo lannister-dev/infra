@@ -35,7 +35,7 @@ provider_compute_vpn_nodes = {
     provider          = "hostvds"
     image_id          = "c54a6fb6-1bc6-490b-a5cd-9559232c9a3f"
     flavor_id         = "c356a6fe-ebff-4c44-aa1f-ada1d93023cc"
-    network_ids       = ["b96e50cb-0d46-45a7-88f3-018158a1aa82"]
+    network_ids       = ["b447fbc8-155b-436b-b633-549c7e4951e8"]
     key_pair          = "dev"
     availability_zone = "nova"
     security_groups   = ["allow_all"]
@@ -43,7 +43,7 @@ provider_compute_vpn_nodes = {
     ssh_user          = "root"
     ssh_port          = 22
     enabled           = true
-    region            = "eu-west2"
+    region            = "eu-north1b"
   }
 }
 
