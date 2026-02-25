@@ -33,6 +33,17 @@ ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/reconcile
 ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-stacks.yml
 ```
 
+## SSH requirements
+
+- For HostVDS Ubuntu images in this project, use `ssh_user = "root"` in node catalog.
+- Server must be created with a known key pair (for example `dev`).
+- CI secret `INFRA_ENV_PROD` must provide one of:
+  - `ANSIBLE_SSH_PRIVATE_KEY_B64` (base64-encoded private key, preferred),
+  - `ANSIBLE_SSH_PRIVATE_KEY` (full private key content),
+  - `ANSIBLE_SSH_PRIVATE_KEY_FILE` (absolute path on self-hosted runner).
+
+If neither key variable is provided, deploy workflow now fails fast before Ansible.
+
 ## 4. Verify
 
 ```bash

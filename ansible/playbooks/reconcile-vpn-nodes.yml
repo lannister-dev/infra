@@ -9,6 +9,7 @@
     - ../inventory/generated/vpn_nodes.yml
   vars:
     repo_root: "{{ lookup('env', 'REPO_ROOT') | default(playbook_dir + '/../..', true) }}"
+    ssh_private_key_file_effective: "{{ lookup('env', 'ANSIBLE_SSH_PRIVATE_KEY_FILE') | default('', true) | trim }}"
     allow_empty_vpn_nodes_effective: >-
       {{
         (
@@ -226,6 +227,7 @@
         ansible_host: "{{ item.public_ip }}"
         ansible_user: "{{ item.ssh_user }}"
         ansible_port: "{{ item.ssh_port }}"
+        ansible_ssh_private_key_file: "{{ ssh_private_key_file_effective if ssh_private_key_file_effective != '' else omit }}"
         peer_name: "{{ item.name }}"
         node_channel: "{{ item.channel }}"
       loop: "{{ desired_enabled_nodes }}"

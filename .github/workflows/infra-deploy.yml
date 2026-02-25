@@ -77,6 +77,42 @@ jobs:
           chmod 600 "${ENV_FILE}"
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
 
+      - name: Prepare SSH key for Ansible
+        run: |
+          set -Eeuo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          if [ -n "${ANSIBLE_SSH_PRIVATE_KEY_B64:-}" ]; then
+            KEY_FILE="${RUNNER_TEMP}/ansible_ssh_key"
+            printf '%s' "${ANSIBLE_SSH_PRIVATE_KEY_B64}" | base64 -d > "${KEY_FILE}" || {
+              echo "::error::Failed to decode ANSIBLE_SSH_PRIVATE_KEY_B64"
+              exit 1
+            }
+            chmod 600 "${KEY_FILE}"
+            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEY_FILE}" >> "${GITHUB_ENV}"
+            exit 0
+          fi
+
+          if [ -n "${ANSIBLE_SSH_PRIVATE_KEY:-}" ]; then
+            KEY_FILE="${RUNNER_TEMP}/ansible_ssh_key"
+            printf '%s\n' "${ANSIBLE_SSH_PRIVATE_KEY}" > "${KEY_FILE}"
+            chmod 600 "${KEY_FILE}"
+            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEY_FILE}" >> "${GITHUB_ENV}"
+            exit 0
+          fi
+
+          if [ -n "${ANSIBLE_SSH_PRIVATE_KEY_FILE:-}" ]; then
+            test -f "${ANSIBLE_SSH_PRIVATE_KEY_FILE}" || {
+              echo "::error::ANSIBLE_SSH_PRIVATE_KEY_FILE points to a missing file: ${ANSIBLE_SSH_PRIVATE_KEY_FILE}"
+              exit 1
+            }
+            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${ANSIBLE_SSH_PRIVATE_KEY_FILE}" >> "${GITHUB_ENV}"
+            exit 0
+          fi
+
+          echo "::error::Set ANSIBLE_SSH_PRIVATE_KEY_B64 or ANSIBLE_SSH_PRIVATE_KEY or ANSIBLE_SSH_PRIVATE_KEY_FILE in INFRA_ENV_PROD"
+          exit 1
+
       - name: Terraform apply
         env:
           APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
@@ -119,4 +155,6 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f "${INFRA_ENV_FILE:-}"
+        run: |
+          rm -f "${INFRA_ENV_FILE:-}"
+          rm -f "${RUNNER_TEMP}/ansible_ssh_key"
