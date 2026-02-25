@@ -10,6 +10,7 @@ resource "openstack_compute_instance_v2" "vpn" {
   for_each = var.nodes
 
   name              = trimspace(each.value.name) != "" ? each.value.name : each.key
+  region            = trimspace(try(each.value.region, "")) != "" ? each.value.region : null
   image_id          = each.value.image_id
   flavor_id         = each.value.flavor_id
   key_pair          = trimspace(each.value.key_pair) != "" ? each.value.key_pair : null
