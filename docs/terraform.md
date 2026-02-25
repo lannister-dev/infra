@@ -153,6 +153,14 @@ TF_VAR_vpn_xhttp_path=/api/v1/mobile
 # optional generic alias style (auto-converted)
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
 # IAC_TFVAR_HOSTVDS_OS_USERNAME=...
+
+# Ansible SSH key for reconcile/deploy (required for node bootstrap)
+# Option A (preferred): base64(private_key)
+# ANSIBLE_SSH_PRIVATE_KEY_B64=LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K...
+# Option B: inline private key
+# ANSIBLE_SSH_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----...
+# Option C: existing key file on runner
+# ANSIBLE_SSH_PRIVATE_KEY_FILE=/home/github-runner/.ssh/dev
 ```
 
 Mirror behavior in deploy workflow:
