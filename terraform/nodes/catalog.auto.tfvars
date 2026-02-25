@@ -26,8 +26,7 @@ provider_api_vpn_nodes = {
     ssh_port  = 22
     enabled   = true
     region    = "eu-west2"
-  },
-
+  }
 }
 
 # Optional legacy switch (keep false; auto-enabled when provider_api_vpn_nodes has entries).
@@ -51,6 +50,6 @@ provider_compute_vpn_nodes = {
 }
 
 # Optional legacy switch/legacy map for backward compatibility.
-hostvds_compute_enabled = false
-hostvds_vpn_nodes = {}
+hostvds_compute_enabled       = false
+hostvds_vpn_nodes             = {}
 hostvds_provisioned_vpn_nodes = {}

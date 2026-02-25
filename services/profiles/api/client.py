@@ -26,14 +26,26 @@ class ControlPlaneClient(BaseApiClient):
             return RetryableApiError(str(exc))
         return NonRetryableApiError(str(exc))
 
+    async def _post_once(
+        self,
+        path: str,
+        *,
+        json_payload: dict[str, Any] | None = None,
+    ) -> Any:
+        """Run one POST call and close aiohttp session in the same event loop."""
+        try:
+            return await self.post(path, json=json_payload)
+        finally:
+            await self.close()
+
     def publish_artifact(self, artifact: dict[str, Any]) -> dict[str, Any]:
         try:
-            result = self.post(
-                "/profiles/publish",
-                json={"artifact": artifact},
+            result = asyncio.run(
+                self._post_once(
+                    "/profiles/publish",
+                    json_payload={"artifact": artifact},
+                )
             )
-            if asyncio.iscoroutine(result):
-                result = asyncio.run(result)
             if not isinstance(result, dict):
                 raise NonRetryableApiError(
                     f"Publish returned non-JSON object response: {type(result).__name__}"
@@ -54,9 +66,7 @@ class ControlPlaneClient(BaseApiClient):
     def reload_registry(self) -> dict[str, Any]:
         """Trigger registry reload after publish."""
         try:
-            result = self.post("/profiles/reload")
-            if asyncio.iscoroutine(result):
-                result = asyncio.run(result)
+            result = asyncio.run(self._post_once("/profiles/reload"))
             if not isinstance(result, dict):
                 raise NonRetryableApiError(
                     f"Reload returned non-JSON object response: {type(result).__name__}"

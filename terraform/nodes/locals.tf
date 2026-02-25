@@ -34,12 +34,12 @@ locals {
     } if lower(trimspace(node.provider)) == "hostvds"
   }
 
-  hostvds_compute_input_nodes = merge(var.hostvds_provisioned_vpn_nodes, local.hostvds_compute_from_provider_catalog)
+  hostvds_compute_input_nodes       = merge(var.hostvds_provisioned_vpn_nodes, local.hostvds_compute_from_provider_catalog)
   hostvds_compute_enabled_effective = var.hostvds_compute_enabled || length(local.hostvds_compute_input_nodes) > 0
 
   hostvds_compute_vpn_nodes = local.hostvds_compute_enabled_effective ? module.hostvds_compute[0].vpn_nodes : {}
-  hostvds_api_input_nodes = merge(var.hostvds_vpn_nodes, local.hostvds_api_from_provider_catalog, local.hostvds_compute_vpn_nodes)
-  hostvds_api_enabled = var.provider_api_enabled || local.hostvds_compute_enabled_effective || length(var.hostvds_vpn_nodes) > 0 || length(local.hostvds_api_from_provider_catalog) > 0
+  hostvds_api_input_nodes   = merge(var.hostvds_vpn_nodes, local.hostvds_api_from_provider_catalog, local.hostvds_compute_vpn_nodes)
+  hostvds_api_enabled       = var.provider_api_enabled || local.hostvds_compute_enabled_effective || length(var.hostvds_vpn_nodes) > 0 || length(local.hostvds_api_from_provider_catalog) > 0
   hostvds_credentials_required = (
     length(var.hostvds_vpn_nodes) > 0
     || length(local.hostvds_api_from_provider_catalog) > 0
