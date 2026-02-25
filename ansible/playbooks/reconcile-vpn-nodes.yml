@@ -147,6 +147,62 @@
       failed_when: wg_peer_result.rc not in [0, 10]
       no_log: true
 
+    - name: Ensure local SSH known_hosts directory exists
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') + '/.ssh' }}"
+        state: directory
+        mode: "0700"
+
+    - name: Remove stale SSH host keys for desired nodes
+      ansible.builtin.command:
+        argv:
+          - ssh-keygen
+          - -R
+          - "{{ item.public_ip }}"
+      loop: "{{ desired_enabled_nodes }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.public_ip }}"
+      changed_when: "false"
+      failed_when: "false"
+
+    - name: Remove stale SSH host keys with port form for desired nodes
+      ansible.builtin.command:
+        argv:
+          - ssh-keygen
+          - -R
+          - "[{{ item.public_ip }}]:{{ item.ssh_port }}"
+      loop: "{{ desired_enabled_nodes }}"
+      loop_control:
+        label: "{{ item.name }} -> [{{ item.public_ip }}]:{{ item.ssh_port }}"
+      changed_when: "false"
+      failed_when: "false"
+
+    - name: Scan SSH host keys for desired nodes
+      ansible.builtin.command:
+        argv:
+          - ssh-keyscan
+          - -T
+          - "10"
+          - -p
+          - "{{ item.ssh_port | string }}"
+          - "{{ item.public_ip }}"
+      loop: "{{ desired_enabled_nodes }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.public_ip }}:{{ item.ssh_port }}"
+      register: scan_known_host_result
+      changed_when: "false"
+      failed_when: scan_known_host_result.rc != 0 or (scan_known_host_result.stdout | trim) == ""
+
+    - name: Save scanned SSH host keys into known_hosts
+      ansible.builtin.known_hosts:
+        path: "{{ lookup('env', 'HOME') + '/.ssh/known_hosts' }}"
+        name: "{{ '[%s]:%s' | format(item.item.public_ip, item.item.ssh_port) if (item.item.ssh_port | int) != 22 else item.item.public_ip }}"
+        key: "{{ item.stdout }}"
+        state: present
+      loop: "{{ scan_known_host_result.results }}"
+      loop_control:
+        label: "{{ item.item.name }} -> {{ item.item.public_ip }}"
+
     - name: Register desired enabled nodes as dynamic inventory targets
       ansible.builtin.add_host:
         name: "{{ item.name }}"
@@ -296,6 +352,35 @@
       }}
 
   tasks:
+    - name: Initialize joined/missing VPN target lists
+      ansible.builtin.set_fact:
+        joined_vpn_targets: []
+        missing_vpn_targets: []
+
+    - name: Classify VPN targets by swarm_node_id presence
+      ansible.builtin.set_fact:
+        joined_vpn_targets: >-
+          {{
+            joined_vpn_targets
+            + ([item] if (hostvars[item].swarm_node_id is defined and (hostvars[item].swarm_node_id | string | trim | length) > 0) else [])
+          }}
+        missing_vpn_targets: >-
+          {{
+            missing_vpn_targets
+            + ([item] if not (hostvars[item].swarm_node_id is defined and (hostvars[item].swarm_node_id | string | trim | length) > 0) else [])
+          }}
+      loop: "{{ groups['vpn_targets'] | default([]) }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Ensure all desired VPN targets joined swarm and reported swarm_node_id
+      ansible.builtin.assert:
+        that:
+          - missing_vpn_targets | length == 0
+        fail_msg: >-
+          VPN targets missing swarm_node_id (likely SSH/bootstrap failure): {{ missing_vpn_targets | join(', ') }}.
+          Check SSH host key validation and connectivity from runner.
+
     - name: Wait until desired nodes are visible in swarm
       ansible.builtin.command:
         argv:
@@ -303,7 +388,7 @@
           - node
           - inspect
           - "{{ hostvars[item].swarm_node_id }}"
-      loop: "{{ groups['vpn_targets'] | default([]) }}"
+      loop: "{{ joined_vpn_targets }}"
       loop_control:
         label: "{{ item }}"
       register: node_visible
@@ -323,7 +408,7 @@
           - "{{ hostvars[item].node_channel }}"
           - --peer-name
           - "{{ hostvars[item].peer_name }}"
-      loop: "{{ groups['vpn_targets'] | default([]) }}"
+      loop: "{{ joined_vpn_targets }}"
       loop_control:
         label: "{{ item }} -> {{ hostvars[item].swarm_node_id }}"
       register: label_result
