@@ -39,3 +39,13 @@ chmod +x apply.sh manager/wireguard-manager.sh
 
 ./apply.sh --backup
 ./apply.sh --restore /var/backups/wireguard-vpn-infra.zip <password>
+```
+
+## IaC integration
+
+Production reconciliation path uses:
+- `wireguard/manager/reconcile-peer.sh` (ensure peer + client config, idempotent, rc `10` on change)
+- `wireguard/manager/decommission-peer.sh` (remove stale peer/node/config, idempotent, rc `10` on change)
+
+These scripts are called by Ansible playbook `ansible/playbooks/reconcile-vpn-nodes.yml`.
+`wireguard/apply.sh` is retained for legacy/manual operations only.
