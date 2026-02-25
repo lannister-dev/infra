@@ -32,7 +32,7 @@
           - inspect
           - "{{ item }}"
       loop: "{{ required_networks }}"
-      changed_when: false
+      changed_when: "false"
 
     - name: Check required volumes
       ansible.builtin.command:
@@ -42,7 +42,7 @@
           - inspect
           - "{{ item }}"
       loop: "{{ required_volumes }}"
-      changed_when: false
+      changed_when: "false"
 
     - name: Check required docker configs
       ansible.builtin.command:
@@ -52,7 +52,7 @@
           - inspect
           - "{{ item }}"
       loop: "{{ required_configs }}"
-      changed_when: false
+      changed_when: "false"
 
     - name: Check dev docker config when vpn-dev is enabled
       ansible.builtin.command:
@@ -62,7 +62,7 @@
           - inspect
           - "{{ xray_config_dev_name }}"
       when: enable_vpn_dev_stack
-      changed_when: false
+      changed_when: "false"
 
     - name: Check required swarm secret bootstrap_token
       ansible.builtin.command:
@@ -71,7 +71,7 @@
           - secret
           - inspect
           - bootstrap_token
-      changed_when: false
+      changed_when: "false"
 
     - name: Check required swarm secret probe_token when probe is enabled
       ansible.builtin.command:
@@ -81,7 +81,7 @@
           - inspect
           - probe_token
       when: deploy_probe_stack
-      changed_when: false
+      changed_when: "false"
 
     - name: Deploy traefik stack
       ansible.builtin.command:
@@ -99,7 +99,7 @@
         TRAEFIK_IMAGE_TAG: "{{ traefik_image_tag }}"
         CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
       no_log: true
-      changed_when: false
+      changed_when: "false"
 
     - name: Deploy monitoring stack
       ansible.builtin.command:
@@ -124,7 +124,7 @@
         GF_SECURITY_ADMIN_PASSWORD: "{{ gf_security_admin_password }}"
         GF_USERS_ALLOW_SIGN_UP: "{{ gf_users_allow_sign_up }}"
       no_log: true
-      changed_when: false
+      changed_when: "false"
 
     - name: Deploy swarmpit stack
       ansible.builtin.command:
@@ -141,7 +141,7 @@
       environment:
         SWARMPIT_IMAGE_TAG: "{{ swarmpit_image_tag }}"
         SWARMPIT_AGENT_IMAGE_TAG: "{{ swarmpit_agent_image_tag }}"
-      changed_when: false
+      changed_when: "false"
 
     - name: Deploy vpn stack
       ansible.builtin.command:
@@ -167,7 +167,7 @@
         VPN_FALLBACK_DOMAIN: "{{ vpn_fallback_domain }}"
         XRAY_IMAGE_TAG: "{{ xray_image_tag }}"
         NGINX_ALPINE_IMAGE_TAG: "{{ nginx_alpine_image_tag }}"
-      changed_when: false
+      changed_when: "false"
 
     - name: Deploy vpn-dev stack
       ansible.builtin.command:
@@ -189,7 +189,7 @@
         VPN_DEV_XHTTP_PATH: "{{ vpn_dev_xhttp_path }}"
         XRAY_IMAGE_TAG: "{{ xray_image_tag }}"
       when: enable_vpn_dev_stack
-      changed_when: false
+      changed_when: "false"
 
     - name: Deploy probe stack
       ansible.builtin.command:
@@ -205,7 +205,7 @@
       args:
         chdir: "{{ repo_root }}"
       when: deploy_probe_stack
-      changed_when: false
+      changed_when: "false"
 
     - name: Ensure sanity check script is executable
       ansible.builtin.file:
@@ -222,4 +222,4 @@
       environment:
         INFRA_ROLE: manager
       when: run_sanity_check
-      changed_when: false
+      changed_when: "false"

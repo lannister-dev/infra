@@ -1,3 +1,4 @@
+---
 # ======= deploy services ========
 x-deploy-common: &deploy-common
   replicas: 1

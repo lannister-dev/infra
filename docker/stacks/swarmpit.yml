@@ -1,3 +1,4 @@
+---
 services:
   app:
     image: swarmpit/swarmpit:${SWARMPIT_IMAGE_TAG}

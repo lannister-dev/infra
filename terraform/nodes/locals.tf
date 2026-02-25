@@ -4,9 +4,47 @@ locals {
   default_inventory_output_path  = "${local.root_dir}/ansible/inventory/generated/vpn_nodes.yml"
   resolved_inventory_output_path = trimspace(var.inventory_output_path) != "" ? var.inventory_output_path : local.default_inventory_output_path
 
-  hostvds_compute_vpn_nodes = var.hostvds_compute_enabled ? module.hostvds_compute[0].vpn_nodes : {}
-  hostvds_api_input_nodes   = merge(var.hostvds_vpn_nodes, local.hostvds_compute_vpn_nodes)
-  hostvds_api_enabled       = var.provider_api_enabled || var.hostvds_compute_enabled
+  hostvds_api_from_provider_catalog = {
+    for name, node in var.provider_api_vpn_nodes : name => {
+      server_id = node.server_id
+      channel   = node.channel
+      ssh_user  = node.ssh_user
+      ssh_port  = node.ssh_port
+      enabled   = node.enabled
+      region    = node.region
+    } if lower(trimspace(node.provider)) == "hostvds"
+  }
+
+  hostvds_compute_from_provider_catalog = {
+    for name, node in var.provider_compute_vpn_nodes : name => {
+      name              = node.name
+      image_id          = node.image_id
+      flavor_id         = node.flavor_id
+      network_ids       = node.network_ids
+      key_pair          = node.key_pair
+      security_groups   = node.security_groups
+      availability_zone = node.availability_zone
+      user_data         = node.user_data
+      metadata          = node.metadata
+      channel           = node.channel
+      ssh_user          = node.ssh_user
+      ssh_port          = node.ssh_port
+      enabled           = node.enabled
+      region            = node.region
+    } if lower(trimspace(node.provider)) == "hostvds"
+  }
+
+  hostvds_compute_input_nodes = merge(var.hostvds_provisioned_vpn_nodes, local.hostvds_compute_from_provider_catalog)
+  hostvds_compute_enabled_effective = var.hostvds_compute_enabled || length(local.hostvds_compute_input_nodes) > 0
+
+  hostvds_compute_vpn_nodes = local.hostvds_compute_enabled_effective ? module.hostvds_compute[0].vpn_nodes : {}
+  hostvds_api_input_nodes = merge(var.hostvds_vpn_nodes, local.hostvds_api_from_provider_catalog, local.hostvds_compute_vpn_nodes)
+  hostvds_api_enabled = var.provider_api_enabled || local.hostvds_compute_enabled_effective || length(var.hostvds_vpn_nodes) > 0 || length(local.hostvds_api_from_provider_catalog) > 0
+  hostvds_credentials_required = (
+    length(var.hostvds_vpn_nodes) > 0
+    || length(local.hostvds_api_from_provider_catalog) > 0
+    || local.hostvds_compute_enabled_effective
+  )
 
   provider_api_vpn_nodes = module.hostvds_api_catalog.vpn_nodes
 

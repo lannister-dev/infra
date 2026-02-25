@@ -1,8 +1,8 @@
-# VPN Nodes and Provider API
+# VPN Nodes Catalog (Provider-Agnostic)
 
-`terraform/nodes` supports three operational modes.
+`terraform/nodes` supports three modes and keeps one normalized inventory output for Ansible.
 
-## 1) Manual nodes
+## 1) Manual nodes (fallback)
 
 Declare static nodes in `vpn_nodes`:
 
@@ -20,16 +20,15 @@ vpn_nodes = {
 }
 ```
 
-## 2) Existing HostVDS servers (API lookup)
+## 2) Existing provider servers by `server_id` (recommended)
 
-Declare server IDs in `hostvds_vpn_nodes` and enable API lookup:
+Declare nodes in `provider_api_vpn_nodes`:
 
 ```hcl
-provider_api_enabled = true
-
-hostvds_vpn_nodes = {
-  "vpn-hv-01" = {
-    server_id = "uuid-or-id"
+provider_api_vpn_nodes = {
+  "vpn-hostvds-01" = {
+    provider  = "hostvds"
+    server_id = "66d46d44-253d-4a17-977d-a274b3d71e25"
     channel   = "prod"
     enabled   = true
     region    = "eu-west2"
@@ -37,17 +36,16 @@ hostvds_vpn_nodes = {
 }
 ```
 
-Terraform resolves `public_ip` via OpenStack API.
+Terraform resolves `public_ip` through provider API module and writes normalized inventory.
 
-## 3) HostVDS compute create/destroy
+## 3) Provider compute create/destroy (recommended for frequent node rotation)
 
-Declare desired compute nodes in `hostvds_provisioned_vpn_nodes`:
+Declare compute nodes in `provider_compute_vpn_nodes`:
 
 ```hcl
-hostvds_compute_enabled = true
-
-hostvds_provisioned_vpn_nodes = {
-  "vpn-hv-02" = {
+provider_compute_vpn_nodes = {
+  "vpn-hostvds-02" = {
+    provider    = "hostvds"
     image_id    = "2c6a2df7-8207-488d-abe9-77df29422ab1"
     flavor_id   = "3ce84631-91df-4ff2-bf59-d549909232dc"
     network_ids = ["76920584-3a19-4c67-bcc1-01407bedf558"]
@@ -60,14 +58,14 @@ hostvds_provisioned_vpn_nodes = {
 ```
 
 Flow:
-1. Terraform creates instance.
-2. Terraform resolves instance public IP via OpenStack.
+1. Terraform creates/replaces instance.
+2. Terraform resolves `public_ip`.
 3. Terraform writes normalized inventory.
-4. Ansible reconciles node into WireGuard + Swarm.
+4. Ansible reconciles WireGuard + Swarm.
 
-## Credentials and server IDs
+## Credentials
 
-Credentials are taken from `.env`/secret storage:
+For `provider=hostvds`:
 - `HOSTVDS_OS_AUTH_URL`
 - `HOSTVDS_OS_USERNAME`
 - `HOSTVDS_OS_PASSWORD`
@@ -77,23 +75,27 @@ Credentials are taken from `.env`/secret storage:
 - `HOSTVDS_OS_REGION_NAME`
 - `HOSTVDS_OS_INTERFACE`
 
-Get existing `server_id` (PowerShell):
-
-```powershell
-.\scripts\core\get-hostvds-server-id.ps1 -EnvPath .\.env
-```
-
-Alternative:
-- `https://horizon.hostvds.com` -> `Compute` -> `Instances` -> `ID`.
-
 ## Lifecycle semantics
 
-- `enabled = false`: node removed from desired cluster, VPS remains.
-- Remove key from `hostvds_provisioned_vpn_nodes`: VPS is destroyed.
+- `enabled = false`: node removed from desired cluster state, VM remains.
+- Removing key from `provider_compute_vpn_nodes`: VM is destroyed.
 
-## Adding another VPN provider
+## Provider rotation algorithm (ban/failure scenario)
 
-Add a provider-specific module following
-`terraform/nodes/modules/provider-template/README.md` and merge its normalized
-output into `terraform/nodes` root. This keeps provider swap/multi-provider
-operation declarative without changing Ansible logic.
+1. Mark failed node as `enabled = false` (or remove key).
+2. Add replacement entry in `provider_api_vpn_nodes` or `provider_compute_vpn_nodes`.
+3. Run Terraform + reconcile playbook.
+4. After drain/decommission confirmation, remove old entry completely.
+
+## Legacy compatibility
+
+`hostvds_vpn_nodes` and `hostvds_provisioned_vpn_nodes` are still supported for backward compatibility, but new changes should use `provider_*` catalogs.
+
+## How to add a new provider
+
+1. Implement provider module(s) in `terraform/nodes/modules/<provider>-api` and/or `terraform/nodes/modules/<provider>-compute`.
+2. Extend dispatch/merge logic in `terraform/nodes/locals.tf` (`*_from_provider_catalog`).
+3. Wire module calls in `terraform/nodes/main.tf`.
+4. Add provider credentials to `.env` (local) and `INFRA_ENV_PROD` (CI secret).
+5. Extend provider allowlist validations in `terraform/nodes/variables.tf`.
+6. Keep Ansible unchanged: it consumes normalized `vpn_nodes` output.

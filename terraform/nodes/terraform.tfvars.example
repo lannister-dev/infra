@@ -16,11 +16,11 @@
 # allow_empty_vpn_nodes = false
 
 # Optional provider API enrichment and compute provisioning.
-# provider_api_enabled    = true
-# hostvds_compute_enabled = true
+# provider_api_enabled    = false  # legacy switch (auto-enabled when provider_api_vpn_nodes is not empty)
+# hostvds_compute_enabled = false  # legacy switch (auto-enabled when provider_compute_vpn_nodes is not empty)
 #
-# NOTE: In this root module API mode is only for VPN nodes (HostVDS).
-# Timeweb non-VPN infrastructure nodes should be managed by a dedicated compute root.
+# NOTE: In this root module provider=hostvds is currently implemented.
+# Additional providers should follow modules/provider-template contract.
 #
 # HostVDS OpenStack credentials (use HOSTVDS_OS_* in .env/CI and map to TF_VAR_hostvds_os_*):
 # hostvds_os_auth_url = "https://<keystone-host>/identity/v3"
@@ -34,8 +34,9 @@
 # hostvds_os_region_name = ""
 # hostvds_os_interface = "public"
 #
-# hostvds_vpn_nodes = {
+# provider_api_vpn_nodes = {
 #   "vpn-hv-main-01" = {
+#     provider  = "hostvds"
 #     server_id = "98765"
 #     channel   = "prod"
 #     ssh_user  = "root"
@@ -45,9 +46,10 @@
 #   }
 # }
 
-# HostVDS compute provisioning (create/destroy VPS via OpenStack):
-# hostvds_provisioned_vpn_nodes = {
+# Provider compute provisioning (create/destroy VPS via Terraform):
+# provider_compute_vpn_nodes = {
 #   "vpn-hv-main-01" = {
+#     provider    = "hostvds"
 #     image_id    = "2c6a2df7-8207-488d-abe9-77df29422ab1"
 #     flavor_id   = "3ce84631-91df-4ff2-bf59-d549909232dc"
 #     network_ids = ["76920584-3a19-4c67-bcc1-01407bedf558"]
@@ -59,3 +61,7 @@
 #     region      = "eu-west2"
 #   }
 # }
+
+# Legacy maps (still supported, but prefer provider_* catalogs above):
+# hostvds_vpn_nodes = {}
+# hostvds_provisioned_vpn_nodes = {}

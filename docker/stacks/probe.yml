@@ -1,3 +1,4 @@
+---
 services:
   probe:
     image: harbor.lannister-dev.ru/vpn-service/probe:prod

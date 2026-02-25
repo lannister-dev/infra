@@ -5,7 +5,7 @@ Terraform is the source of truth for infrastructure state in this repository.
 ## Root modules
 
 - `terraform/foundation`: Swarm foundation (networks, volumes, Docker configs).
-- `terraform/nodes`: VPN node catalog and HostVDS provider modules.
+- `terraform/nodes`: provider-agnostic VPN node catalog (provider modules underneath).
 - `terraform/infra-nodes`: non-VPN infra nodes (Timeweb).
 
 Each root has its own remote state key:
@@ -36,8 +36,12 @@ editing workflow `export` lists.
 
 `terraform/nodes` supports:
 - Manual catalog: `vpn_nodes`
-- HostVDS API lookup for existing servers: `hostvds_vpn_nodes`
-- HostVDS compute create/destroy: `hostvds_provisioned_vpn_nodes`
+- Provider API lookup for existing servers: `provider_api_vpn_nodes`
+- Provider compute create/destroy: `provider_compute_vpn_nodes`
+
+Legacy compatibility:
+- `hostvds_vpn_nodes`
+- `hostvds_provisioned_vpn_nodes`
 
 `terraform/infra-nodes` supports:
 - Manual catalog: `infra_nodes`
@@ -55,7 +59,7 @@ Important semantics:
 
 ## Required runtime credentials
 
-HostVDS (OpenStack) for `terraform/nodes` provider modes:
+HostVDS (OpenStack) for `terraform/nodes` entries with `provider=hostvds`:
 - `HOSTVDS_OS_AUTH_URL`
 - `HOSTVDS_OS_USERNAME`
 - `HOSTVDS_OS_PASSWORD`

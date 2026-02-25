@@ -9,13 +9,23 @@ output "enabled_vpn_nodes" {
 }
 
 output "provider_api_vpn_nodes" {
-  description = "VPN nodes resolved from HostVDS OpenStack API."
+  description = "VPN nodes resolved from provider API modules (currently HostVDS)."
   value       = local.provider_api_vpn_nodes
 }
 
 output "hostvds_compute_vpn_nodes" {
   description = "VPN nodes provisioned in HostVDS compute module."
   value       = local.hostvds_compute_vpn_nodes
+}
+
+output "provider_api_catalog_hostvds_input" {
+  description = "Effective HostVDS API catalog input after merging provider_api_vpn_nodes + legacy maps + compute outputs."
+  value       = local.hostvds_api_input_nodes
+}
+
+output "provider_compute_catalog_hostvds_input" {
+  description = "Effective HostVDS compute catalog input after merging provider_compute_vpn_nodes + legacy maps."
+  value       = local.hostvds_compute_input_nodes
 }
 
 output "inventory_output_path" {
