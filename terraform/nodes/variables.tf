@@ -165,8 +165,10 @@ variable "hostvds_provisioned_vpn_nodes" {
   description = "Legacy HostVDS compute node catalog to create/destroy via OpenStack."
   type = map(object({
     name              = optional(string, "")
-    image_id          = string
-    flavor_id         = string
+    image_id          = optional(string, "")
+    image_name        = optional(string, "")
+    flavor_id         = optional(string, "")
+    flavor_name       = optional(string, "")
     network_ids       = list(string)
     key_pair          = optional(string, "")
     security_groups   = optional(list(string), [])
@@ -185,14 +187,14 @@ variable "hostvds_provisioned_vpn_nodes" {
     condition = alltrue([
       for peer_name, node in var.hostvds_provisioned_vpn_nodes : (
         can(regex("^[a-zA-Z0-9._-]+$", peer_name))
-        && length(trimspace(node.image_id)) > 0
-        && length(trimspace(node.flavor_id)) > 0
+        && (length(trimspace(node.image_id)) > 0 || length(trimspace(node.image_name)) > 0)
+        && (length(trimspace(node.flavor_id)) > 0 || length(trimspace(node.flavor_name)) > 0)
         && length(node.network_ids) > 0
         && contains(["prod", "dev"], node.channel)
         && node.ssh_port > 0
       )
     ])
-    error_message = "hostvds_provisioned_vpn_nodes entries must include valid peer_name, image_id, flavor_id, at least one network_id, channel in [prod,dev], ssh_port > 0."
+    error_message = "hostvds_provisioned_vpn_nodes entries must include valid peer_name, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], ssh_port > 0."
   }
 }
 
@@ -202,7 +204,9 @@ variable "provider_compute_vpn_nodes" {
     provider          = string
     name              = optional(string, "")
     image_id          = optional(string, "")
+    image_name        = optional(string, "")
     flavor_id         = optional(string, "")
+    flavor_name       = optional(string, "")
     network_ids       = optional(list(string), [])
     key_pair          = optional(string, "")
     security_groups   = optional(list(string), [])
@@ -222,13 +226,13 @@ variable "provider_compute_vpn_nodes" {
       for peer_name, node in var.provider_compute_vpn_nodes : (
         can(regex("^[a-zA-Z0-9._-]+$", peer_name))
         && contains(["hostvds"], lower(trimspace(node.provider)))
-        && length(trimspace(node.image_id)) > 0
-        && length(trimspace(node.flavor_id)) > 0
+        && (length(trimspace(node.image_id)) > 0 || length(trimspace(node.image_name)) > 0)
+        && (length(trimspace(node.flavor_id)) > 0 || length(trimspace(node.flavor_name)) > 0)
         && length(node.network_ids) > 0
         && contains(["prod", "dev"], node.channel)
         && node.ssh_port > 0
       )
     ])
-    error_message = "provider_compute_vpn_nodes entries must include valid peer_name, provider=hostvds, non-empty image_id/flavor_id, at least one network_id, channel in [prod,dev], and ssh_port > 0."
+    error_message = "provider_compute_vpn_nodes entries must include valid peer_name, provider=hostvds, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], and ssh_port > 0."
   }
 }

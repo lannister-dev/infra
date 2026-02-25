@@ -19,7 +19,9 @@ locals {
     for name, node in var.provider_compute_vpn_nodes : name => {
       name              = node.name
       image_id          = node.image_id
+      image_name        = node.image_name
       flavor_id         = node.flavor_id
+      flavor_name       = node.flavor_name
       network_ids       = node.network_ids
       key_pair          = node.key_pair
       security_groups   = node.security_groups

@@ -33,8 +33,8 @@ provider_compute_vpn_nodes = {
 
   "vpn-hostvds-main-02" = {
     provider          = "hostvds"
-    image_id          = "c54a6fb6-1bc6-490b-a5cd-9559232c9a3f"
-    flavor_id         = "c356a6fe-ebff-4c44-aa1f-ada1d93023cc"
+    image_name        = "Ubuntu-22.04-amd64"
+    flavor_name       = "hostvds-4"
     network_ids       = ["b447fbc8-155b-436b-b633-549c7e4951e8"]
     key_pair          = "dev"
     availability_zone = "nova"

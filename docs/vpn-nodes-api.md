@@ -46,8 +46,8 @@ Declare compute nodes in `provider_compute_vpn_nodes`:
 provider_compute_vpn_nodes = {
   "vpn-hostvds-02" = {
     provider    = "hostvds"
-    image_id    = "2c6a2df7-8207-488d-abe9-77df29422ab1"
-    flavor_id   = "3ce84631-91df-4ff2-bf59-d549909232dc"
+    image_name  = "Ubuntu-22.04-amd64"
+    flavor_name = "hostvds-4"
     network_ids = ["76920584-3a19-4c67-bcc1-01407bedf558"]
     key_pair    = "main-key"
     channel     = "prod"
@@ -56,6 +56,8 @@ provider_compute_vpn_nodes = {
   }
 }
 ```
+
+`image_name`/`flavor_name` are preferred for cross-region stability; use IDs only when pinned.
 
 Flow:
 1. Terraform creates/replaces instance.

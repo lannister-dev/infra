@@ -11,8 +11,10 @@ resource "openstack_compute_instance_v2" "vpn" {
 
   name              = trimspace(each.value.name) != "" ? each.value.name : each.key
   region            = trimspace(try(each.value.region, "")) != "" ? each.value.region : null
-  image_id          = each.value.image_id
-  flavor_id         = each.value.flavor_id
+  image_id          = trimspace(each.value.image_id) != "" ? each.value.image_id : null
+  image_name        = trimspace(each.value.image_name) != "" ? each.value.image_name : null
+  flavor_id         = trimspace(each.value.flavor_id) != "" ? each.value.flavor_id : null
+  flavor_name       = trimspace(each.value.flavor_name) != "" ? each.value.flavor_name : null
   key_pair          = trimspace(each.value.key_pair) != "" ? each.value.key_pair : null
   security_groups   = each.value.security_groups
   availability_zone = trimspace(each.value.availability_zone) != "" ? each.value.availability_zone : null
