@@ -35,9 +35,15 @@ def request_json(
             response_headers = dict(response.headers.items())
             return data, response_headers
     except urllib.error.HTTPError as exc:
+        body = ""
+        try:
+            body = exc.read().decode("utf-8", errors="replace").strip()
+        except Exception:
+            body = ""
+        detail = f"HTTP {exc.code}" + (f" body={body}" if body else "")
         if fatal:
-            fail(f"API request failed: {method} {url} -> HTTP {exc.code}")
-        return None, {"__error__": f"HTTP {exc.code}"}
+            fail(f"API request failed: {method} {url} -> {detail}")
+        return None, {"__error__": detail}
     except urllib.error.URLError as exc:
         if fatal:
             fail(f"API request failed: {method} {url} -> {exc}")
@@ -78,7 +84,9 @@ def build_keystone_auth_payload(query: dict[str, str]) -> dict[str, Any]:
     }
 
 
-def find_compute_endpoint(catalog: list[dict[str, Any]], interface: str, region: str) -> tuple[str, str]:
+def find_compute_endpoints(
+    catalog: list[dict[str, Any]], interface: str, preferred_region: str
+) -> list[tuple[str, str]]:
     endpoints: list[tuple[str, str]] = []
     for service in catalog:
         if service.get("type") != "compute":
@@ -87,15 +95,19 @@ def find_compute_endpoint(catalog: list[dict[str, Any]], interface: str, region:
             if endpoint.get("interface") != interface:
                 continue
             endpoint_region = (endpoint.get("region") or endpoint.get("region_id") or "").strip()
-            if region and endpoint_region != region:
-                continue
             url = (endpoint.get("url") or "").strip()
             if url:
                 endpoints.append((url, endpoint_region))
 
     if not endpoints:
         fail("Could not find compute endpoint in Keystone catalog")
-    return endpoints[0]
+
+    if not preferred_region:
+        return endpoints
+
+    preferred = [endpoint for endpoint in endpoints if endpoint[1] == preferred_region]
+    fallback = [endpoint for endpoint in endpoints if endpoint[1] != preferred_region]
+    return preferred + fallback
 
 
 def extract_server_ipv4(server_payload: dict[str, Any]) -> str:
@@ -205,17 +217,33 @@ def resolve(query: dict[str, Any]) -> dict[str, str]:
         fail("Keystone auth succeeded but X-Subject-Token header is missing")
 
     catalog = auth_response.get("token", {}).get("catalog", [])
-    compute_base_url, resolved_region = find_compute_endpoint(catalog, os_interface, os_region_name)
-    server_url = f"{compute_base_url.rstrip('/')}/servers/{server_id}"
-    server_payload, _ = request_json(
-        "GET",
-        server_url,
-        {"Accept": "application/json", "X-Auth-Token": token},
-    )
-    assert server_payload is not None
+    compute_endpoints = find_compute_endpoints(catalog, os_interface, os_region_name)
+    server_payload: dict[str, Any] | None = None
+    resolved_region = ""
+    lookup_errors: list[str] = []
+    for compute_base_url, endpoint_region in compute_endpoints:
+        server_url = f"{compute_base_url.rstrip('/')}/servers/{server_id}"
+        payload, error_headers = request_json(
+            "GET",
+            server_url,
+            {"Accept": "application/json", "X-Auth-Token": token},
+            fatal=False,
+        )
+        if payload is not None:
+            server_payload = payload
+            resolved_region = endpoint_region
+            break
+        lookup_errors.append(f"{server_url}: {error_headers.get('__error__', 'unknown error')}")
+
+    if server_payload is None:
+        fail(
+            "Could not resolve server by id in available compute endpoints. "
+            f"server_id={server_id}; attempts: {'; '.join(lookup_errors)}"
+        )
+
     chosen_ip = extract_server_ipv4(server_payload)
 
-    region = os_region_name if os_region_name else resolved_region
+    region = resolved_region if resolved_region else os_region_name
     if not region:
         region = find_region(server_payload)
 
