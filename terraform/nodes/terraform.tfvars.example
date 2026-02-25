@@ -51,7 +51,9 @@
 #   "vpn-hv-main-01" = {
 #     provider    = "hostvds"
 #     image_id    = "2c6a2df7-8207-488d-abe9-77df29422ab1"
+#     # or image_name = "Ubuntu-22.04-amd64" (preferred for cross-region stability)
 #     flavor_id   = "3ce84631-91df-4ff2-bf59-d549909232dc"
+#     # or flavor_name = "hostvds-4" (preferred for cross-region stability)
 #     network_ids = ["76920584-3a19-4c67-bcc1-01407bedf558"]
 #     key_pair    = "main-key"
 #     channel     = "prod"
