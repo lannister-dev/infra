@@ -1,3 +1,4 @@
+---
 x-healthcheck-common: &healthcheck-common
   interval: 30s
   timeout: 5s
@@ -28,7 +29,7 @@ services:
     configs:
       - source: xray_config
         target: /etc/xray/config.json
-        mode: 0444
+        mode: 292
     command: ["run", "-config", "/etc/xray/config.json"]
     healthcheck:
       <<: *healthcheck-common
@@ -91,10 +92,10 @@ services:
     configs:
       - source: vpn_fallback_index
         target: /usr/share/nginx/html/index.html
-        mode: 0444
+        mode: 292
       - source: vpn_fallback_nginx_conf
         target: /etc/nginx/conf.d/default.conf
-        mode: 0444
+        mode: 292
     deploy:
       replicas: 1
       placement:

@@ -1,12 +1,12 @@
 module "hostvds_compute" {
   source = "./modules/hostvds-compute"
-  count  = var.hostvds_compute_enabled ? 1 : 0
+  count  = local.hostvds_compute_enabled_effective ? 1 : 0
 
   providers = {
     openstack = openstack.hostvds
   }
 
-  nodes = var.hostvds_provisioned_vpn_nodes
+  nodes = local.hostvds_compute_input_nodes
 }
 
 module "hostvds_api_catalog" {
@@ -40,37 +40,37 @@ resource "local_file" "vpn_nodes_inventory" {
     }
 
     precondition {
-      condition     = !local.hostvds_api_enabled || length(local.hostvds_api_input_nodes) == 0 || trimspace(var.hostvds_os_auth_url) != ""
+      condition     = !local.hostvds_credentials_required || trimspace(var.hostvds_os_auth_url) != ""
       error_message = "hostvds_os_auth_url is required when HostVDS API/compute mode has nodes enabled."
     }
 
     precondition {
-      condition     = !local.hostvds_api_enabled || length(local.hostvds_api_input_nodes) == 0 || trimspace(var.hostvds_os_username) != ""
+      condition     = !local.hostvds_credentials_required || trimspace(var.hostvds_os_username) != ""
       error_message = "hostvds_os_username is required when HostVDS API/compute mode has nodes enabled."
     }
 
     precondition {
-      condition     = !local.hostvds_api_enabled || length(local.hostvds_api_input_nodes) == 0 || trimspace(var.hostvds_os_project_name) != ""
+      condition     = !local.hostvds_credentials_required || trimspace(var.hostvds_os_project_name) != ""
       error_message = "hostvds_os_project_name is required when HostVDS API/compute mode has nodes enabled."
     }
 
     precondition {
-      condition     = !local.hostvds_api_enabled || length(local.hostvds_api_input_nodes) == 0 || trimspace(var.hostvds_os_interface) != ""
+      condition     = !local.hostvds_credentials_required || trimspace(var.hostvds_os_interface) != ""
       error_message = "hostvds_os_interface is required when HostVDS API/compute mode has nodes enabled."
     }
 
     precondition {
-      condition     = !local.hostvds_api_enabled || length(local.hostvds_api_input_nodes) == 0 || trimspace(var.hostvds_os_user_domain_name) != "" || trimspace(var.hostvds_os_user_domain_id) != ""
+      condition     = !local.hostvds_credentials_required || trimspace(var.hostvds_os_user_domain_name) != "" || trimspace(var.hostvds_os_user_domain_id) != ""
       error_message = "Set hostvds_os_user_domain_name or hostvds_os_user_domain_id when HostVDS API/compute mode has nodes enabled."
     }
 
     precondition {
-      condition     = !local.hostvds_api_enabled || length(local.hostvds_api_input_nodes) == 0 || trimspace(var.hostvds_os_project_domain_name) != "" || trimspace(var.hostvds_os_project_domain_id) != ""
+      condition     = !local.hostvds_credentials_required || trimspace(var.hostvds_os_project_domain_name) != "" || trimspace(var.hostvds_os_project_domain_id) != ""
       error_message = "Set hostvds_os_project_domain_name or hostvds_os_project_domain_id when HostVDS API/compute mode has nodes enabled."
     }
 
     precondition {
-      condition     = !local.hostvds_api_enabled || length(local.hostvds_api_input_nodes) == 0 || trimspace(var.hostvds_os_password) != ""
+      condition     = !local.hostvds_credentials_required || trimspace(var.hostvds_os_password) != ""
       error_message = "hostvds_os_password is required when HostVDS API/compute mode has nodes enabled."
     }
   }

@@ -37,7 +37,7 @@ variable "allow_empty_vpn_nodes" {
 }
 
 variable "provider_api_enabled" {
-  description = "Enable provider API catalog enrichment for VPN nodes (HostVDS)."
+  description = "Legacy switch to force provider API catalog enrichment. Preferred flow is provider_api_vpn_nodes."
   type        = bool
   default     = false
 }
@@ -110,7 +110,7 @@ variable "hostvds_os_interface" {
 }
 
 variable "hostvds_vpn_nodes" {
-  description = "HostVDS VPN nodes keyed by peer name (server_id references provider object id)."
+  description = "Legacy HostVDS API node catalog keyed by peer name (server_id references provider object id)."
   type = map(object({
     server_id = string
     channel   = optional(string, "prod")
@@ -134,8 +134,35 @@ variable "hostvds_vpn_nodes" {
   }
 }
 
+variable "provider_api_vpn_nodes" {
+  description = "Provider-agnostic API node catalog keyed by peer name. Each entry selects provider + server_id."
+  type = map(object({
+    provider  = string
+    server_id = string
+    channel   = optional(string, "prod")
+    ssh_user  = optional(string, "root")
+    ssh_port  = optional(number, 22)
+    enabled   = optional(bool, true)
+    region    = optional(string, "")
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for peer_name, node in var.provider_api_vpn_nodes : (
+        can(regex("^[a-zA-Z0-9._-]+$", peer_name))
+        && contains(["hostvds"], lower(trimspace(node.provider)))
+        && length(trimspace(node.server_id)) > 0
+        && contains(["prod", "dev"], node.channel)
+        && node.ssh_port > 0
+      )
+    ])
+    error_message = "provider_api_vpn_nodes entries must include valid peer_name, provider=hostvds, non-empty server_id, channel in [prod,dev], and ssh_port > 0."
+  }
+}
+
 variable "hostvds_provisioned_vpn_nodes" {
-  description = "HostVDS VPN nodes to create/destroy via OpenStack."
+  description = "Legacy HostVDS compute node catalog to create/destroy via OpenStack."
   type = map(object({
     name              = optional(string, "")
     image_id          = string
@@ -166,5 +193,42 @@ variable "hostvds_provisioned_vpn_nodes" {
       )
     ])
     error_message = "hostvds_provisioned_vpn_nodes entries must include valid peer_name, image_id, flavor_id, at least one network_id, channel in [prod,dev], ssh_port > 0."
+  }
+}
+
+variable "provider_compute_vpn_nodes" {
+  description = "Provider-agnostic compute node catalog keyed by peer name. Each entry selects provider + provisioning spec."
+  type = map(object({
+    provider          = string
+    name              = optional(string, "")
+    image_id          = optional(string, "")
+    flavor_id         = optional(string, "")
+    network_ids       = optional(list(string), [])
+    key_pair          = optional(string, "")
+    security_groups   = optional(list(string), [])
+    availability_zone = optional(string, "")
+    user_data         = optional(string, "")
+    metadata          = optional(map(string), {})
+    channel           = optional(string, "prod")
+    ssh_user          = optional(string, "root")
+    ssh_port          = optional(number, 22)
+    enabled           = optional(bool, true)
+    region            = optional(string, "")
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for peer_name, node in var.provider_compute_vpn_nodes : (
+        can(regex("^[a-zA-Z0-9._-]+$", peer_name))
+        && contains(["hostvds"], lower(trimspace(node.provider)))
+        && length(trimspace(node.image_id)) > 0
+        && length(trimspace(node.flavor_id)) > 0
+        && length(node.network_ids) > 0
+        && contains(["prod", "dev"], node.channel)
+        && node.ssh_port > 0
+      )
+    ])
+    error_message = "provider_compute_vpn_nodes entries must include valid peer_name, provider=hostvds, non-empty image_id/flavor_id, at least one network_id, channel in [prod,dev], and ssh_port > 0."
   }
 }

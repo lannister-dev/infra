@@ -52,7 +52,7 @@ CI policy:
 Source of truth: `terraform/nodes/catalog.auto.tfvars`.
 
 Add node:
-1. Add entry into one of maps (`vpn_nodes`, `hostvds_vpn_nodes`, `hostvds_provisioned_vpn_nodes`).
+1. Add entry into one of maps (`vpn_nodes`, `provider_api_vpn_nodes`, `provider_compute_vpn_nodes`).
 2. Apply `terraform/nodes`.
 3. Run `reconcile-vpn-nodes.yml`.
 
@@ -61,7 +61,7 @@ Disable node without deleting VPS:
 2. Apply and reconcile.
 
 Destroy compute node:
-1. Remove node from `hostvds_provisioned_vpn_nodes`.
+1. Remove node from `provider_compute_vpn_nodes`.
 2. Apply and reconcile.
 
 ## 4. Non-VPN infra nodes

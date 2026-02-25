@@ -6,8 +6,11 @@ Primary flow is fully declarative.
 
 Edit `terraform/nodes/catalog.auto.tfvars`:
 - `vpn_nodes` for manual IP,
-- or `hostvds_vpn_nodes` for existing server IDs,
-- or `hostvds_provisioned_vpn_nodes` for Terraform-managed compute.
+- or `provider_api_vpn_nodes` for existing server IDs (recommended),
+- or `provider_compute_vpn_nodes` for Terraform-managed compute (recommended for frequent rotation).
+
+Legacy compatibility:
+- `hostvds_vpn_nodes` and `hostvds_provisioned_vpn_nodes` still work but are deprecated.
 
 ## 2. Apply Terraform nodes state
 
