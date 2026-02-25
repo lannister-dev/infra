@@ -11,6 +11,10 @@ This directory is split into:
   Converts `IAC_TFVAR_*` aliases to `TF_VAR_*` for Terraform in CI/deploy.
 - `scripts/core/sanity-check.sh`
   Post-deploy sanity checks (called by Ansible deploy playbook).
+- `scripts/core/swarm-label-node.sh`
+  Idempotent Swarm node labeling helper (`role/channel/peer_name`), returns rc `10` on change.
+- `scripts/core/swarm-refresh-registry-auth.sh`
+  Idempotent helper to refresh registry auth for a Swarm service, returns rc `10` on change.
 - `scripts/core/update-terraform-locks.sh`
   Updates provider lock files (`.terraform.lock.hcl`) for all roots.
 
