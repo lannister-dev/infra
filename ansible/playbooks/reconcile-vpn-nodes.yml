@@ -76,8 +76,8 @@
     - name: Validate SSH auth retry settings
       ansible.builtin.assert:
         that:
-          - ssh_auth_retries_effective > 0
-          - ssh_auth_delay_effective > 0
+          - (ssh_auth_retries_effective | int) > 0
+          - (ssh_auth_delay_effective | int) > 0
         fail_msg: >-
           Invalid SSH auth retry settings. ANSIBLE_SSH_AUTH_RETRIES and ANSIBLE_SSH_AUTH_DELAY
           must be positive integers.
@@ -294,8 +294,8 @@
       loop_control:
         label: "{{ item.name }} -> {{ item.ssh_user }}@{{ item.public_ip }}"
       register: ssh_auth_check_result
-      retries: "{{ ssh_auth_retries_effective }}"
-      delay: "{{ ssh_auth_delay_effective }}"
+      retries: "{{ ssh_auth_retries_effective | int }}"
+      delay: "{{ ssh_auth_delay_effective | int }}"
       until: ssh_auth_check_result.rc == 0
       changed_when: false
 
