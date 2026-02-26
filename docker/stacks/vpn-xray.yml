@@ -71,7 +71,6 @@ services:
       AGENT_BOOTSTRAP_TOKEN_FILE: /run/secrets/bootstrap_token
       AGENT_IDENTITY_PATH: /data/node_identity.json
       AGENT_NODE_KEY: "swarm-node-{{.Node.ID}}"
-      AGENT_INSTANCE_ID: "swarm-task-{{.Task.ID}}"
     env_file:
       - ../../node-agent.env
     healthcheck:
