@@ -207,6 +207,36 @@
       when: deploy_probe_stack
       changed_when: "false"
 
+    - name: Wait for Traefik service to have at least one running task
+      ansible.builtin.command:
+        argv:
+          - docker
+          - service
+          - ps
+          - traefik_traefik
+          - --filter
+          - desired-state=running
+          - --format
+          - "{{ '{{.CurrentState}}' }}"
+      register: traefik_ps
+      retries: 30
+      delay: 3
+      until: >-
+        (traefik_ps.stdout_lines | select('match', '^Running') | list | length) > 0
+      when: run_sanity_check
+      changed_when: "false"
+
+    - name: Wait for Traefik HTTPS listener on localhost
+      ansible.builtin.wait_for:
+        host: "127.0.0.1"
+        port: 443
+        state: started
+        timeout: 180
+        delay: 2
+        sleep: 3
+      when: run_sanity_check
+      changed_when: "false"
+
     - name: Ensure sanity check script is executable
       ansible.builtin.file:
         path: "{{ repo_root }}/scripts/core/sanity-check.sh"
