@@ -1,14 +1,14 @@
 variable "vpn_nodes" {
   description = "Desired VPN nodes keyed by peer name. Public IP is required."
   type = map(object({
-    public_ip = string
-    channel   = optional(string, "prod")
-    ssh_user  = optional(string, "root")
-    ssh_port  = optional(number, 22)
+    public_ip   = string
+    channel     = optional(string, "prod")
+    ssh_user    = optional(string, "root")
+    ssh_port    = optional(number, 22)
     ssh_key_ref = optional(string, "default")
-    enabled   = optional(bool, true)
-    provider  = optional(string, "api")
-    region    = optional(string, "")
+    enabled     = optional(bool, true)
+    provider    = optional(string, "api")
+    region      = optional(string, "")
   }))
   default = {}
 
@@ -114,13 +114,13 @@ variable "hostvds_os_interface" {
 variable "hostvds_vpn_nodes" {
   description = "Legacy HostVDS API node catalog keyed by peer name (server_id references provider object id)."
   type = map(object({
-    server_id = string
-    channel   = optional(string, "prod")
-    ssh_user  = optional(string, "root")
-    ssh_port  = optional(number, 22)
+    server_id   = string
+    channel     = optional(string, "prod")
+    ssh_user    = optional(string, "root")
+    ssh_port    = optional(number, 22)
     ssh_key_ref = optional(string, "default")
-    enabled   = optional(bool, true)
-    region    = optional(string, "")
+    enabled     = optional(bool, true)
+    region      = optional(string, "")
   }))
   default = {}
 
@@ -141,14 +141,14 @@ variable "hostvds_vpn_nodes" {
 variable "provider_api_vpn_nodes" {
   description = "Provider-agnostic API node catalog keyed by peer name. Each entry selects provider + server_id."
   type = map(object({
-    provider  = string
-    server_id = string
-    channel   = optional(string, "prod")
-    ssh_user  = optional(string, "root")
-    ssh_port  = optional(number, 22)
+    provider    = string
+    server_id   = string
+    channel     = optional(string, "prod")
+    ssh_user    = optional(string, "root")
+    ssh_port    = optional(number, 22)
     ssh_key_ref = optional(string, "default")
-    enabled   = optional(bool, true)
-    region    = optional(string, "")
+    enabled     = optional(bool, true)
+    region      = optional(string, "")
   }))
   default = {}
 
