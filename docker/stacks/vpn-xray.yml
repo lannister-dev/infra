@@ -77,12 +77,7 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/healthz', timeout=2).read(); print('ok')"]
     deploy:
       <<: *deploy-common
-      # Agent identity/token is single-writer per node.
-      # Avoid running old+new task together during update/rollback.
-      update_config:
-        order: stop-first
-      rollback_config:
-        order: stop-first
+      # Per-agent identity is supported; common start-first rollout is safe.
       labels:
         - "prometheus-scrape=true"
         - "prometheus-app=node-agent"
