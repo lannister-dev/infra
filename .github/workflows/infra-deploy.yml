@@ -179,23 +179,7 @@ jobs:
             exit 1
           fi
 
-          key_refs="$(
-            python3 - <<'PY'
-import yaml
-
-with open("ansible/inventory/generated/vpn_nodes.yml", "r", encoding="utf-8") as fh:
-    data = yaml.safe_load(fh) or {}
-nodes = data.get("vpn_nodes", []) or []
-refs = sorted(
-    {
-        str(node.get("ssh_key_ref", "")).strip()
-        for node in nodes
-        if bool(node.get("enabled", True)) and str(node.get("ssh_key_ref", "")).strip() != ""
-    }
-)
-print(",".join(refs))
-PY
-          )"
+          key_refs="$(awk '/ssh_key_ref:/{print $2}' "${inventory_file}" | tr -d '"' | sort -u | paste -sd, -)"
           if [ -z "${key_refs}" ]; then
             echo "::notice::No ssh_key_ref entries found in ${inventory_file}; skipping HostVDS keypair verification"
             exit 0
