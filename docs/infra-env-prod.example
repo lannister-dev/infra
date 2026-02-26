@@ -71,3 +71,11 @@ ENABLE_VPN_DEV_STACK=false
 # ---- Generic alias style (alternative to TF_VAR_*) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
 # IAC_TFVAR_TIMEWEB_API_TOKEN=...
+
+# ---- SSH keys for Ansible reconcile/deploy ----
+# Recommended multi-key map (node selects by ssh_key_ref):
+# ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>","backup":"<base64_private_key>"}'
+# Backward-compatible single-key options:
+# ANSIBLE_SSH_PRIVATE_KEY_B64=<base64_private_key>
+# ANSIBLE_SSH_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----...
+# ANSIBLE_SSH_PRIVATE_KEY_FILE=/home/github-runner/.ssh/dev

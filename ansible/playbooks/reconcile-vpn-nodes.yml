@@ -10,6 +10,7 @@
   vars:
     repo_root: "{{ lookup('env', 'REPO_ROOT') | default(playbook_dir + '/../..', true) }}"
     ssh_private_key_file_effective: "{{ lookup('env', 'ANSIBLE_SSH_PRIVATE_KEY_FILE') | default('', true) | trim }}"
+    ssh_keys_dir_effective: "{{ lookup('env', 'ANSIBLE_SSH_KEYS_DIR') | default('', true) | trim }}"
     allow_empty_vpn_nodes_effective: >-
       {{
         (
@@ -55,10 +56,43 @@
           - item.public_ip | length > 0
           - item.channel in ['prod', 'dev']
           - (item.ssh_port | int) > 0
+          - item.ssh_key_ref is defined
+          - (item.ssh_key_ref | default('default', true)) is match('^[a-zA-Z0-9._-]+$')
         fail_msg: "Invalid node entry: {{ item }}"
       loop: "{{ desired_enabled_nodes }}"
       loop_control:
         label: "{{ item.name }}"
+
+    - name: Ensure SSH auth material is configured
+      ansible.builtin.assert:
+        that:
+          - ssh_keys_dir_effective != '' or ssh_private_key_file_effective != ''
+        fail_msg: >-
+          SSH key is not configured. Set ANSIBLE_SSH_KEYS_DIR (recommended, per-node keys)
+          or ANSIBLE_SSH_PRIVATE_KEY_FILE (single key fallback).
+
+    - name: Check per-node SSH key file exists on controller
+      ansible.builtin.stat:
+        path: "{{ ssh_keys_dir_effective }}/{{ item.ssh_key_ref | default('default', true) | trim }}"
+      delegate_to: localhost
+      become: false
+      loop: "{{ desired_enabled_nodes }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.ssh_key_ref | default('default', true) }}"
+      when: ssh_keys_dir_effective != ''
+      register: ssh_key_file_stat_result
+      changed_when: false
+
+    - name: Ensure per-node SSH key file exists on controller
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+        fail_msg: >-
+          Missing SSH key for node {{ item.item.name }} (ref={{ item.item.ssh_key_ref | default('default', true) }}):
+          expected file {{ ssh_keys_dir_effective }}/{{ item.item.ssh_key_ref | default('default', true) | trim }}.
+      loop: "{{ ssh_key_file_stat_result.results | default([]) }}"
+      when: ssh_keys_dir_effective != ''
 
     - name: Prevent accidental empty desired node set
       ansible.builtin.assert:
@@ -220,6 +254,36 @@
       loop_control:
         label: "{{ item.item.name }} -> {{ item.item.public_ip }}"
 
+    - name: Verify SSH authentication works for desired nodes
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - ConnectTimeout=10
+          - -o
+          - StrictHostKeyChecking=yes
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (item.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ item.ssh_port | string }}"
+          - "{{ item.ssh_user }}@{{ item.public_ip }}"
+          - "true"
+      loop: "{{ desired_enabled_nodes }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.ssh_user }}@{{ item.public_ip }}"
+      register: ssh_auth_check_result
+      retries: 3
+      delay: 5
+      until: ssh_auth_check_result.rc == 0
+      changed_when: false
+
     - name: Register desired enabled nodes as dynamic inventory targets
       ansible.builtin.add_host:
         name: "{{ item.name }}"
@@ -227,7 +291,12 @@
         ansible_host: "{{ item.public_ip }}"
         ansible_user: "{{ item.ssh_user }}"
         ansible_port: "{{ item.ssh_port }}"
-        ansible_ssh_private_key_file: "{{ ssh_private_key_file_effective if ssh_private_key_file_effective != '' else omit }}"
+        ansible_ssh_private_key_file: >-
+          {{
+            (ssh_keys_dir_effective ~ '/' ~ (item.ssh_key_ref | default('default', true) | trim))
+            if ssh_keys_dir_effective != ''
+            else (ssh_private_key_file_effective if ssh_private_key_file_effective != '' else omit)
+          }}
         peer_name: "{{ item.name }}"
         node_channel: "{{ item.channel }}"
       loop: "{{ desired_enabled_nodes }}"

@@ -5,6 +5,7 @@ variable "vpn_nodes" {
     channel   = optional(string, "prod")
     ssh_user  = optional(string, "root")
     ssh_port  = optional(number, 22)
+    ssh_key_ref = optional(string, "default")
     enabled   = optional(bool, true)
     provider  = optional(string, "api")
     region    = optional(string, "")
@@ -18,9 +19,10 @@ variable "vpn_nodes" {
         && length(trimspace(node.public_ip)) > 0
         && contains(["prod", "dev"], node.channel)
         && node.ssh_port > 0
+        && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
       )
     ])
-    error_message = "vpn_nodes must use valid peer names, non-empty public_ip, channel in [prod,dev], and ssh_port > 0."
+    error_message = "vpn_nodes must use valid peer names, non-empty public_ip, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }
 
@@ -116,6 +118,7 @@ variable "hostvds_vpn_nodes" {
     channel   = optional(string, "prod")
     ssh_user  = optional(string, "root")
     ssh_port  = optional(number, 22)
+    ssh_key_ref = optional(string, "default")
     enabled   = optional(bool, true)
     region    = optional(string, "")
   }))
@@ -128,9 +131,10 @@ variable "hostvds_vpn_nodes" {
         && length(trimspace(node.server_id)) > 0
         && contains(["prod", "dev"], node.channel)
         && node.ssh_port > 0
+        && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
       )
     ])
-    error_message = "hostvds_vpn_nodes entries must include valid peer_name, non-empty server_id, channel in [prod,dev], and ssh_port > 0."
+    error_message = "hostvds_vpn_nodes entries must include valid peer_name, non-empty server_id, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }
 
@@ -142,6 +146,7 @@ variable "provider_api_vpn_nodes" {
     channel   = optional(string, "prod")
     ssh_user  = optional(string, "root")
     ssh_port  = optional(number, 22)
+    ssh_key_ref = optional(string, "default")
     enabled   = optional(bool, true)
     region    = optional(string, "")
   }))
@@ -155,9 +160,10 @@ variable "provider_api_vpn_nodes" {
         && length(trimspace(node.server_id)) > 0
         && contains(["prod", "dev"], node.channel)
         && node.ssh_port > 0
+        && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
       )
     ])
-    error_message = "provider_api_vpn_nodes entries must include valid peer_name, provider=hostvds, non-empty server_id, channel in [prod,dev], and ssh_port > 0."
+    error_message = "provider_api_vpn_nodes entries must include valid peer_name, provider=hostvds, non-empty server_id, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }
 
@@ -178,6 +184,7 @@ variable "hostvds_provisioned_vpn_nodes" {
     channel           = optional(string, "prod")
     ssh_user          = optional(string, "root")
     ssh_port          = optional(number, 22)
+    ssh_key_ref       = optional(string, "default")
     enabled           = optional(bool, true)
     region            = optional(string, "")
   }))
@@ -192,9 +199,10 @@ variable "hostvds_provisioned_vpn_nodes" {
         && length(node.network_ids) > 0
         && contains(["prod", "dev"], node.channel)
         && node.ssh_port > 0
+        && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
       )
     ])
-    error_message = "hostvds_provisioned_vpn_nodes entries must include valid peer_name, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], ssh_port > 0."
+    error_message = "hostvds_provisioned_vpn_nodes entries must include valid peer_name, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }
 
@@ -216,6 +224,7 @@ variable "provider_compute_vpn_nodes" {
     channel           = optional(string, "prod")
     ssh_user          = optional(string, "root")
     ssh_port          = optional(number, 22)
+    ssh_key_ref       = optional(string, "default")
     enabled           = optional(bool, true)
     region            = optional(string, "")
   }))
@@ -231,8 +240,9 @@ variable "provider_compute_vpn_nodes" {
         && length(node.network_ids) > 0
         && contains(["prod", "dev"], node.channel)
         && node.ssh_port > 0
+        && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
       )
     ])
-    error_message = "provider_compute_vpn_nodes entries must include valid peer_name, provider=hostvds, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], and ssh_port > 0."
+    error_message = "provider_compute_vpn_nodes entries must include valid peer_name, provider=hostvds, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }

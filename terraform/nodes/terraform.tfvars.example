@@ -5,6 +5,7 @@
 #     channel   = "prod"
 #     ssh_user  = "root"
 #     ssh_port  = 22
+#     ssh_key_ref = "default"
 #     enabled   = true
 #     provider  = "manual"
 #     region    = "eu-nl"
@@ -41,6 +42,7 @@
 #     channel   = "prod"
 #     ssh_user  = "root"
 #     ssh_port  = 22
+#     ssh_key_ref = "default"
 #     enabled   = true
 #     region    = "de-fra"
 #   }
@@ -59,6 +61,7 @@
 #     channel     = "prod"
 #     ssh_user    = "root"
 #     ssh_port    = 22
+#     ssh_key_ref = "default"
 #     enabled     = true
 #     region      = "eu-west2"
 #   }

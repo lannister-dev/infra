@@ -43,6 +43,7 @@ locals {
       channel   = try(var.nodes[name].channel, "prod")
       ssh_user  = try(var.nodes[name].ssh_user, "root")
       ssh_port  = try(var.nodes[name].ssh_port, 22)
+      ssh_key_ref = try(var.nodes[name].ssh_key_ref, "default")
       enabled   = try(var.nodes[name].enabled, true)
       region    = try(var.nodes[name].region, "")
     }

@@ -8,6 +8,7 @@ Edit `terraform/nodes/catalog.auto.tfvars`:
 - `vpn_nodes` for manual IP,
 - or `provider_api_vpn_nodes` for existing server IDs (recommended),
 - or `provider_compute_vpn_nodes` for Terraform-managed compute (recommended for frequent rotation).
+- set `ssh_key_ref` per node (example: `dev`, `hostvds`, `timeweb`).
 
 Legacy compatibility:
 - `hostvds_vpn_nodes` and `hostvds_provisioned_vpn_nodes` still work but are deprecated.
@@ -37,12 +38,15 @@ ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-st
 
 - For HostVDS Ubuntu images in this project, use `ssh_user = "root"` in node catalog.
 - Server must be created with a known key pair (for example `dev`).
-- CI secret `INFRA_ENV_PROD` must provide one of:
-  - `ANSIBLE_SSH_PRIVATE_KEY_B64` (base64-encoded private key, preferred),
-  - `ANSIBLE_SSH_PRIVATE_KEY` (full private key content),
-  - `ANSIBLE_SSH_PRIVATE_KEY_FILE` (absolute path on self-hosted runner).
+- CI secret `INFRA_ENV_PROD` should provide `ANSIBLE_SSH_KEYS_B64_JSON`:
+  - JSON object: `'{"dev":"<base64_private_key>","other":"<base64_private_key>"}'`.
+  - each node picks key by `ssh_key_ref`.
+- Backward compatibility still works:
+  - `ANSIBLE_SSH_PRIVATE_KEY_B64`,
+  - `ANSIBLE_SSH_PRIVATE_KEY`,
+  - `ANSIBLE_SSH_PRIVATE_KEY_FILE`.
 
-If neither key variable is provided, deploy workflow now fails fast before Ansible.
+If keys are missing, deploy workflow fails fast before Ansible.
 
 ## 4. Verify
 
