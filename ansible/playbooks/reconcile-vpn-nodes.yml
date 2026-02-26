@@ -286,7 +286,8 @@
             exit 0
           fi
         done
-        echo "SSH auth failed for node {{ item.name }}@{{ item.public_ip }} with users: {{ (([item.ssh_user] + ssh_auth_fallback_users_effective) | unique | join(', ')) }}. If this node was reprovisioned, ensure key_pair/authorized_keys matches ssh_key_ref={{ item.ssh_key_ref | default('default', true) }} or replace the VM." >&2
+        echo "SSH auth failed for node {{ item.name }}@{{ item.public_ip }} with users: {{ (([item.ssh_user] + ssh_auth_fallback_users_effective) | unique | join(', ')) }}." \
+          "If this node was reprovisioned, ensure key_pair/authorized_keys matches ssh_key_ref={{ item.ssh_key_ref | default('default', true) }} or replace the VM." >&2
         exit 1
       args:
         executable: /bin/bash
@@ -301,7 +302,7 @@
 
     - name: Build effective SSH user map from auth checks
       ansible.builtin.set_fact:
-        effective_ssh_users: "{{ (effective_ssh_users | default({})) | combine({ item.item.name: (item.stdout | trim) }) }}"
+        effective_ssh_users: "{{ (effective_ssh_users | default({})) | combine({item.item.name: (item.stdout | trim)}) }}"
       loop: "{{ ssh_auth_check_result.results }}"
       loop_control:
         label: "{{ item.item.name }} -> {{ item.stdout | trim }}"
