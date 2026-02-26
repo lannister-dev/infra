@@ -82,36 +82,96 @@ jobs:
           set -Eeuo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
 
+          KEYS_DIR="${RUNNER_TEMP}/ansible_ssh_keys"
+          mkdir -p "${KEYS_DIR}"
+          chmod 700 "${KEYS_DIR}"
+          keys_written=0
+
+          if [ -n "${ANSIBLE_SSH_KEYS_B64_JSON:-}" ]; then
+            command -v python3 >/dev/null 2>&1 || {
+              echo "::error::python3 is required to parse ANSIBLE_SSH_KEYS_B64_JSON"
+              exit 1
+            }
+
+            export KEYS_DIR
+            json_count="$(python3 - <<'PY'
+import base64
+import json
+import os
+import re
+import sys
+
+raw = os.environ.get("ANSIBLE_SSH_KEYS_B64_JSON", "").strip()
+keys_dir = os.environ.get("KEYS_DIR", "")
+name_re = re.compile(r"^[A-Za-z0-9._-]+$")
+
+try:
+    payload = json.loads(raw)
+except Exception as exc:  # pylint: disable=broad-exception-caught
+    print(f"::error::ANSIBLE_SSH_KEYS_B64_JSON is not valid JSON: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+
+if not isinstance(payload, dict):
+    print("::error::ANSIBLE_SSH_KEYS_B64_JSON must be a JSON object: {\"ref\":\"base64_key\"}", file=sys.stderr)
+    raise SystemExit(1)
+
+count = 0
+for ref, encoded_key in payload.items():
+    if not isinstance(ref, str) or not name_re.match(ref):
+        print(f"::error::Invalid ssh key ref '{ref}'. Allowed pattern: [A-Za-z0-9._-]+", file=sys.stderr)
+        raise SystemExit(1)
+    if not isinstance(encoded_key, str) or encoded_key.strip() == "":
+        print(f"::error::SSH key value for ref '{ref}' must be non-empty base64 string", file=sys.stderr)
+        raise SystemExit(1)
+
+    try:
+        key_bytes = base64.b64decode(encoded_key, validate=True)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        print(f"::error::Failed to decode base64 for ssh key ref '{ref}': {exc}", file=sys.stderr)
+        raise SystemExit(1)
+
+    key_path = os.path.join(keys_dir, ref)
+    with open(key_path, "wb") as fh:
+        fh.write(key_bytes)
+    os.chmod(key_path, 0o600)
+    count += 1
+
+print(count)
+PY
+)"
+            keys_written=$((keys_written + json_count))
+          fi
+
           if [ -n "${ANSIBLE_SSH_PRIVATE_KEY_B64:-}" ]; then
-            KEY_FILE="${RUNNER_TEMP}/ansible_ssh_key"
-            printf '%s' "${ANSIBLE_SSH_PRIVATE_KEY_B64}" | base64 -d > "${KEY_FILE}" || {
+            printf '%s' "${ANSIBLE_SSH_PRIVATE_KEY_B64}" | base64 -d > "${KEYS_DIR}/default" || {
               echo "::error::Failed to decode ANSIBLE_SSH_PRIVATE_KEY_B64"
               exit 1
             }
-            chmod 600 "${KEY_FILE}"
-            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEY_FILE}" >> "${GITHUB_ENV}"
-            exit 0
-          fi
-
-          if [ -n "${ANSIBLE_SSH_PRIVATE_KEY:-}" ]; then
-            KEY_FILE="${RUNNER_TEMP}/ansible_ssh_key"
-            printf '%s\n' "${ANSIBLE_SSH_PRIVATE_KEY}" > "${KEY_FILE}"
-            chmod 600 "${KEY_FILE}"
-            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEY_FILE}" >> "${GITHUB_ENV}"
-            exit 0
-          fi
-
-          if [ -n "${ANSIBLE_SSH_PRIVATE_KEY_FILE:-}" ]; then
+            chmod 600 "${KEYS_DIR}/default"
+            keys_written=$((keys_written + 1))
+          elif [ -n "${ANSIBLE_SSH_PRIVATE_KEY:-}" ]; then
+            printf '%s\n' "${ANSIBLE_SSH_PRIVATE_KEY}" > "${KEYS_DIR}/default"
+            chmod 600 "${KEYS_DIR}/default"
+            keys_written=$((keys_written + 1))
+          elif [ -n "${ANSIBLE_SSH_PRIVATE_KEY_FILE:-}" ]; then
             test -f "${ANSIBLE_SSH_PRIVATE_KEY_FILE}" || {
               echo "::error::ANSIBLE_SSH_PRIVATE_KEY_FILE points to a missing file: ${ANSIBLE_SSH_PRIVATE_KEY_FILE}"
               exit 1
             }
-            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${ANSIBLE_SSH_PRIVATE_KEY_FILE}" >> "${GITHUB_ENV}"
-            exit 0
+            cp "${ANSIBLE_SSH_PRIVATE_KEY_FILE}" "${KEYS_DIR}/default"
+            chmod 600 "${KEYS_DIR}/default"
+            keys_written=$((keys_written + 1))
           fi
 
-          echo "::error::Set ANSIBLE_SSH_PRIVATE_KEY_B64 or ANSIBLE_SSH_PRIVATE_KEY or ANSIBLE_SSH_PRIVATE_KEY_FILE in INFRA_ENV_PROD"
-          exit 1
+          if [ "${keys_written}" -eq 0 ]; then
+            echo "::error::Set ANSIBLE_SSH_KEYS_B64_JSON (recommended) or one of: ANSIBLE_SSH_PRIVATE_KEY_B64 / ANSIBLE_SSH_PRIVATE_KEY / ANSIBLE_SSH_PRIVATE_KEY_FILE in INFRA_ENV_PROD"
+            exit 1
+          fi
+
+          echo "ANSIBLE_SSH_KEYS_DIR=${KEYS_DIR}" >> "${GITHUB_ENV}"
+          if [ -f "${KEYS_DIR}/default" ]; then
+            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEYS_DIR}/default" >> "${GITHUB_ENV}"
+          fi
 
       - name: Terraform apply
         env:
@@ -157,4 +217,4 @@ jobs:
         if: always()
         run: |
           rm -f "${INFRA_ENV_FILE:-}"
-          rm -f "${RUNNER_TEMP}/ansible_ssh_key"
+          rm -rf "${RUNNER_TEMP}/ansible_ssh_keys"

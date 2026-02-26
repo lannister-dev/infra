@@ -53,8 +53,10 @@ Source of truth: `terraform/nodes/catalog.auto.tfvars`.
 
 Add node:
 1. Add entry into one of maps (`vpn_nodes`, `provider_api_vpn_nodes`, `provider_compute_vpn_nodes`).
-2. Apply `terraform/nodes`.
-3. Run `reconcile-vpn-nodes.yml`.
+2. Set `ssh_key_ref` for the node (for example `dev`).
+3. Ensure matching private key exists in `INFRA_ENV_PROD` via `ANSIBLE_SSH_KEYS_B64_JSON`.
+4. Apply `terraform/nodes`.
+5. Run `reconcile-vpn-nodes.yml`.
 
 Disable node without deleting VPS:
 1. Set `enabled = false`.

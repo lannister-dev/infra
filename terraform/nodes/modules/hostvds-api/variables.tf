@@ -68,6 +68,7 @@ variable "nodes" {
     channel   = optional(string, "prod")
     ssh_user  = optional(string, "root")
     ssh_port  = optional(number, 22)
+    ssh_key_ref = optional(string, "default")
     enabled   = optional(bool, true)
     region    = optional(string, "")
   }))

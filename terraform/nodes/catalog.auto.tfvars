@@ -27,6 +27,7 @@ provider_compute_vpn_nodes = {
     channel           = "prod"
     ssh_user          = "root"
     ssh_port          = 22
+    ssh_key_ref       = "dev"
     enabled           = true
     region            = "eu-west2"
   }
@@ -41,6 +42,7 @@ provider_compute_vpn_nodes = {
     channel         = "prod"
     ssh_user        = "root"
     ssh_port        = 22
+    ssh_key_ref     = "dev"
     enabled         = true
     region          = "eu-north1b"
   }

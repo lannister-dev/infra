@@ -154,12 +154,14 @@ TF_VAR_vpn_xhttp_path=/api/v1/mobile
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
 # IAC_TFVAR_HOSTVDS_OS_USERNAME=...
 
-# Ansible SSH key for reconcile/deploy (required for node bootstrap)
-# Option A (preferred): base64(private_key)
+# Ansible SSH keys for reconcile/deploy (required for node bootstrap)
+# Recommended (multi-key): map key refs to base64 private keys.
+# Nodes select key via ssh_key_ref in terraform/nodes/catalog.auto.tfvars.
+# ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"LS0tLS1CRUdJTi...","backup":"LS0tLS1CRUdJTi..."}'
+#
+# Backward-compatible single-key options:
 # ANSIBLE_SSH_PRIVATE_KEY_B64=LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K...
-# Option B: inline private key
 # ANSIBLE_SSH_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----...
-# Option C: existing key file on runner
 # ANSIBLE_SSH_PRIVATE_KEY_FILE=/home/github-runner/.ssh/dev
 ```
 
