@@ -19,6 +19,7 @@ set -u
 : "${TF_STATE_KEY_PREFIX:?TF_STATE_KEY_PREFIX is required}"
 
 GITHUB_ENV="${GITHUB_ENV:-/dev/null}"
+NODES_REPLACE_ARGS=()
 
 # ----- provider mirror --------------------------------------------------
 # Sets _TF_MIRROR_CFG_TMP (path to temp file) for cleanup by caller.
@@ -96,6 +97,33 @@ for env_name, key in {
 ' >> "${GITHUB_ENV}"
 }
 
+prepare_nodes_replace_args() {
+  local raw names_csv
+  raw="${REPLACE_VPN_NODES:-}"
+  names_csv="$(printf '%s' "${raw}" | tr -d '[:space:]')"
+  [ -n "${names_csv}" ] || return 0
+
+  local IFS=','
+  local -a names=()
+  read -r -a names <<< "${names_csv}"
+
+  local name
+  for name in "${names[@]}"; do
+    [ -n "${name}" ] || continue
+    if [[ ! "${name}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+      echo "::error::Invalid node name in REPLACE_VPN_NODES: '${name}'"
+      exit 1
+    fi
+    NODES_REPLACE_ARGS+=(
+      "-replace=module.hostvds_compute[0].openstack_compute_instance_v2.vpn[\"${name}\"]"
+    )
+  done
+
+  if [ "${#NODES_REPLACE_ARGS[@]}" -gt 0 ]; then
+    echo "::notice::terraform/nodes will force-recreate: ${names_csv}"
+  fi
+}
+
 # ----- main --------------------------------------------------------------
 main() {
   # Convert IAC_TFVAR_* → TF_VAR_*
@@ -105,6 +133,7 @@ main() {
   source "${script_dir}/core/prepare-terraform-env.sh"
 
   setup_provider_mirror
+  prepare_nodes_replace_args
 
   local roots=(foundation nodes)
   [ "${APPLY_INFRA_NODES:-false}" != "true" ] || roots+=(infra-nodes)
@@ -122,8 +151,14 @@ main() {
       infra-nodes) export TF_VAR_inventory_output_path="${INFRA_NODES_OUTPUT_PATH:-}" ;;
     esac
 
-    terraform -chdir="terraform/${root}" init  -input=false -backend-config="${backend_file}"
-    terraform -chdir="terraform/${root}" plan  -input=false -out=tfplan
+    terraform -chdir="terraform/${root}" init -input=false -backend-config="${backend_file}"
+
+    if [ "${root}" = "nodes" ] && [ "${#NODES_REPLACE_ARGS[@]}" -gt 0 ]; then
+      terraform -chdir="terraform/${root}" plan -input=false "${NODES_REPLACE_ARGS[@]}" -out=tfplan
+    else
+      terraform -chdir="terraform/${root}" plan -input=false -out=tfplan
+    fi
+
     terraform -chdir="terraform/${root}" apply -input=false -auto-approve tfplan
 
     [ "${root}" != "foundation" ] || export_config_names

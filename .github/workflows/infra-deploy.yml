@@ -24,6 +24,11 @@ on:
         required: true
         type: boolean
         default: false
+      replace_vpn_nodes:
+        description: "Comma-separated VPN node names to force recreate in terraform/nodes (provider_compute only)"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -144,6 +149,7 @@ jobs:
       - name: Terraform apply
         env:
           APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
+          REPLACE_VPN_NODES: ${{ inputs.replace_vpn_nodes }}
         run: |
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
@@ -160,6 +166,44 @@ jobs:
 
       - name: Install Ansible
         run: python -m pip install --upgrade pip ansible
+
+      - name: Verify HostVDS keypair fingerprints
+        if: ${{ inputs.reconcile_nodes == true }}
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          inventory_file="ansible/inventory/generated/vpn_nodes.yml"
+          if [ ! -f "${inventory_file}" ]; then
+            echo "::error::Missing generated inventory file: ${inventory_file}"
+            exit 1
+          fi
+
+          key_refs="$(
+            python3 - <<'PY'
+import yaml
+
+with open("ansible/inventory/generated/vpn_nodes.yml", "r", encoding="utf-8") as fh:
+    data = yaml.safe_load(fh) or {}
+nodes = data.get("vpn_nodes", []) or []
+refs = sorted(
+    {
+        str(node.get("ssh_key_ref", "")).strip()
+        for node in nodes
+        if bool(node.get("enabled", True)) and str(node.get("ssh_key_ref", "")).strip() != ""
+    }
+)
+print(",".join(refs))
+PY
+          )"
+          if [ -z "${key_refs}" ]; then
+            echo "::notice::No ssh_key_ref entries found in ${inventory_file}; skipping HostVDS keypair verification"
+            exit 0
+          fi
+
+          python3 ./scripts/core/verify-hostvds-keypairs.py \
+            --keys-dir "${ANSIBLE_SSH_KEYS_DIR}" \
+            --refs "${key_refs}"
 
       - name: Reconcile VPN nodes (Ansible)
         if: ${{ inputs.reconcile_nodes == true }}
