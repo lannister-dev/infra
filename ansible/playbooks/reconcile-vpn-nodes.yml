@@ -92,6 +92,8 @@
           Missing SSH key for node {{ item.item.name }} (ref={{ item.item.ssh_key_ref | default('default', true) }}):
           expected file {{ ssh_keys_dir_effective }}/{{ item.item.ssh_key_ref | default('default', true) | trim }}.
       loop: "{{ ssh_key_file_stat_result.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.name }} -> {{ item.item.ssh_key_ref | default('default', true) }}"
       when: ssh_keys_dir_effective != ''
 
     - name: Prevent accidental empty desired node set
