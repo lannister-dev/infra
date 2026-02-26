@@ -94,51 +94,7 @@ jobs:
             }
 
             export KEYS_DIR
-            json_count="$(python3 - <<'PY'
-import base64
-import json
-import os
-import re
-import sys
-
-raw = os.environ.get("ANSIBLE_SSH_KEYS_B64_JSON", "").strip()
-keys_dir = os.environ.get("KEYS_DIR", "")
-name_re = re.compile(r"^[A-Za-z0-9._-]+$")
-
-try:
-    payload = json.loads(raw)
-except Exception as exc:  # pylint: disable=broad-exception-caught
-    print(f"::error::ANSIBLE_SSH_KEYS_B64_JSON is not valid JSON: {exc}", file=sys.stderr)
-    raise SystemExit(1)
-
-if not isinstance(payload, dict):
-    print("::error::ANSIBLE_SSH_KEYS_B64_JSON must be a JSON object: {\"ref\":\"base64_key\"}", file=sys.stderr)
-    raise SystemExit(1)
-
-count = 0
-for ref, encoded_key in payload.items():
-    if not isinstance(ref, str) or not name_re.match(ref):
-        print(f"::error::Invalid ssh key ref '{ref}'. Allowed pattern: [A-Za-z0-9._-]+", file=sys.stderr)
-        raise SystemExit(1)
-    if not isinstance(encoded_key, str) or encoded_key.strip() == "":
-        print(f"::error::SSH key value for ref '{ref}' must be non-empty base64 string", file=sys.stderr)
-        raise SystemExit(1)
-
-    try:
-        key_bytes = base64.b64decode(encoded_key, validate=True)
-    except Exception as exc:  # pylint: disable=broad-exception-caught
-        print(f"::error::Failed to decode base64 for ssh key ref '{ref}': {exc}", file=sys.stderr)
-        raise SystemExit(1)
-
-    key_path = os.path.join(keys_dir, ref)
-    with open(key_path, "wb") as fh:
-        fh.write(key_bytes)
-    os.chmod(key_path, 0o600)
-    count += 1
-
-print(count)
-PY
-)"
+            json_count="$(python3 ./scripts/core/render-ansible-ssh-keys.py --keys-dir "${KEYS_DIR}")"
             keys_written=$((keys_written + json_count))
           fi
 
