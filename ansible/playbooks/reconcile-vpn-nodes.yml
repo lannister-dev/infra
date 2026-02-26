@@ -13,6 +13,8 @@
     ssh_keys_dir_effective: "{{ lookup('env', 'ANSIBLE_SSH_KEYS_DIR') | default('', true) | trim }}"
     ssh_auth_retries_effective: "{{ lookup('env', 'ANSIBLE_SSH_AUTH_RETRIES') | default('18', true) | int }}"
     ssh_auth_delay_effective: "{{ lookup('env', 'ANSIBLE_SSH_AUTH_DELAY') | default('5', true) | int }}"
+    ssh_auth_fallback_users_csv_effective: "{{ lookup('env', 'ANSIBLE_SSH_AUTH_FALLBACK_USERS') | default('ubuntu,debian,ec2-user,cloud-user,admin', true) }}"
+    ssh_auth_fallback_users_effective: "{{ ssh_auth_fallback_users_csv_effective.split(',') | map('trim') | reject('equalto', '') | list }}"
     allow_empty_vpn_nodes_effective: >-
       {{
         (
@@ -268,43 +270,61 @@
         label: "{{ item.item.name }} -> {{ item.item.public_ip }}"
 
     - name: Verify SSH authentication works for desired nodes
-      ansible.builtin.command:
-        argv:
-          - ssh
-          - -o
-          - BatchMode=yes
-          - -o
-          - ConnectTimeout=10
-          - -o
-          - IdentitiesOnly=yes
-          - -o
-          - StrictHostKeyChecking=yes
-          - -i
-          - >-
-            {{
-              (ssh_keys_dir_effective ~ '/' ~ (item.ssh_key_ref | default('default', true) | trim))
-              if ssh_keys_dir_effective != ''
-              else ssh_private_key_file_effective
-            }}
-          - -p
-          - "{{ item.ssh_port | string }}"
-          - "{{ item.ssh_user }}@{{ item.public_ip }}"
-          - "true"
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        for ssh_user_candidate in {{ (([item.ssh_user] + ssh_auth_fallback_users_effective) | unique | map('quote') | join(' ')) }}; do
+          if ssh \
+            -o BatchMode=yes \
+            -o ConnectTimeout=10 \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -i {{ ((ssh_keys_dir_effective ~ '/' ~ (item.ssh_key_ref | default('default', true) | trim)) if ssh_keys_dir_effective != '' else ssh_private_key_file_effective) | quote }} \
+            -p {{ (item.ssh_port | string) | quote }} \
+            "${ssh_user_candidate}@{{ item.public_ip }}" \
+            true >/dev/null 2>&1; then
+            printf '%s\n' "${ssh_user_candidate}"
+            exit 0
+          fi
+        done
+        echo "SSH auth failed for node {{ item.name }}@{{ item.public_ip }} with users: {{ (([item.ssh_user] + ssh_auth_fallback_users_effective) | unique | join(', ')) }}. If this node was reprovisioned, ensure key_pair/authorized_keys matches ssh_key_ref={{ item.ssh_key_ref | default('default', true) }} or replace the VM." >&2
+        exit 1
+      args:
+        executable: /bin/bash
       loop: "{{ desired_enabled_nodes }}"
       loop_control:
-        label: "{{ item.name }} -> {{ item.ssh_user }}@{{ item.public_ip }}"
+        label: "{{ item.name }} -> {{ item.public_ip }}"
       register: ssh_auth_check_result
       retries: "{{ ssh_auth_retries_effective | int }}"
       delay: "{{ ssh_auth_delay_effective | int }}"
       until: ssh_auth_check_result.rc == 0
       changed_when: false
 
+    - name: Build effective SSH user map from auth checks
+      ansible.builtin.set_fact:
+        effective_ssh_users: "{{ (effective_ssh_users | default({})) | combine({ item.item.name: (item.stdout | trim) }) }}"
+      loop: "{{ ssh_auth_check_result.results }}"
+      loop_control:
+        label: "{{ item.item.name }} -> {{ item.stdout | trim }}"
+
+    - name: Show discovered SSH user overrides
+      ansible.builtin.debug:
+        msg: >-
+          Node {{ item.name }} uses discovered SSH user {{ effective_ssh_users[item.name] }}
+          (configured ssh_user={{ item.ssh_user }}).
+      loop: "{{ desired_enabled_nodes }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - effective_ssh_users is defined
+        - effective_ssh_users[item.name] is defined
+        - effective_ssh_users[item.name] != item.ssh_user
+
     - name: Register desired enabled nodes as dynamic inventory targets
       ansible.builtin.add_host:
         name: "{{ item.name }}"
         groups: vpn_targets
         ansible_host: "{{ item.public_ip }}"
-        ansible_user: "{{ item.ssh_user }}"
+        ansible_user: "{{ (effective_ssh_users[item.name] if (effective_ssh_users is defined and effective_ssh_users[item.name] is defined) else item.ssh_user) }}"
         ansible_port: "{{ item.ssh_port }}"
         ansible_ssh_private_key_file: >-
           {{
