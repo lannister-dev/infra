@@ -44,7 +44,7 @@ services:
       labels:
         - traefik.enable=true
 
-        # ===== WS =====
+        # ===== WS ======
         - traefik.http.routers.vpn-ws.rule=Host(`${VPN_DOMAIN}`) && PathPrefix(`${VPN_WS_PATH}`)
         - traefik.http.routers.vpn-ws.entrypoints=websecure
         - traefik.http.routers.vpn-ws.tls=true
