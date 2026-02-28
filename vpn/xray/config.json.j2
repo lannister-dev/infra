@@ -71,6 +71,53 @@
         }
       },
       "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] }
+    },
+
+    {
+      "tag": "vless-reality",
+      "listen": "0.0.0.0",
+      "port": 10002,
+      "protocol": "vless",
+      "settings": {
+        "clients": [],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": false,
+          "dest": "127.0.0.1:10443",
+          "xver": 0,
+          "serverNames": ["${VPN_REALITY_SERVER_NAME}"],
+          "privateKey": "${VPN_REALITY_PRIVATE_KEY}",
+          "minClientVer": "",
+          "maxClientVer": "",
+          "maxTimeDiff": 0,
+          "shortIds": ["${VPN_REALITY_SHORT_ID}"]
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"]
+      }
+    },
+
+    {
+      "tag": "reality-dokodemo",
+      "listen": "127.0.0.1",
+      "port": 10443,
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "${VPN_REALITY_DEST_HOST}",
+        "port": 443,
+        "network": "tcp"
+      },
+      "sniffing": {
+        "enabled": true,
+        "routeOnly": true,
+        "destOverride": ["http", "tls"]
+      }
     }
   ],
 
@@ -80,14 +127,30 @@
         "type": "field",
         "inboundTag": ["api"],
         "outboundTag": "api"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["reality-dokodemo"],
+        "domain": ["${VPN_REALITY_DEST_DOMAIN}"],
+        "outboundTag": "freedom"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["reality-dokodemo"],
+        "outboundTag": "block"
       }
     ]
   },
 
   "outbounds": [
     {
+      "tag": "freedom",
       "protocol": "freedom",
       "settings": { "domainStrategy": "UseIPv4" }
+    },
+    {
+      "tag": "block",
+      "protocol": "blackhole"
     }
   ]
 }
