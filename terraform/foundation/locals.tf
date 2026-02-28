@@ -9,13 +9,13 @@ locals {
   vpn_fallback_index_data         = filebase64("${local.root_dir}/vpn/nginx/index.html")
   vpn_fallback_nginx_data         = filebase64("${local.root_dir}/vpn/nginx/server.conf")
 
-  vpn_dev_domain     = trimspace(var.vpn_dev_domain) != "" ? var.vpn_dev_domain : var.vpn_domain
-  vpn_dev_ws_path    = trimspace(var.vpn_dev_ws_path) != "" ? var.vpn_dev_ws_path : var.vpn_ws_path
-  vpn_dev_xhttp_path = trimspace(var.vpn_dev_xhttp_path) != "" ? var.vpn_dev_xhttp_path : var.vpn_xhttp_path
-  vpn_reality_dest_host   = trimspace(var.vpn_reality_dest_host) != "" ? var.vpn_reality_dest_host : "www.cloudflare.com"
-  vpn_reality_server_name = trimspace(var.vpn_reality_server_name) != "" ? var.vpn_reality_server_name : local.vpn_reality_dest_host
-  vpn_reality_private_key = trimspace(var.vpn_reality_private_key)
-  vpn_reality_short_id    = trimspace(var.vpn_reality_short_id)
+  vpn_dev_domain              = trimspace(var.vpn_dev_domain) != "" ? var.vpn_dev_domain : var.vpn_domain
+  vpn_dev_ws_path             = trimspace(var.vpn_dev_ws_path) != "" ? var.vpn_dev_ws_path : var.vpn_ws_path
+  vpn_dev_xhttp_path          = trimspace(var.vpn_dev_xhttp_path) != "" ? var.vpn_dev_xhttp_path : var.vpn_xhttp_path
+  vpn_reality_dest_host       = trimspace(var.vpn_reality_dest_host) != "" ? var.vpn_reality_dest_host : "www.cloudflare.com"
+  vpn_reality_server_name     = trimspace(var.vpn_reality_server_name) != "" ? var.vpn_reality_server_name : local.vpn_reality_dest_host
+  vpn_reality_private_key     = trimspace(var.vpn_reality_private_key)
+  vpn_reality_short_id        = trimspace(var.vpn_reality_short_id)
   vpn_dev_reality_dest_host   = trimspace(var.vpn_dev_reality_dest_host) != "" ? var.vpn_dev_reality_dest_host : local.vpn_reality_dest_host
   vpn_dev_reality_server_name = trimspace(var.vpn_dev_reality_server_name) != "" ? var.vpn_dev_reality_server_name : local.vpn_dev_reality_dest_host
   vpn_dev_reality_private_key = trimspace(var.vpn_dev_reality_private_key) != "" ? var.vpn_dev_reality_private_key : local.vpn_reality_private_key
