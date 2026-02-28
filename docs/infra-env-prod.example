@@ -74,7 +74,7 @@ ENABLE_VPN_DEV_STACK=false
 # TRAEFIK_IMAGE_TAG=v3.6
 # PROMETHEUS_IMAGE_TAG=v2.55.1
 # GRAFANA_IMAGE_TAG=11.5.2
-# XRAY_IMAGE_TAG=v1.8.24
+# XRAY_IMAGE_TAG=latest
 
 # ---- Generic alias style (alternative to TF_VAR_*) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
