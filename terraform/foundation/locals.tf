@@ -12,17 +12,35 @@ locals {
   vpn_dev_domain     = trimspace(var.vpn_dev_domain) != "" ? var.vpn_dev_domain : var.vpn_domain
   vpn_dev_ws_path    = trimspace(var.vpn_dev_ws_path) != "" ? var.vpn_dev_ws_path : var.vpn_ws_path
   vpn_dev_xhttp_path = trimspace(var.vpn_dev_xhttp_path) != "" ? var.vpn_dev_xhttp_path : var.vpn_xhttp_path
+  vpn_reality_dest_host   = trimspace(var.vpn_reality_dest_host) != "" ? var.vpn_reality_dest_host : "www.cloudflare.com"
+  vpn_reality_server_name = trimspace(var.vpn_reality_server_name) != "" ? var.vpn_reality_server_name : local.vpn_reality_dest_host
+  vpn_reality_private_key = trimspace(var.vpn_reality_private_key)
+  vpn_reality_short_id    = trimspace(var.vpn_reality_short_id)
+  vpn_dev_reality_dest_host   = trimspace(var.vpn_dev_reality_dest_host) != "" ? var.vpn_dev_reality_dest_host : local.vpn_reality_dest_host
+  vpn_dev_reality_server_name = trimspace(var.vpn_dev_reality_server_name) != "" ? var.vpn_dev_reality_server_name : local.vpn_dev_reality_dest_host
+  vpn_dev_reality_private_key = trimspace(var.vpn_dev_reality_private_key) != "" ? var.vpn_dev_reality_private_key : local.vpn_reality_private_key
+  vpn_dev_reality_short_id    = trimspace(var.vpn_dev_reality_short_id) != "" ? var.vpn_dev_reality_short_id : local.vpn_reality_short_id
 
   xray_config_rendered = templatefile("${local.root_dir}/vpn/xray/config.json.j2", {
-    VPN_DOMAIN     = var.vpn_domain
-    VPN_WS_PATH    = var.vpn_ws_path
-    VPN_XHTTP_PATH = var.vpn_xhttp_path
+    VPN_DOMAIN              = var.vpn_domain
+    VPN_WS_PATH             = var.vpn_ws_path
+    VPN_XHTTP_PATH          = var.vpn_xhttp_path
+    VPN_REALITY_SERVER_NAME = local.vpn_reality_server_name
+    VPN_REALITY_PRIVATE_KEY = local.vpn_reality_private_key
+    VPN_REALITY_SHORT_ID    = local.vpn_reality_short_id
+    VPN_REALITY_DEST_HOST   = local.vpn_reality_dest_host
+    VPN_REALITY_DEST_DOMAIN = "full:${local.vpn_reality_dest_host}"
   })
 
   xray_config_dev_rendered = templatefile("${local.root_dir}/vpn/xray/config.json.j2", {
-    VPN_DOMAIN     = local.vpn_dev_domain
-    VPN_WS_PATH    = local.vpn_dev_ws_path
-    VPN_XHTTP_PATH = local.vpn_dev_xhttp_path
+    VPN_DOMAIN              = local.vpn_dev_domain
+    VPN_WS_PATH             = local.vpn_dev_ws_path
+    VPN_XHTTP_PATH          = local.vpn_dev_xhttp_path
+    VPN_REALITY_SERVER_NAME = local.vpn_dev_reality_server_name
+    VPN_REALITY_PRIVATE_KEY = local.vpn_dev_reality_private_key
+    VPN_REALITY_SHORT_ID    = local.vpn_dev_reality_short_id
+    VPN_REALITY_DEST_HOST   = local.vpn_dev_reality_dest_host
+    VPN_REALITY_DEST_DOMAIN = "full:${local.vpn_dev_reality_dest_host}"
   })
 
   xray_config_data     = base64encode(local.xray_config_rendered)

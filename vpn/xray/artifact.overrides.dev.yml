@@ -10,3 +10,19 @@ profiles:
 
   vless-xhttp:
     enabled: false
+
+  vless-reality:
+    enabled: true
+    key: reality_tcp_dev_v1
+    display_name: REALITY TCP DEV
+    type: reality_tcp
+    client:
+      sni: www.cloudflare.com
+      flow: xtls-rprx-vision
+      fingerprint: chrome
+      public_key: JAhYG2mwU4TTlNmOPUHsmUZqptN0CjfutpRQj-MfvCM
+      short_id: 6c1ec52d8fabfd86
+      spider_x: /
+
+  reality-dokodemo:
+    enabled: false

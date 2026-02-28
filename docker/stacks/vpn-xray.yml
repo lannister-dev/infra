@@ -23,6 +23,11 @@ x-deploy-common: &deploy-common
 services:
   xray:
     image: ghcr.io/xtls/xray-core:${XRAY_IMAGE_TAG}
+    ports:
+      - target: 10002
+        published: 443
+        protocol: tcp
+        mode: host
     networks:
       - traefik_swarm
       - vpn-net
