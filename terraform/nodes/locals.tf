@@ -6,10 +6,10 @@ locals {
 
   hostvds_api_from_provider_catalog = {
     for name, node in var.provider_api_vpn_nodes : name => {
-      server_id   = node.server_id
-      channel     = node.channel
-      ssh_user    = node.ssh_user
-      ssh_port    = node.ssh_port
+      server_id       = node.server_id
+      channel         = node.channel
+      ssh_user        = node.ssh_user
+      ssh_port        = node.ssh_port
       ssh_key_ref     = node.ssh_key_ref
       enabled         = node.enabled
       region          = node.region
@@ -58,12 +58,12 @@ locals {
 
   merged_vpn_nodes = {
     for name, node in local.merged_vpn_nodes_raw : name => {
-      public_ip   = tostring(try(node["public_ip"], ""))
-      channel     = tostring(try(node["channel"], "prod"))
-      ssh_user    = tostring(try(node["ssh_user"], "root"))
-      ssh_port    = tonumber(try(node["ssh_port"], 22))
-      ssh_key_ref = tostring(try(node["ssh_key_ref"], "default"))
-      enabled     = try(node["enabled"], true)
+      public_ip       = tostring(try(node["public_ip"], ""))
+      channel         = tostring(try(node["channel"], "prod"))
+      ssh_user        = tostring(try(node["ssh_user"], "root"))
+      ssh_port        = tonumber(try(node["ssh_port"], 22))
+      ssh_key_ref     = tostring(try(node["ssh_key_ref"], "default"))
+      enabled         = try(node["enabled"], true)
       provider        = tostring(try(node["provider"], "api"))
       region          = tostring(try(node["region"], ""))
       platform_region = tostring(try(node["platform_region"], ""))
@@ -72,13 +72,13 @@ locals {
 
   vpn_nodes_list = [
     for name in sort(keys(local.merged_vpn_nodes)) : {
-      name        = name
-      public_ip   = local.merged_vpn_nodes[name]["public_ip"]
-      channel     = local.merged_vpn_nodes[name]["channel"]
-      ssh_user    = local.merged_vpn_nodes[name]["ssh_user"]
-      ssh_port    = local.merged_vpn_nodes[name]["ssh_port"]
-      ssh_key_ref = local.merged_vpn_nodes[name]["ssh_key_ref"]
-      enabled     = local.merged_vpn_nodes[name]["enabled"]
+      name            = name
+      public_ip       = local.merged_vpn_nodes[name]["public_ip"]
+      channel         = local.merged_vpn_nodes[name]["channel"]
+      ssh_user        = local.merged_vpn_nodes[name]["ssh_user"]
+      ssh_port        = local.merged_vpn_nodes[name]["ssh_port"]
+      ssh_key_ref     = local.merged_vpn_nodes[name]["ssh_key_ref"]
+      enabled         = local.merged_vpn_nodes[name]["enabled"]
       provider        = local.merged_vpn_nodes[name]["provider"]
       region          = local.merged_vpn_nodes[name]["region"]
       platform_region = local.merged_vpn_nodes[name]["platform_region"]
