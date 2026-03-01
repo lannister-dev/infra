@@ -34,7 +34,8 @@ locals {
       ssh_key_ref = try(node.ssh_key_ref, "default")
       enabled     = try(node.enabled, true)
       provider    = "hostvds-api"
-      region      = trimspace(try(node.region, "")) != "" ? try(node.region, "") : try(data.external.node_lookup[name].result.region, "")
+      region          = trimspace(try(node.region, "")) != "" ? try(node.region, "") : try(data.external.node_lookup[name].result.region, "")
+      platform_region = try(node.platform_region, "")
     }
     if var.enabled
   }

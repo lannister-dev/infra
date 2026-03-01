@@ -45,7 +45,8 @@ locals {
       ssh_port    = try(var.nodes[name].ssh_port, 22)
       ssh_key_ref = try(var.nodes[name].ssh_key_ref, "default")
       enabled     = try(var.nodes[name].enabled, true)
-      region      = try(var.nodes[name].region, "")
+      region          = try(var.nodes[name].region, "")
+      platform_region = try(var.nodes[name].platform_region, "")
     }
   }
 }

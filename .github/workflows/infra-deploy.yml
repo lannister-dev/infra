@@ -209,6 +209,13 @@ jobs:
           ansible-playbook -i ansible/inventory/production.ini \
             ansible/playbooks/deploy-stacks.yml
 
+      - name: Reconcile node configs with control plane
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          ansible-playbook ansible/playbooks/reconcile-node-configs.yml
+
       - name: Cleanup
         if: always()
         run: |

@@ -70,7 +70,8 @@ variable "nodes" {
     ssh_port    = optional(number, 22)
     ssh_key_ref = optional(string, "default")
     enabled     = optional(bool, true)
-    region      = optional(string, "")
+    region          = optional(string, "")
+    platform_region = optional(string, "")
   }))
   default = {}
 }

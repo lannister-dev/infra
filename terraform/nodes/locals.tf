@@ -10,9 +10,10 @@ locals {
       channel     = node.channel
       ssh_user    = node.ssh_user
       ssh_port    = node.ssh_port
-      ssh_key_ref = node.ssh_key_ref
-      enabled     = node.enabled
-      region      = node.region
+      ssh_key_ref     = node.ssh_key_ref
+      enabled         = node.enabled
+      region          = node.region
+      platform_region = node.platform_region
     } if lower(trimspace(node.provider)) == "hostvds"
   }
 
@@ -35,6 +36,7 @@ locals {
       ssh_key_ref       = node.ssh_key_ref
       enabled           = node.enabled
       region            = node.region
+      platform_region   = node.platform_region
     } if lower(trimspace(node.provider)) == "hostvds"
   }
 
@@ -62,8 +64,9 @@ locals {
       ssh_port    = tonumber(try(node["ssh_port"], 22))
       ssh_key_ref = tostring(try(node["ssh_key_ref"], "default"))
       enabled     = try(node["enabled"], true)
-      provider    = tostring(try(node["provider"], "api"))
-      region      = tostring(try(node["region"], ""))
+      provider        = tostring(try(node["provider"], "api"))
+      region          = tostring(try(node["region"], ""))
+      platform_region = tostring(try(node["platform_region"], ""))
     }
   }
 
@@ -76,8 +79,9 @@ locals {
       ssh_port    = local.merged_vpn_nodes[name]["ssh_port"]
       ssh_key_ref = local.merged_vpn_nodes[name]["ssh_key_ref"]
       enabled     = local.merged_vpn_nodes[name]["enabled"]
-      provider    = local.merged_vpn_nodes[name]["provider"]
-      region      = local.merged_vpn_nodes[name]["region"]
+      provider        = local.merged_vpn_nodes[name]["provider"]
+      region          = local.merged_vpn_nodes[name]["region"]
+      platform_region = local.merged_vpn_nodes[name]["platform_region"]
     }
   ]
 
