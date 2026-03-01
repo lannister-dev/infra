@@ -64,12 +64,12 @@ variable "os_interface" {
 variable "nodes" {
   description = "VPN nodes keyed by peer name."
   type = map(object({
-    server_id   = string
-    channel     = optional(string, "prod")
-    ssh_user    = optional(string, "root")
-    ssh_port    = optional(number, 22)
-    ssh_key_ref = optional(string, "default")
-    enabled     = optional(bool, true)
+    server_id       = string
+    channel         = optional(string, "prod")
+    ssh_user        = optional(string, "root")
+    ssh_port        = optional(number, 22)
+    ssh_key_ref     = optional(string, "default")
+    enabled         = optional(bool, true)
     region          = optional(string, "")
     platform_region = optional(string, "")
   }))
