@@ -8,7 +8,8 @@ variable "vpn_nodes" {
     ssh_key_ref = optional(string, "default")
     enabled     = optional(bool, true)
     provider    = optional(string, "api")
-    region      = optional(string, "")
+    region          = optional(string, "")
+    platform_region = optional(string, "")
   }))
   default = {}
 
@@ -120,7 +121,8 @@ variable "hostvds_vpn_nodes" {
     ssh_port    = optional(number, 22)
     ssh_key_ref = optional(string, "default")
     enabled     = optional(bool, true)
-    region      = optional(string, "")
+    region          = optional(string, "")
+    platform_region = optional(string, "")
   }))
   default = {}
 
@@ -148,7 +150,8 @@ variable "provider_api_vpn_nodes" {
     ssh_port    = optional(number, 22)
     ssh_key_ref = optional(string, "default")
     enabled     = optional(bool, true)
-    region      = optional(string, "")
+    region          = optional(string, "")
+    platform_region = optional(string, "")
   }))
   default = {}
 
@@ -187,6 +190,7 @@ variable "hostvds_provisioned_vpn_nodes" {
     ssh_key_ref       = optional(string, "default")
     enabled           = optional(bool, true)
     region            = optional(string, "")
+    platform_region   = optional(string, "")
   }))
   default = {}
 
@@ -227,6 +231,7 @@ variable "provider_compute_vpn_nodes" {
     ssh_key_ref       = optional(string, "default")
     enabled           = optional(bool, true)
     region            = optional(string, "")
+    platform_region   = optional(string, "")
   }))
   default = {}
 

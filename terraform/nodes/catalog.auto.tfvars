@@ -30,6 +30,7 @@ provider_compute_vpn_nodes = {
     ssh_key_ref       = "dev"
     enabled           = true
     region            = "eu-west2"
+    platform_region   = "fr"
   }
 
   "vpn-hostvds-main-02" = {
@@ -45,6 +46,7 @@ provider_compute_vpn_nodes = {
     ssh_key_ref     = "dev"
     enabled         = true
     region          = "eu-north1b"
+    platform_region = "fi"         # eu-north1b → Finland
   }
 }
 
