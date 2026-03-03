@@ -83,6 +83,40 @@
       when: deploy_probe_stack
       changed_when: "false"
 
+    - name: Validate NATS auth token when nats is enabled
+      ansible.builtin.assert:
+        that:
+          - (nats_auth_token | trim | length) > 0
+        fail_msg: "NATS_AUTH_TOKEN env must be set when nats deployment is enabled."
+      when: deploy_nats_stack
+      changed_when: "false"
+
+    - name: Check nats_auth_token secret when nats is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - nats_auth_token
+      when: deploy_nats_stack
+      register: nats_auth_secret_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create nats_auth_token secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$NATS_AUTH_TOKEN" | docker secret create nats_auth_token -
+      args:
+        executable: /bin/bash
+      environment:
+        NATS_AUTH_TOKEN: "{{ nats_auth_token }}"
+      when:
+        - deploy_nats_stack
+        - nats_auth_secret_inspect.rc != 0
+      no_log: true
+      changed_when: true
+
     - name: Deploy traefik stack
       ansible.builtin.command:
         argv:
@@ -141,6 +175,25 @@
       environment:
         SWARMPIT_IMAGE_TAG: "{{ swarmpit_image_tag }}"
         SWARMPIT_AGENT_IMAGE_TAG: "{{ swarmpit_agent_image_tag }}"
+      changed_when: "false"
+
+    - name: Deploy nats stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/nats.yml
+          - nats
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        NATS_IMAGE_TAG: "{{ nats_image_tag }}"
+        NATS_EXPORTER_IMAGE_TAG: "{{ nats_exporter_image_tag }}"
+      when: deploy_nats_stack
       changed_when: "false"
 
     - name: Deploy vpn stack

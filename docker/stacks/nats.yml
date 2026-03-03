@@ -1,0 +1,81 @@
+---
+services:
+  nats:
+    image: nats:${NATS_IMAGE_TAG}
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        exec nats-server
+        --jetstream
+        --store_dir=/data
+        --http_port=8222
+        --server_name=nats
+        --max_connections=4096
+        --max_control_line=4096
+        --auth "$$(cat /run/secrets/nats_auth_token)"
+    volumes:
+      - nats_data:/data
+    secrets:
+      - nats_auth_token
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.kind == dev
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      rollback_config:
+        order: stop-first
+      restart_policy:
+        condition: any
+    networks:
+      vpn-net:
+        aliases:
+          - nats
+      monitoring:
+
+  nats-exporter:
+    image: natsio/prometheus-nats-exporter:${NATS_EXPORTER_IMAGE_TAG}
+    command:
+      - "-varz"
+      - "-connz"
+      - "-routez"
+      - "-subz"
+      - "-jsz=all"
+      - "http://nats:8222"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.kind == dev
+      restart_policy:
+        condition: any
+      labels:
+        - "prometheus-scrape=true"
+        - "prometheus-app=nats"
+        - "prometheus-env=dev"
+        - "prometheus-metrics-port=7777"
+        - "prometheus-metrics-path=/metrics"
+        - "prometheus-scrape-profile=important"
+    networks:
+      - monitoring
+
+volumes:
+  nats_data:
+    driver: local
+
+networks:
+  monitoring:
+    external: true
+  vpn-net:
+    external: true
+
+secrets:
+  nats_auth_token:
+    external: true

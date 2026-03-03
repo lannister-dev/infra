@@ -3,6 +3,7 @@ repo_root: "{{ lookup('env', 'REPO_ROOT') | default('/opt/vpn-infra', true) }}"
 
 enable_vpn_dev_stack: "{{ (lookup('env', 'ENABLE_VPN_DEV_STACK') | default('false', true)) | bool }}"
 deploy_probe_stack: "{{ (lookup('env', 'DEPLOY_PROBE_STACK') | default('true', true)) | bool }}"
+deploy_nats_stack: "{{ (lookup('env', 'DEPLOY_NATS_STACK') | default('true', true)) | bool }}"
 run_sanity_check: "{{ (lookup('env', 'RUN_SANITY_CHECK') | default('true', true)) | bool }}"
 allow_empty_vpn_nodes: "{{ (lookup('env', 'ALLOW_EMPTY_VPN_NODES') | default('false', true)) | bool }}"
 
@@ -38,3 +39,6 @@ xray_image_tag: "{{ lookup('env', 'XRAY_IMAGE_TAG') | default('latest', true) }}
 nginx_alpine_image_tag: "{{ lookup('env', 'NGINX_ALPINE_IMAGE_TAG') | default('1.27.5-alpine', true) }}"
 swarmpit_image_tag: "{{ lookup('env', 'SWARMPIT_IMAGE_TAG') | default('latest', true) }}"
 swarmpit_agent_image_tag: "{{ lookup('env', 'SWARMPIT_AGENT_IMAGE_TAG') | default('2.2', true) }}"
+nats_image_tag: "{{ lookup('env', 'NATS_IMAGE_TAG') | default('2.11-alpine', true) }}"
+nats_exporter_image_tag: "{{ lookup('env', 'NATS_EXPORTER_IMAGE_TAG') | default('0.17.0', true) }}"
+nats_auth_token: "{{ lookup('env', 'NATS_AUTH_TOKEN') | default('', true) }}"
