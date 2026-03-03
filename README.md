@@ -32,6 +32,7 @@ Secrets and provider credentials stay in local `.env` / CI secrets.
 - `docs/operations-runbook.md`
 - `docs/harbor.md`
 - `docs/profiles-artifact.md`
+- `docs/nats.md`
 
 ## Note on scripts
 

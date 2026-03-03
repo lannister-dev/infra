@@ -68,13 +68,17 @@ TF_VAR_vpn_dev_reality_dest_host=
 # ---- Ansible runtime toggles (not Terraform vars) ----
 RUN_SANITY_CHECK=true
 DEPLOY_PROBE_STACK=true
+DEPLOY_NATS_STACK=true
 ENABLE_VPN_DEV_STACK=false
+NATS_AUTH_TOKEN=replace_with_strong_random_token
 
 # Optional stack image/version env (if you manage via env)
 # TRAEFIK_IMAGE_TAG=v3.6
 # PROMETHEUS_IMAGE_TAG=v2.55.1
 # GRAFANA_IMAGE_TAG=11.5.2
 # XRAY_IMAGE_TAG=latest
+# NATS_IMAGE_TAG=2.11-alpine
+# NATS_EXPORTER_IMAGE_TAG=0.17.0
 
 # ---- Generic alias style (alternative to TF_VAR_*) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity

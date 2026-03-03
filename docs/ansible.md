@@ -11,7 +11,7 @@ Ansible handles reconciliation after Terraform converges infrastructure state.
 
 - `ansible/playbooks/deploy-stacks.yml`
   - validates foundation dependencies
-  - deploys stacks (`traefik`, `monitoring`, `swarmpit`, `vpn`, optional `vpn-dev`, optional `probe`)
+  - deploys stacks (`traefik`, `monitoring`, `swarmpit`, optional `nats`, `vpn`, optional `vpn-dev`, optional `probe`)
 
 ## Inputs
 
@@ -22,9 +22,14 @@ Topology is not read directly from env JSON. It is read from generated inventory
 Environment variables are used for stack toggles/secrets/version pins, for example:
 - `ENABLE_VPN_DEV_STACK`
 - `DEPLOY_PROBE_STACK`
+- `DEPLOY_NATS_STACK`
 - `RUN_SANITY_CHECK`
 - `VPN_DOMAIN`, `VPN_WS_PATH`, `VPN_XHTTP_PATH`
-- version pins: `PROMETHEUS_CONFIG_VERSION`, `XRAY_CONFIG_VERSION`, etc.
+- `NATS_AUTH_TOKEN`
+- image tags: `NATS_IMAGE_TAG`, `NATS_EXPORTER_IMAGE_TAG`, `TRAEFIK_IMAGE_TAG`, etc.
+
+`DEPLOY_NATS_STACK` is enabled by default; disable explicitly with `DEPLOY_NATS_STACK=false`.
+When enabled, playbook auto-creates Swarm secret `nats_auth_token` if missing.
 
 ## Run
 
@@ -44,4 +49,3 @@ ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-st
 
 `ansible.cfg` uses strict host key checking.
 Keep target host keys in known_hosts on the runner/manager.
-
