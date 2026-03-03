@@ -40,5 +40,5 @@ nginx_alpine_image_tag: "{{ lookup('env', 'NGINX_ALPINE_IMAGE_TAG') | default('1
 swarmpit_image_tag: "{{ lookup('env', 'SWARMPIT_IMAGE_TAG') | default('latest', true) }}"
 swarmpit_agent_image_tag: "{{ lookup('env', 'SWARMPIT_AGENT_IMAGE_TAG') | default('2.2', true) }}"
 nats_image_tag: "{{ lookup('env', 'NATS_IMAGE_TAG') | default('2.11-alpine', true) }}"
-nats_exporter_image_tag: "{{ lookup('env', 'NATS_EXPORTER_IMAGE_TAG') | default('0.17.0', true) }}"
+nats_exporter_image_tag: "{{ lookup('env', 'NATS_EXPORTER_IMAGE_TAG') | default('0.18.0', true) }}"
 nats_auth_token: "{{ lookup('env', 'NATS_AUTH_TOKEN') | default('', true) }}"
