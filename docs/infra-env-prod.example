@@ -78,7 +78,7 @@ NATS_AUTH_TOKEN=replace_with_strong_random_token
 # GRAFANA_IMAGE_TAG=11.5.2
 # XRAY_IMAGE_TAG=latest
 # NATS_IMAGE_TAG=2.11-alpine
-# NATS_EXPORTER_IMAGE_TAG=0.18.0
+# NATS_EXPORTER_IMAGE_TAG=0.19.1
 
 # ---- Generic alias style (alternative to TF_VAR_*) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
