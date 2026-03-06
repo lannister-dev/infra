@@ -27,3 +27,9 @@ State key recommendation:
 - `foundation.tfstate`
 - `nodes.tfstate`
 - `infra-nodes.tfstate`
+
+Development var-files (used by `.github/workflows/infra-deploy-dev.yml`):
+
+- `terraform/foundation/terraform.dev.tfvars`
+- `terraform/nodes/catalog.dev.tfvars`
+- `terraform/infra-nodes/catalog.dev.tfvars`

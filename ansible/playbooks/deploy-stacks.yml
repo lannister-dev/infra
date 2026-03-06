@@ -117,6 +117,37 @@
       no_log: true
       changed_when: true
 
+    - name: Validate external data services precheck settings
+      ansible.builtin.assert:
+        that:
+          - external_postgres_host | trim | length > 0
+          - external_redis_host | trim | length > 0
+          - (external_postgres_port | int) > 0
+          - (external_redis_port | int) > 0
+        fail_msg: >-
+          EXTERNAL_DATA_PRECHECK_ENABLED=true requires:
+          EXTERNAL_POSTGRES_HOST, EXTERNAL_POSTGRES_PORT,
+          EXTERNAL_REDIS_HOST, EXTERNAL_REDIS_PORT.
+      when: external_data_precheck_enabled
+
+    - name: Check external Postgres TCP reachability
+      ansible.builtin.wait_for:
+        host: "{{ external_postgres_host }}"
+        port: "{{ external_postgres_port | int }}"
+        state: started
+        timeout: "{{ external_data_precheck_timeout | int }}"
+      when: external_data_precheck_enabled
+      changed_when: "false"
+
+    - name: Check external Redis TCP reachability
+      ansible.builtin.wait_for:
+        host: "{{ external_redis_host }}"
+        port: "{{ external_redis_port | int }}"
+        state: started
+        timeout: "{{ external_data_precheck_timeout | int }}"
+      when: external_data_precheck_enabled
+      changed_when: "false"
+
     - name: Deploy traefik stack
       ansible.builtin.command:
         argv:

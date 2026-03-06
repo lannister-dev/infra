@@ -33,6 +33,7 @@ Secrets and provider credentials stay in local `.env` / CI secrets.
 - `docs/harbor.md`
 - `docs/profiles-artifact.md`
 - `docs/nats.md`
+- `docs/infra-env-dev.example`
 
 ## Note on scripts
 
