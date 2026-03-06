@@ -45,7 +45,20 @@ ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-st
 CI policy:
 - `.github/workflows/infra-ci.yml`: checks only on `pull_request` and `push/main`.
 - `.github/workflows/infra-deploy.yml`: production apply only from `workflow_dispatch` with `confirm_apply=APPLY`.
+- `.github/workflows/infra-deploy-dev.yml`: development apply from `workflow_dispatch` with `confirm_apply=DEV`.
 - Terraform variables in CI are centralized via `TF_VAR_*` (or `IAC_TFVAR_*` aliases).
+
+Development-specific notes:
+- Configure separate GitHub secret `INFRA_ENV_DEV`.
+- Use dedicated state prefix in `INFRA_ENV_DEV`, for example `TF_STATE_KEY_PREFIX=vpn-infra/dev`.
+- Dev workflow uses explicit var-files:
+  - `terraform/foundation/terraform.dev.tfvars`
+  - `terraform/nodes/catalog.dev.tfvars`
+  - `terraform/infra-nodes/catalog.dev.tfvars`
+- If DB/Redis are hosted outside this repo (manual/external services), enable precheck:
+  - `EXTERNAL_DATA_PRECHECK_ENABLED=true`
+  - `EXTERNAL_POSTGRES_HOST` / `EXTERNAL_POSTGRES_PORT`
+  - `EXTERNAL_REDIS_HOST` / `EXTERNAL_REDIS_PORT`
 
 ## 3. VPN node lifecycle
 

@@ -1,0 +1,48 @@
+# Backend (required)
+TF_STATE_BUCKET=your-state-bucket
+TF_STATE_REGION=ru-central1
+TF_STATE_KEY_PREFIX=vpn-infra/dev
+
+# Terraform provider mirror (recommended in restricted regions)
+# TF_PROVIDER_MIRROR_URL=https://terraform-mirror.yandexcloud.net/
+
+# Foundation TF vars (required)
+TF_VAR_vpn_domain=dev.vpn.example.com
+TF_VAR_vpn_ws_path=/api/v1/stream
+TF_VAR_vpn_xhttp_path=/api/v1/mobile
+
+# Enable dev channel stack in development environment
+TF_VAR_enable_vpn_dev_stack=true
+TF_VAR_vpn_dev_domain=dev-vpn.example.com
+TF_VAR_vpn_dev_ws_path=/api/v1/stream
+TF_VAR_vpn_dev_xhttp_path=/api/v1/mobile
+
+# Provider credentials (if provider modes are enabled in dev catalogs)
+# TF_VAR_hostvds_os_auth_url=...
+# TF_VAR_hostvds_os_username=...
+# TF_VAR_hostvds_os_password=...
+# TF_VAR_hostvds_os_project_name=...
+# TF_VAR_hostvds_os_project_domain_id=default
+# TF_VAR_hostvds_os_interface=public
+# TF_VAR_timeweb_api_token=...
+
+# Ansible runtime toggles
+RUN_SANITY_CHECK=true
+DEPLOY_PROBE_STACK=true
+ENABLE_VPN_DEV_STACK=true
+ALLOW_EMPTY_VPN_NODES=true
+
+# Control plane (development)
+CONTROL_PLANE_URL=https://dev-api.example.com/api/v1/artifacts
+ADMIN_API_KEY=REPLACE_WITH_DEV_ADMIN_TOKEN
+
+# External data services precheck (DB/Redis hosted outside infra repo scope)
+EXTERNAL_DATA_PRECHECK_ENABLED=true
+EXTERNAL_POSTGRES_HOST=127.0.0.1
+EXTERNAL_POSTGRES_PORT=5432
+EXTERNAL_REDIS_HOST=127.0.0.1
+EXTERNAL_REDIS_PORT=6379
+EXTERNAL_DATA_PRECHECK_TIMEOUT=10
+
+# SSH keys for Ansible reconcile/deploy
+# ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>"}'

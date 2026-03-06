@@ -19,6 +19,9 @@ Topology is declared in versioned tfvars files:
 
 - `terraform/nodes/catalog.auto.tfvars`
 - `terraform/infra-nodes/catalog.auto.tfvars`
+- `terraform/foundation/terraform.dev.tfvars` (dev workflow var-file)
+- `terraform/nodes/catalog.dev.tfvars` (dev workflow var-file)
+- `terraform/infra-nodes/catalog.dev.tfvars` (dev workflow var-file)
 
 Do not keep topology in JSON env variables anymore.
 
@@ -128,13 +131,21 @@ schemas are downloaded.
 Workflows:
 - `.github/workflows/infra-ci.yml`: checks on `pull_request`/`push`.
 - `.github/workflows/infra-deploy.yml`: production deploy via `workflow_dispatch`.
+- `.github/workflows/infra-deploy-dev.yml`: development deploy via `workflow_dispatch`.
 - `.github/workflows/infra-checks-reusable.yml`: shared checks job.
 
 Deploy gate:
 - `workflow_dispatch` + `confirm_apply=APPLY`.
+- dev deploy gate: `workflow_dispatch` + `confirm_apply=DEV`.
 - Optional input `apply_infra_nodes=true`: also applies `terraform/infra-nodes`.
 
 Topology for CI comes from repository tfvars; secrets come from `INFRA_ENV_PROD`.
+Development deploy reads secrets from `INFRA_ENV_DEV`.
+
+Dev workflow pins explicit var-files:
+- `terraform/foundation/terraform.dev.tfvars`
+- `terraform/nodes/catalog.dev.tfvars`
+- `terraform/infra-nodes/catalog.dev.tfvars`
 
 Recommended `INFRA_ENV_PROD` style:
 
@@ -174,3 +185,4 @@ Mirror behavior in deploy workflow:
 
 Full example template:
 - `docs/infra-env-prod.example`
+- `docs/infra-env-dev.example`

@@ -32,6 +32,14 @@ gf_security_admin_password: "{{ lookup('env', 'GF_SECURITY_ADMIN_PASSWORD') }}"
 gf_users_allow_sign_up: "{{ lookup('env', 'GF_USERS_ALLOW_SIGN_UP') | default('false', true) }}"
 control_plane_url: "{{ lookup('env', 'CONTROL_PLANE_URL') | default('', true) }}"
 
+# External data services precheck (for services deployed outside this repo, e.g. control-api).
+external_data_precheck_enabled: "{{ (lookup('env', 'EXTERNAL_DATA_PRECHECK_ENABLED') | default('false', true)) | bool }}"
+external_postgres_host: "{{ lookup('env', 'EXTERNAL_POSTGRES_HOST') | default('', true) }}"
+external_postgres_port: "{{ (lookup('env', 'EXTERNAL_POSTGRES_PORT') | default('5432', true)) | int }}"
+external_redis_host: "{{ lookup('env', 'EXTERNAL_REDIS_HOST') | default('', true) }}"
+external_redis_port: "{{ (lookup('env', 'EXTERNAL_REDIS_PORT') | default('6379', true)) | int }}"
+external_data_precheck_timeout: "{{ (lookup('env', 'EXTERNAL_DATA_PRECHECK_TIMEOUT') | default('10', true)) | int }}"
+
 traefik_image_tag: "{{ lookup('env', 'TRAEFIK_IMAGE_TAG') | default('v3.6', true) }}"
 prometheus_image_tag: "{{ lookup('env', 'PROMETHEUS_IMAGE_TAG') | default('v2.55.1', true) }}"
 grafana_image_tag: "{{ lookup('env', 'GRAFANA_IMAGE_TAG') | default('11.5.2', true) }}"
