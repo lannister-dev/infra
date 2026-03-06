@@ -11,7 +11,7 @@ Placement constraints:
 - `node.role == manager`
 - `node.labels.kind == dev`
 
-No public port is published. Access is internal via Swarm overlay networks.
+No public port is published directly. NATS monitoring endpoint (`8222`) is exposed via Traefik HTTPS route with basic auth.
 
 ## Enable deployment
 
@@ -43,3 +43,4 @@ From services attached to `vpn-net`:
 
 For monitoring:
 - exporter metrics: `nats_nats-exporter:7777/metrics` (auto-scraped via existing Prometheus Swarm discovery labels)
+- web monitor via Traefik: `https://nats.lannister-dev.ru/` (basic auth required)
