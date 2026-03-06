@@ -30,11 +30,21 @@ services:
         order: stop-first
       restart_policy:
         condition: any
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.nats.rule=Host(`nats.lannister-dev.ru`)"
+        - "traefik.http.routers.nats.entrypoints=websecure"
+        - "traefik.http.routers.nats.tls=true"
+        - "traefik.http.routers.nats.service=nats"
+        - "traefik.http.routers.nats.middlewares=nats-auth@swarm"
+        - "traefik.http.services.nats.loadbalancer.server.port=8222"
+        - "traefik.http.middlewares.nats-auth.basicauth.users=admin:$$apr1$$pJrubxMY$$Dvvcwt08XWViGWk/21qv9/"
     networks:
       vpn-net:
         aliases:
           - nats
       monitoring:
+      traefik_swarm:
 
   nats-exporter:
     image: natsio/prometheus-nats-exporter:${NATS_EXPORTER_IMAGE_TAG}
@@ -72,6 +82,8 @@ networks:
   monitoring:
     external: true
   vpn-net:
+    external: true
+  traefik_swarm:
     external: true
 
 secrets:
