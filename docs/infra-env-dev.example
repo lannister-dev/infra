@@ -29,8 +29,10 @@ TF_VAR_vpn_dev_xhttp_path=/api/v1/mobile
 # Ansible runtime toggles
 RUN_SANITY_CHECK=true
 DEPLOY_PROBE_STACK=true
+DEPLOY_NATS_STACK=true
 ENABLE_VPN_DEV_STACK=true
 ALLOW_EMPTY_VPN_NODES=true
+NATS_AUTH_TOKEN=replace_with_strong_random_token
 
 # Control plane (development)
 CONTROL_PLANE_URL=https://dev-api.example.com/api/v1/artifacts
