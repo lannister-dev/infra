@@ -7,6 +7,7 @@ __pycache__/
 
 .env
 .env.infra
+node-agent.env
 openrc.sh
 openrc*.sh
 env.nodes
