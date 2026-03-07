@@ -48,3 +48,12 @@ From external node agents / control-plane clients:
 For monitoring:
 - exporter metrics: `nats_nats-exporter:7777/metrics` (auto-scraped via existing Prometheus Swarm discovery labels)
 - web monitor via Traefik: `https://nats.lannister-dev.ru/` (basic auth required)
+
+## Troubleshooting
+
+`Authorization Violation` in node-agent logs usually means NATS credentials mismatch:
+- `NATS_SERVER` has no token (`nats://host:4222` instead of `nats://<token>@host:4222`).
+- token in `NATS_SERVER` differs from deployed `NATS_AUTH_TOKEN`.
+- wrong endpoint (`nats:4222` vs external domain) for current network path.
+
+`Connection reset by peer` right after auth errors is expected: NATS closes unauthorized connections.
