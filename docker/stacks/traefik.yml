@@ -12,6 +12,10 @@ services:
         published: 443
         protocol: tcp
         mode: host
+      - target: 4222
+        published: 4222
+        protocol: tcp
+        mode: host
     environment:
       CF_DNS_API_TOKEN: "${CF_DNS_API_TOKEN}"
     volumes:
@@ -27,6 +31,7 @@ services:
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.websecure.http.tls=true"
       - "--entrypoints.websecure.http.tls.certresolver=cf"
+      - "--entrypoints.nats.address=:4222"
       - "--entrypoints.web.forwardedHeaders.insecure=true"
       - "--entrypoints.websecure.forwardedHeaders.insecure=true"
 
