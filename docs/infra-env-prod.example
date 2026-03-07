@@ -71,6 +71,14 @@ DEPLOY_PROBE_STACK=true
 DEPLOY_NATS_STACK=true
 ENABLE_VPN_DEV_STACK=false
 NATS_AUTH_TOKEN=replace_with_strong_random_token
+FIREWALL_ENFORCE=false
+FIREWALL_ADMIN_CIDRS=203.0.113.10/32
+FIREWALL_NATS_CLIENT_CIDRS=198.51.100.20/32
+# Optional:
+# FIREWALL_OPEN_HTTP=true
+# FIREWALL_OPEN_HTTPS=true
+# FIREWALL_OPEN_NATS=true
+# FIREWALL_OPEN_SWARM_PORTS=true
 
 # Optional stack image/version env (if you manage via env)
 # TRAEFIK_IMAGE_TAG=v3.6
@@ -91,3 +99,8 @@ NATS_AUTH_TOKEN=replace_with_strong_random_token
 # ANSIBLE_SSH_PRIVATE_KEY_B64=<base64_private_key>
 # ANSIBLE_SSH_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----..
 # ANSIBLE_SSH_PRIVATE_KEY_FILE=/home/github-runner/.ssh/dev
+
+# ---- GitHub Secrets (set in Actions environment, not here) ----
+# NODE_AGENT_ENV_PROD=<multiline node-agent.env content>
+# or
+# NODE_AGENT_ENV_PROD_B64=<base64(node-agent.env)>
