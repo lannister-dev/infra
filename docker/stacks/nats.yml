@@ -39,6 +39,11 @@ services:
         - "traefik.http.routers.nats.middlewares=nats-auth@swarm"
         - "traefik.http.services.nats.loadbalancer.server.port=8222"
         - "traefik.http.middlewares.nats-auth.basicauth.users=admin:$$apr1$$pJrubxMY$$Dvvcwt08XWViGWk/21qv9/"
+        #TCP
+        - "traefik.tcp.routers.nats-client.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.nats-client.entrypoints=nats"
+        - "traefik.tcp.routers.nats-client.service=nats-client-svc"
+        - "traefik.tcp.services.nats-client-svc.loadbalancer.server.port=4222"
     networks:
       vpn-net:
         aliases:
