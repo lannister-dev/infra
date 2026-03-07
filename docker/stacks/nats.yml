@@ -32,14 +32,15 @@ services:
         condition: any
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.nats.rule=Host(`nats.lannister-dev.ru`)"
-        - "traefik.http.routers.nats.entrypoints=websecure"
-        - "traefik.http.routers.nats.tls=true"
-        - "traefik.http.routers.nats.service=nats"
-        - "traefik.http.routers.nats.middlewares=nats-auth@swarm"
-        - "traefik.http.services.nats.loadbalancer.server.port=8222"
+        - "traefik.http.routers.nats-monitor.rule=Host(`nats.lannister-dev.ru`)"
+        - "traefik.http.routers.nats-monitor.entrypoints=websecure"
+        - "traefik.http.routers.nats-monitor.tls=true"
+        - "traefik.http.routers.nats-monitor.service=nats-monitor"
+        - "--entrypoints.websecure.http.tls.certresolver=cf"
+        - "traefik.http.routers.nats-monitor.middlewares=nats-auth@swarm"
+        - "traefik.http.services.nats-monitor.loadbalancer.server.port=8222"
         - "traefik.http.middlewares.nats-auth.basicauth.users=admin:$$apr1$$pJrubxMY$$Dvvcwt08XWViGWk/21qv9/"
-        #TCP
+        # TCP client endpoint (node-agent/control-plane)
         - "traefik.tcp.routers.nats-client.rule=HostSNI(`*`)"
         - "traefik.tcp.routers.nats-client.entrypoints=nats"
         - "traefik.tcp.routers.nats-client.service=nats-client-svc"

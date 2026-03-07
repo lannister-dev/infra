@@ -11,7 +11,8 @@ Placement constraints:
 - `node.role == manager`
 - `node.labels.kind == dev`
 
-No public port is published directly. NATS monitoring endpoint (`8222`) is exposed via Traefik HTTPS route with basic auth.
+NATS client traffic (`4222/tcp`) is exposed via Traefik TCP entrypoint `nats`.
+NATS monitoring endpoint (`8222`) is exposed via Traefik HTTPS route with basic auth.
 
 ## Enable deployment
 
@@ -40,6 +41,9 @@ ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-st
 From services attached to `vpn-net`:
 - `nats://<token>@nats:4222` (network alias)
 - fallback: `nats://<token>@nats_nats:4222` (stack service name)
+
+From external node agents / control-plane clients:
+- `nats://<token>@nats.lannister-dev.ru:4222`
 
 For monitoring:
 - exporter metrics: `nats_nats-exporter:7777/metrics` (auto-scraped via existing Prometheus Swarm discovery labels)
