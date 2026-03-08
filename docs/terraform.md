@@ -136,6 +136,16 @@ Deploy gate:
 
 Topology for CI comes from repository tfvars; secrets come from `INFRA_ENV_PROD`.
 
+`node-agent.env` for stack deploy is rendered at runtime from one of GitHub secrets:
+- `NODE_AGENT_ENV_PROD` (plain multiline env text), or
+- `NODE_AGENT_ENV_PROD_B64` (base64-encoded env text).
+
+Template file (non-secret) is stored in repo:
+- `node-agent.env.example`
+
+Important: `NATS_SERVER` in node-agent env must include credentials and use the same token
+as `NATS_AUTH_TOKEN` used by infra deploy (`nats://<token>@host:4222`).
+
 Recommended `INFRA_ENV_PROD` style:
 
 ```bash

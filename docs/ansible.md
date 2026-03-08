@@ -13,6 +13,10 @@ Ansible handles reconciliation after Terraform converges infrastructure state.
   - validates foundation dependencies
   - deploys stacks (`traefik`, `monitoring`, `swarmpit`, optional `nats`, `vpn`, optional `vpn-dev`, optional `probe`)
 
+- `ansible/playbooks/reconcile-firewall.yml`
+  - applies UFW baseline to enabled infra nodes (dev/prod)
+  - enforces NATS `4222` source CIDR allowlist when enabled
+
 ## Inputs
 
 Topology is not read directly from env JSON. It is read from generated inventory files:
@@ -26,6 +30,7 @@ Environment variables are used for stack toggles/secrets/version pins, for examp
 - `RUN_SANITY_CHECK`
 - `VPN_DOMAIN`, `VPN_WS_PATH`, `VPN_XHTTP_PATH`
 - `NATS_AUTH_TOKEN`
+- `FIREWALL_ENFORCE`, `FIREWALL_ADMIN_CIDRS`, `FIREWALL_NATS_CLIENT_CIDRS`
 - image tags: `NATS_IMAGE_TAG`, `NATS_EXPORTER_IMAGE_TAG`, `TRAEFIK_IMAGE_TAG`, etc.
 
 `DEPLOY_NATS_STACK` is enabled by default; disable explicitly with `DEPLOY_NATS_STACK=false`.

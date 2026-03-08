@@ -1,0 +1,169 @@
+---
+- name: Build firewall target inventory
+  hosts: "swarm_managers[0]"
+  gather_facts: false
+  become: false
+
+  vars:
+    repo_root: "{{ lookup('env', 'REPO_ROOT') | default(playbook_dir + '/../..', true) }}"
+    infra_nodes_inventory_path: "{{ repo_root }}/ansible/inventory/generated/infra_nodes.yml"
+    firewall_enforce: "{{ (lookup('env', 'FIREWALL_ENFORCE') | default('false', true)) | bool }}"
+    firewall_admin_cidrs_csv: "{{ lookup('env', 'FIREWALL_ADMIN_CIDRS') | default('', true) }}"
+    firewall_nats_client_cidrs_csv: "{{ lookup('env', 'FIREWALL_NATS_CLIENT_CIDRS') | default('', true) }}"
+    firewall_open_http: "{{ (lookup('env', 'FIREWALL_OPEN_HTTP') | default('true', true)) | bool }}"
+    firewall_open_https: "{{ (lookup('env', 'FIREWALL_OPEN_HTTPS') | default('true', true)) | bool }}"
+    firewall_open_nats: "{{ (lookup('env', 'FIREWALL_OPEN_NATS') | default('true', true)) | bool }}"
+    firewall_open_swarm_ports: "{{ (lookup('env', 'FIREWALL_OPEN_SWARM_PORTS') | default('true', true)) | bool }}"
+    firewall_ssh_port_default: "{{ (lookup('env', 'FIREWALL_SSH_PORT_DEFAULT') | default('22', true)) | int }}"
+
+  tasks:
+    - name: Ensure firewall reconcile is explicitly enabled
+      ansible.builtin.assert:
+        that:
+          - firewall_enforce
+        fail_msg: >-
+          FIREWALL_ENFORCE is false. Set FIREWALL_ENFORCE=true to apply firewall rules.
+
+    - name: Ensure generated infra nodes inventory exists
+      ansible.builtin.stat:
+        path: "{{ infra_nodes_inventory_path }}"
+      register: infra_nodes_inventory_stat
+
+    - name: Fail when generated infra nodes inventory is missing
+      ansible.builtin.assert:
+        that:
+          - infra_nodes_inventory_stat.stat.exists
+        fail_msg: >-
+          Missing {{ infra_nodes_inventory_path }}.
+          Run terraform for infra-nodes first.
+
+    - name: Load generated infra nodes inventory
+      ansible.builtin.include_vars:
+        file: "{{ infra_nodes_inventory_path }}"
+        name: generated_infra_inventory
+
+    - name: Build firewall CIDR sets
+      ansible.builtin.set_fact:
+        firewall_admin_cidrs: >-
+          {{
+            firewall_admin_cidrs_csv.split(',')
+            | map('trim')
+            | reject('equalto', '')
+            | unique
+            | list
+          }}
+        firewall_nats_client_cidrs: >-
+          {{
+            firewall_nats_client_cidrs_csv.split(',')
+            | map('trim')
+            | reject('equalto', '')
+            | unique
+            | list
+          }}
+        firewall_swarm_peer_cidrs: >-
+          {{
+            (
+              generated_infra_inventory.infra_nodes
+              | selectattr('enabled', 'equalto', true)
+              | map(attribute='public_ip')
+              | map('regex_replace', '$', '/32')
+              | list
+            )
+            | unique
+          }}
+
+    - name: Validate required firewall inputs
+      ansible.builtin.assert:
+        that:
+          - firewall_admin_cidrs | length > 0
+          - (not firewall_open_nats) or (firewall_nats_client_cidrs | length > 0)
+        fail_msg: >-
+          FIREWALL_ADMIN_CIDRS must be non-empty.
+          FIREWALL_NATS_CLIENT_CIDRS must be set when FIREWALL_OPEN_NATS=true.
+
+    - name: Register enabled infra nodes as dynamic hosts
+      ansible.builtin.add_host:
+        name: "{{ item.name }}"
+        groups: firewall_targets
+        ansible_host: "{{ item.public_ip }}"
+        ansible_user: "{{ item.ssh_user | default('root') }}"
+        ansible_port: "{{ item.ssh_port | default(firewall_ssh_port_default) }}"
+        firewall_node_role: "{{ item.role | default('worker') }}"
+        firewall_node_kind: "{{ item.kind | default('prod') }}"
+        firewall_admin_cidrs: "{{ firewall_admin_cidrs }}"
+        firewall_nats_client_cidrs: "{{ firewall_nats_client_cidrs }}"
+        firewall_swarm_peer_cidrs: "{{ firewall_swarm_peer_cidrs }}"
+        firewall_open_http: "{{ firewall_open_http }}"
+        firewall_open_https: "{{ firewall_open_https }}"
+        firewall_open_nats: "{{ firewall_open_nats }}"
+        firewall_open_swarm_ports: "{{ firewall_open_swarm_ports }}"
+      loop: >-
+        {{
+          generated_infra_inventory.infra_nodes
+          | selectattr('enabled', 'equalto', true)
+          | list
+        }}
+      loop_control:
+        label: "{{ item.name }} -> {{ item.public_ip }}"
+
+- name: Reconcile UFW firewall rules on infra nodes
+  hosts: firewall_targets
+  gather_facts: false
+  become: true
+  any_errors_fatal: true
+
+  vars:
+    firewall_ssh_port: "{{ ansible_port | int }}"
+
+  tasks:
+    - name: Ensure UFW binary exists
+      ansible.builtin.command:
+        argv: [bash, -lc, "command -v ufw >/dev/null 2>&1"]
+      changed_when: false
+
+    - name: Apply firewall baseline
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+
+        ufw --force disable || true
+        ufw --force reset
+        ufw default deny incoming
+        ufw default allow outgoing
+
+        for cidr in {{ firewall_admin_cidrs | join(' ') }}; do
+          ufw allow proto tcp from "$cidr" to any port {{ firewall_ssh_port }} comment 'admin-ssh'
+        done
+
+        if [ "{{ firewall_open_swarm_ports | bool }}" = "True" ]; then
+          for cidr in {{ firewall_swarm_peer_cidrs | join(' ') }}; do
+            ufw allow proto tcp from "$cidr" to any port 2377 comment 'swarm-mgmt'
+            ufw allow proto tcp from "$cidr" to any port 7946 comment 'swarm-gossip'
+            ufw allow proto udp from "$cidr" to any port 7946 comment 'swarm-gossip'
+            ufw allow proto udp from "$cidr" to any port 4789 comment 'swarm-overlay'
+          done
+        fi
+
+        if [ "{{ firewall_node_role }}" = "manager" ] && [ "{{ firewall_open_http | bool }}" = "True" ]; then
+          ufw allow 80/tcp comment 'traefik-http'
+        fi
+
+        if [ "{{ firewall_node_role }}" = "manager" ] && [ "{{ firewall_open_https | bool }}" = "True" ]; then
+          ufw allow 443/tcp comment 'traefik-https'
+        fi
+
+        if [ "{{ firewall_node_role }}" = "manager" ] && [ "{{ firewall_open_nats | bool }}" = "True" ]; then
+          for cidr in {{ firewall_nats_client_cidrs | join(' ') }}; do
+            ufw allow proto tcp from "$cidr" to any port 4222 comment 'nats-clients'
+          done
+        fi
+
+        ufw --force enable
+        ufw status numbered
+      args:
+        executable: /bin/bash
+      register: ufw_apply_result
+      changed_when: true
+
+    - name: Print resulting firewall status
+      ansible.builtin.debug:
+        msg: "{{ ufw_apply_result.stdout_lines }}"

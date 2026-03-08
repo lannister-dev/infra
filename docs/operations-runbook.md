@@ -39,6 +39,7 @@ terraform -chdir=terraform/infra-nodes init -input=false -backend-config="$(pwd)
 terraform -chdir=terraform/infra-nodes apply -input=false -auto-approve
 
 ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/reconcile-vpn-nodes.yml
+ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/reconcile-firewall.yml
 ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-stacks.yml
 ```
 
