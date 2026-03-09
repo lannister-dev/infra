@@ -23,13 +23,22 @@ Environment variables are used for stack toggles/secrets/version pins, for examp
 - `ENABLE_VPN_DEV_STACK`
 - `DEPLOY_PROBE_STACK`
 - `DEPLOY_NATS_STACK`
+- `DEPLOY_DATA_DEV_STACK`
+- `DEPLOY_DATA_PROD_STACK`
 - `RUN_SANITY_CHECK`
 - `VPN_DOMAIN`, `VPN_WS_PATH`, `VPN_XHTTP_PATH`
 - `NATS_AUTH_TOKEN`
+- `DEV_POSTGRES_PASSWORD`, `DEV_REDIS_PASSWORD` (when `DEPLOY_DATA_DEV_STACK=true`; legacy aliases `DATA_DEV_*` are supported)
+- `DATA_PROD_POSTGRES_PASSWORD`, `DATA_PROD_REDIS_PASSWORD` (when `DEPLOY_DATA_PROD_STACK=true`)
+- `NODE_AGENT_IMAGE_REF`, `NODE_AGENT_IMAGE_REF_DEV`
 - image tags: `NATS_IMAGE_TAG`, `NATS_EXPORTER_IMAGE_TAG`, `TRAEFIK_IMAGE_TAG`, etc.
 
 `DEPLOY_NATS_STACK` is enabled by default; disable explicitly with `DEPLOY_NATS_STACK=false`.
 When enabled, playbook auto-creates Swarm secret `nats_auth_token` if missing.
+
+`vpn` and `vpn-dev` stacks read node-agent runtime env from `node-agent.env` in repo root.
+In CI this file is rendered from GitHub Secrets (`NODE_AGENT_ENV_*`).
+For local runs use `node-agent.env.example` as a template.
 
 ## Run
 

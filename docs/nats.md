@@ -11,7 +11,8 @@ Placement constraints:
 - `node.role == manager`
 - `node.labels.kind == dev`
 
-No public port is published. Access is internal via Swarm overlay networks.
+NATS client traffic (`4222/tcp`) is exposed via Traefik TCP entrypoint `nats`.
+NATS monitoring endpoint (`8222`) is exposed via Traefik HTTPS route with basic auth.
 
 ## Enable deployment
 
@@ -41,5 +42,18 @@ From services attached to `vpn-net`:
 - `nats://<token>@nats:4222` (network alias)
 - fallback: `nats://<token>@nats_nats:4222` (stack service name)
 
+From external node agents / control-plane clients:
+- `nats://<token>@nats.lannister-dev.ru:4222`
+
 For monitoring:
 - exporter metrics: `nats_nats-exporter:7777/metrics` (auto-scraped via existing Prometheus Swarm discovery labels)
+- web monitor via Traefik: `https://nats.lannister-dev.ru/` (basic auth required)
+
+## Troubleshooting
+
+`Authorization Violation` in node-agent logs usually means NATS credentials mismatch:
+- `NATS_SERVER` has no token (`nats://host:4222` instead of `nats://<token>@host:4222`).
+- token in `NATS_SERVER` differs from deployed `NATS_AUTH_TOKEN`.
+- wrong endpoint (`nats:4222` vs external domain) for current network path.
+
+`Connection reset by peer` right after auth errors is expected: NATS closes unauthorized connections.
