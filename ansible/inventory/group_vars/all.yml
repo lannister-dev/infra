@@ -16,6 +16,7 @@ xray_config_name: "{{ lookup('env', 'XRAY_CONFIG_NAME') }}"
 xray_config_dev_name: "{{ lookup('env', 'XRAY_CONFIG_DEV_NAME') | default('', true) }}"
 vpn_fallback_index_config_name: "{{ lookup('env', 'VPN_FALLBACK_INDEX_CONFIG_NAME') }}"
 vpn_fallback_nginx_config_name: "{{ lookup('env', 'VPN_FALLBACK_NGINX_CONFIG_NAME') }}"
+vault_config_name: "{{ lookup('env', 'VAULT_CONFIG_NAME') }}"
 
 vpn_domain: "{{ lookup('env', 'VPN_DOMAIN') | default('', true) }}"
 vpn_ws_path: "{{ lookup('env', 'VPN_WS_PATH') | default('/api/v1/stream', true) }}"

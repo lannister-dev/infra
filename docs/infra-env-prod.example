@@ -87,6 +87,7 @@ FIREWALL_NATS_CLIENT_CIDRS=198.51.100.20/32
 # XRAY_IMAGE_TAG=latest
 # NATS_IMAGE_TAG=2.11-alpine
 # NATS_EXPORTER_IMAGE_TAG=0.19.1
+# VAULT_IMAGE_TAG=1.13.3
 
 # ---- Generic alias style (alternative to TF_VAR_*) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
