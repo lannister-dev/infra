@@ -28,9 +28,6 @@ services:
       - source: vault_config
         target: /etc/vault/config.hcl
         mode: 292
-    environment:
-      VAULT_LOCAL_CONFIG: |
-        ui = true
     deploy:
       mode: replicated
       replicas: 1
