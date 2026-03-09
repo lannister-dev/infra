@@ -31,6 +31,9 @@ RUN_SANITY_CHECK=true
 DEPLOY_PROBE_STACK=true
 ENABLE_VPN_DEV_STACK=true
 ALLOW_EMPTY_VPN_NODES=true
+DEPLOY_DATA_DEV_STACK=false
+NODE_AGENT_IMAGE_REF=harbor.lannister-dev.ru/vpn-service/node-agent:prod
+NODE_AGENT_IMAGE_REF_DEV=harbor.lannister-dev.ru/vpn-service/node-agent:dev
 
 # Control plane (development)
 CONTROL_PLANE_URL=https://dev-api.example.com/api/v1/artifacts
@@ -44,5 +47,18 @@ EXTERNAL_REDIS_HOST=127.0.0.1
 EXTERNAL_REDIS_PORT=6379
 EXTERNAL_DATA_PRECHECK_TIMEOUT=10
 
+# Managed data-dev stack (postgres/redis in swarm, optional)
+POSTGRES_IMAGE_TAG=16-alpine
+REDIS_IMAGE_TAG=7-alpine
+DEV_POSTGRES_DB=vpn_control_dev
+DEV_POSTGRES_USER=vpn_dev_user
+DEV_POSTGRES_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
+DEV_REDIS_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
+
 # SSH keys for Ansible reconcile/deploy
 # ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>"}'
+
+# GitHub Actions secrets for node-agent env (set in environment "development", not in INFRA_ENV_DEV):
+# NODE_AGENT_ENV_DEV=<multiline node-agent.env content>
+# or
+# NODE_AGENT_ENV_DEV_B64=<base64(node-agent.env)>

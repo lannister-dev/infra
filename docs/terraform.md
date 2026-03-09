@@ -142,6 +142,12 @@ Deploy gate:
 Topology for CI comes from repository tfvars; secrets come from `INFRA_ENV_PROD`.
 Development deploy reads secrets from `INFRA_ENV_DEV`.
 
+`node-agent.env` is rendered at runtime in dev CI from GitHub environment secrets:
+- development workflow: `NODE_AGENT_ENV_DEV` or `NODE_AGENT_ENV_DEV_B64`.
+
+Repository stores only non-secret template:
+- `node-agent.env.example`
+
 Dev workflow pins explicit var-files:
 - `terraform/foundation/terraform.dev.tfvars`
 - `terraform/nodes/catalog.dev.tfvars`

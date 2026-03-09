@@ -82,6 +82,41 @@ jobs:
           chmod 600 "${ENV_FILE}"
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
 
+      - name: Render node-agent env from GitHub Secrets
+        env:
+          NODE_AGENT_ENV_DEV: ${{ secrets.NODE_AGENT_ENV_DEV }}
+          NODE_AGENT_ENV_DEV_B64: ${{ secrets.NODE_AGENT_ENV_DEV_B64 }}
+        run: |
+          set -Eeuo pipefail
+
+          NODE_AGENT_ENV_FILE="${GITHUB_WORKSPACE}/node-agent.env"
+          if [ -n "${NODE_AGENT_ENV_DEV_B64}" ]; then
+            printf '%s' "${NODE_AGENT_ENV_DEV_B64}" | base64 -d > "${NODE_AGENT_ENV_FILE}" || {
+              echo "::error::Failed to decode NODE_AGENT_ENV_DEV_B64"
+              exit 1
+            }
+          elif [ -n "${NODE_AGENT_ENV_DEV}" ]; then
+            printf '%s\n' "${NODE_AGENT_ENV_DEV}" > "${NODE_AGENT_ENV_FILE}"
+          else
+            echo "::error::Missing NODE_AGENT_ENV_DEV or NODE_AGENT_ENV_DEV_B64 secret"
+            exit 1
+          fi
+
+          chmod 600 "${NODE_AGENT_ENV_FILE}"
+          if ! grep -Eq '^AGENT_CONTROL_API=.+$' "${NODE_AGENT_ENV_FILE}"; then
+            echo "::error::node-agent env is invalid: AGENT_CONTROL_API is missing or empty"
+            exit 1
+          fi
+          if ! grep -q '^NATS_SERVER=' "${NODE_AGENT_ENV_FILE}"; then
+            echo "::error::node-agent env is invalid: NATS_SERVER is missing"
+            exit 1
+          fi
+          nats_server_value="$(grep '^NATS_SERVER=' "${NODE_AGENT_ENV_FILE}" | tail -n1 | cut -d= -f2-)"
+          if ! printf '%s' "${nats_server_value}" | grep -Eq '^nats://[^@]+@[^[:space:]]+$'; then
+            echo "::error::node-agent env is invalid: NATS_SERVER must include credentials (expected nats://<token>@host:4222)"
+            exit 1
+          fi
+
       - name: Prepare SSH key for Ansible
         run: |
           set -Eeuo pipefail
@@ -223,4 +258,5 @@ jobs:
         if: always()
         run: |
           rm -f "${INFRA_ENV_FILE:-}"
+          rm -f "${GITHUB_WORKSPACE}/node-agent.env"
           rm -rf "${RUNNER_TEMP}/ansible_ssh_keys"

@@ -1,0 +1,88 @@
+---
+services:
+  postgres:
+    image: postgres:${POSTGRES_IMAGE_TAG}
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB_NAME}"
+      POSTGRES_USER: "${POSTGRES_DB_USER}"
+      POSTGRES_PASSWORD_FILE: /run/secrets/data_prod_postgres_password
+    secrets:
+      - data_prod_postgres_password
+    volumes:
+      - data_prod_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_DB_USER} -d ${POSTGRES_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.kind == prod
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      rollback_config:
+        order: stop-first
+      restart_policy:
+        condition: any
+    networks:
+      vpn-net:
+        aliases:
+          - postgres-prod
+
+  redis:
+    image: redis:${REDIS_IMAGE_TAG}
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        exec redis-server
+        --appendonly yes
+        --requirepass "$$(cat /run/secrets/data_prod_redis_password)"
+    secrets:
+      - data_prod_redis_password
+    volumes:
+      - data_prod_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/data_prod_redis_password)\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.kind == prod
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      rollback_config:
+        order: stop-first
+      restart_policy:
+        condition: any
+    networks:
+      vpn-net:
+        aliases:
+          - redis-prod
+
+volumes:
+  data_prod_postgres_data:
+    driver: local
+  data_prod_redis_data:
+    driver: local
+
+networks:
+  vpn-net:
+    external: true
+
+secrets:
+  data_prod_postgres_password:
+    external: true
+  data_prod_redis_password:
+    external: true

@@ -8,5 +8,5 @@ provider_api_enabled = false
 timeweb_infra_nodes  = {}
 
 # 3) Timeweb compute mode (create/destroy VPS via Terraform)
-timeweb_compute_enabled            = false
-timeweb_provisioned_infra_nodes    = {}
+timeweb_compute_enabled         = false
+timeweb_provisioned_infra_nodes = {}
