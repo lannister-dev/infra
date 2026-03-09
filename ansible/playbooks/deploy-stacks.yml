@@ -394,7 +394,6 @@
         POSTGRES_DB_USER: "{{ data_prod_postgres_user }}"
       when: deploy_data_prod_stack
       changed_when: "false"
-
     - name: Deploy vpn stack
       ansible.builtin.command:
         argv:
