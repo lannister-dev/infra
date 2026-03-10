@@ -92,10 +92,10 @@ FIREWALL_NATS_CLIENT_CIDRS=198.51.100.20/32
 # REDIS_IMAGE_TAG=7-alpine
 
 # Managed data-prod stack (optional)
-DATA_PROD_POSTGRES_DB=vpn_control
-DATA_PROD_POSTGRES_USER=vpn_prod_user
-DATA_PROD_POSTGRES_PASSWORD=replace_with_strong_password
-DATA_PROD_REDIS_PASSWORD=replace_with_strong_password
+PROD_POSTGRES_DB=vpn_control
+PROD_POSTGRES_USER=vpn_prod_user
+PROD_POSTGRES_PASSWORD=replace_with_strong_password
+PROD_REDIS_PASSWORD=replace_with_strong_password
 
 # ---- Generic alias style (alternative to TF_VAR_*) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
