@@ -9,10 +9,10 @@ In `INFRA_ENV_PROD`:
 
 ```bash
 DEPLOY_DATA_PROD_STACK=true
-DATA_PROD_POSTGRES_DB=vpn_control
-DATA_PROD_POSTGRES_USER=vpn_prod_user
-DATA_PROD_POSTGRES_PASSWORD=replace_with_strong_password
-DATA_PROD_REDIS_PASSWORD=replace_with_strong_password
+PROD_POSTGRES_DB=vpn_control
+PROD_POSTGRES_USER=vpn_prod_user
+PROD_POSTGRES_PASSWORD=replace_with_strong_password
+PROD_REDIS_PASSWORD=replace_with_strong_password
 ```
 
 Deploy:
@@ -57,7 +57,7 @@ Redis restore:
 Update control-plane/probe runtime env to:
 - Postgres host `postgres-prod`, port `5432`
 - Redis host `redis-prod`, port `6379`
-- Redis password = `DATA_PROD_REDIS_PASSWORD`
+- Redis password = `PROD_REDIS_PASSWORD`
 
 Deploy updated services.
 

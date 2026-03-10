@@ -109,7 +109,7 @@
           - (data_prod_redis_password | trim | length) > 0
         fail_msg: >-
           DEPLOY_DATA_PROD_STACK=true requires:
-          DATA_PROD_POSTGRES_PASSWORD and DATA_PROD_REDIS_PASSWORD.
+          PROD_POSTGRES_PASSWORD and PROD_REDIS_PASSWORD.
       when: deploy_data_prod_stack
       changed_when: "false"
 
@@ -206,11 +206,11 @@
     - name: Create data_prod_postgres_password secret when missing
       ansible.builtin.shell: |
         set -Eeuo pipefail
-        printf '%s' "$DATA_PROD_POSTGRES_PASSWORD" | docker secret create data_prod_postgres_password -
+        printf '%s' "$PROD_POSTGRES_PASSWORD" | docker secret create data_prod_postgres_password -
       args:
         executable: /bin/bash
       environment:
-        DATA_PROD_POSTGRES_PASSWORD: "{{ data_prod_postgres_password }}"
+        PROD_POSTGRES_PASSWORD: "{{ data_prod_postgres_password }}"
       when:
         - deploy_data_prod_stack
         - data_prod_pg_secret_inspect.rc != 0
@@ -232,11 +232,11 @@
     - name: Create data_prod_redis_password secret when missing
       ansible.builtin.shell: |
         set -Eeuo pipefail
-        printf '%s' "$DATA_PROD_REDIS_PASSWORD" | docker secret create data_prod_redis_password -
+        printf '%s' "$PROD_REDIS_PASSWORD" | docker secret create data_prod_redis_password -
       args:
         executable: /bin/bash
       environment:
-        DATA_PROD_REDIS_PASSWORD: "{{ data_prod_redis_password }}"
+        PROD_REDIS_PASSWORD: "{{ data_prod_redis_password }}"
       when:
         - deploy_data_prod_stack
         - data_prod_redis_secret_inspect.rc != 0
