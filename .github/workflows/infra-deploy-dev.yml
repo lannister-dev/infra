@@ -24,6 +24,11 @@ on:
         required: true
         type: boolean
         default: true
+      apply_foundation:
+        description: "Apply terraform/foundation (disable to avoid foundation changes in dev run)"
+        required: true
+        type: boolean
+        default: false
       replace_vpn_nodes:
         description: "Comma-separated VPN node names to force recreate in terraform/nodes (provider_compute only)"
         required: false
@@ -183,6 +188,7 @@ jobs:
 
       - name: Terraform apply
         env:
+          APPLY_FOUNDATION: ${{ inputs.apply_foundation }}
           APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
           REPLACE_VPN_NODES: ${{ inputs.replace_vpn_nodes }}
           FOUNDATION_TFVARS_FILE: ${{ github.workspace }}/terraform/foundation/terraform.dev.tfvars
