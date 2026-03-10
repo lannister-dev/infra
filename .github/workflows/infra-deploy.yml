@@ -25,7 +25,7 @@ on:
         type: boolean
         default: false
       replace_vpn_nodes:
-        description: "Comma-separated VPN node names to force recreate in terraform/nodes (provider_compute only)"
+        description: "Deprecated. Leave empty; use drain -> migrate -> deactivate lifecycle instead."
         required: false
         type: string
         default: ""
@@ -48,7 +48,7 @@ jobs:
   deploy-prod:
     if: ${{ inputs.deploy == true && inputs.confirm_apply == 'APPLY' }}
     needs: checks
-    runs-on: [self-hosted, dev]
+    runs-on: [self-hosted, prod]
     timeout-minutes: 90
     environment:
       name: production
@@ -81,6 +81,24 @@ jobs:
           printf '%s\n' "${INFRA_ENV_PROD}" > "${ENV_FILE}"
           chmod 600 "${ENV_FILE}"
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
+
+      - name: Validate production isolation guardrails
+        run: |
+          set -Eeuo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          if [ -z "${TF_STATE_KEY_PREFIX:-}" ]; then
+            echo "::error::TF_STATE_KEY_PREFIX must be set in INFRA_ENV_PROD"
+            exit 1
+          fi
+          if printf '%s' "${TF_STATE_KEY_PREFIX}" | grep -Eq '(^|/)dev($|/)'; then
+            echo "::error::TF_STATE_KEY_PREFIX must not target dev scope in Infra Deploy: current='${TF_STATE_KEY_PREFIX}'"
+            exit 1
+          fi
+          if [ "${DEPLOY_DATA_DEV_STACK:-false}" = "true" ]; then
+            echo "::error::DEPLOY_DATA_DEV_STACK=true is forbidden in Infra Deploy"
+            exit 1
+          fi
 
       - name: Render node-agent env from GitHub Secrets
         env:

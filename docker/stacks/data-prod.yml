@@ -30,7 +30,7 @@ services:
       restart_policy:
         condition: any
     networks:
-      vpn-net:
+      data-prod-net:
         aliases:
           - postgres-prod
 
@@ -67,7 +67,7 @@ services:
       restart_policy:
         condition: any
     networks:
-      vpn-net:
+      data-prod-net:
         aliases:
           - redis-prod
 
@@ -78,8 +78,9 @@ volumes:
     driver: local
 
 networks:
-  vpn-net:
+  data-prod-net:
     external: true
+    name: ${DATA_PROD_NETWORK_NAME:-data-prod-net}
 
 secrets:
   data_prod_postgres_password:

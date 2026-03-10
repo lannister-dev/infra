@@ -32,8 +32,8 @@ services:
       - "--entrypoints.websecure.http.tls=true"
       - "--entrypoints.websecure.http.tls.certresolver=cf"
       - "--entrypoints.nats.address=:4222"
-      - "--entrypoints.web.forwardedHeaders.insecure=true"
-      - "--entrypoints.websecure.forwardedHeaders.insecure=true"
+      - "--entrypoints.web.forwardedHeaders.insecure=${TRAEFIK_WEB_FORWARDED_HEADERS_INSECURE:-false}"
+      - "--entrypoints.websecure.forwardedHeaders.insecure=${TRAEFIK_WEBSECURE_FORWARDED_HEADERS_INSECURE:-false}"
 
       # PROVIDERS
       - "--providers.swarm=true"
@@ -49,7 +49,7 @@ services:
       - "--ping=true"
 
       # ACME (DNS-01)
-      - "--certificatesresolvers.cf.acme.email=degterev907@gmail.com"
+      - "--certificatesresolvers.cf.acme.email=${TRAEFIK_ACME_EMAIL}"
       - "--certificatesresolvers.cf.acme.storage=/acme/acme.json"
       - "--certificatesresolvers.cf.acme.dnschallenge.provider=cloudflare"
 
@@ -70,13 +70,13 @@ services:
         - "traefik.enable=true"
 
         # ============ TRAEFIK DASHBOARD ================
-        - "traefik.http.routers.traefik.rule=Host(`traefik.lannister-dev.ru`)"
+        - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_DASHBOARD_HOST}`)"
         - "traefik.http.routers.traefik.entrypoints=websecure"
         - "traefik.http.routers.traefik.service=api@internal"
         - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
         # ============ BASIC AUTH =======================
-        - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$2b$$12$$NBVFexM1H5XALLmGqtapeueNALHtgUThPFj2SoUmgWBEs5mhEiksK"
+        - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH_USERS}"
         - "traefik.http.routers.traefik.middlewares=dashboard-auth@swarm"
 
         # ===== PROMETHEUS =====
