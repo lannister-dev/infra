@@ -18,12 +18,12 @@ on:
         description: "Run VPN node reconciliation playbook"
         required: true
         type: boolean
-        default: true
+        default: false
       apply_infra_nodes:
         description: "Apply terraform/infra-nodes before Ansible deploy"
         required: true
         type: boolean
-        default: true
+        default: false
       apply_nodes:
         description: "Apply terraform/nodes (disable for data-only dev runs)"
         required: true
@@ -35,7 +35,7 @@ on:
         type: boolean
         default: false
       replace_vpn_nodes:
-        description: "Comma-separated VPN node names to force recreate in terraform/nodes (provider_compute only)"
+        description: "Deprecated. Leave empty; use drain -> migrate -> deactivate lifecycle instead."
         required: false
         type: string
         default: ""
@@ -92,7 +92,45 @@ jobs:
           chmod 600 "${ENV_FILE}"
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
 
+      - name: Validate development isolation guardrails
+        run: |
+          set -Eeuo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          # Dev workflow must use a dev state scope.
+          if [ -z "${TF_STATE_KEY_PREFIX:-}" ]; then
+            echo "::error::TF_STATE_KEY_PREFIX must be set in INFRA_ENV_DEV"
+            exit 1
+          fi
+          if ! printf '%s' "${TF_STATE_KEY_PREFIX}" | grep -Eq '(^|/)dev($|/)'; then
+            echo "::error::TF_STATE_KEY_PREFIX must target dev scope (contains '/dev'): current='${TF_STATE_KEY_PREFIX}'"
+            exit 1
+          fi
+
+          # Dev workflow must never deploy prod data stack.
+          if [ "${DEPLOY_DATA_PROD_STACK:-false}" = "true" ]; then
+            echo "::error::DEPLOY_DATA_PROD_STACK=true is forbidden in Infra Deploy Dev"
+            exit 1
+          fi
+
+          if [ "${{ inputs.reconcile_nodes }}" = "true" ] && [ "${{ inputs.apply_nodes }}" != "true" ]; then
+            echo "::error::reconcile_nodes=true requires apply_nodes=true in Infra Deploy Dev"
+            exit 1
+          fi
+
+      - name: Resolve dev workflow scope
+        run: |
+          set -Eeuo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          if [ "${ENABLE_VPN_DEV_STACK:-false}" = "true" ]; then
+            echo "REQUIRE_NODE_AGENT_ENV=true" >> "${GITHUB_ENV}"
+          else
+            echo "REQUIRE_NODE_AGENT_ENV=false" >> "${GITHUB_ENV}"
+          fi
+
       - name: Render node-agent env from GitHub Secrets
+        if: ${{ env.REQUIRE_NODE_AGENT_ENV == 'true' }}
         env:
           NODE_AGENT_ENV_DEV: ${{ secrets.NODE_AGENT_ENV_DEV }}
           NODE_AGENT_ENV_DEV_B64: ${{ secrets.NODE_AGENT_ENV_DEV_B64 }}
@@ -128,6 +166,7 @@ jobs:
           fi
 
       - name: Prepare SSH key for Ansible
+        if: ${{ inputs.reconcile_nodes == true }}
         run: |
           set -Eeuo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
@@ -254,12 +293,12 @@ jobs:
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
           export REPO_ROOT="${GITHUB_WORKSPACE}"
-          export RUN_SANITY_CHECK="true"
           export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
           ansible-playbook -i ansible/inventory/development.ini \
-            ansible/playbooks/deploy-stacks.yml
+            ansible/playbooks/deploy-dev-stacks.yml
 
       - name: Reconcile node configs with control plane
+        if: ${{ inputs.reconcile_nodes == true }}
         run: |
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u

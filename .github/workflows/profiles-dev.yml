@@ -39,6 +39,8 @@ jobs:
   publish-dev:
     needs: validate-dev
     runs-on: [self-hosted, dev]
+    environment:
+      name: development
     steps:
       - name: Decide whether to publish dev artifact
         id: dev_secrets

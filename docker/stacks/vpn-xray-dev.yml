@@ -19,6 +19,20 @@ x-deploy-common: &deploy-common
   restart_policy:
     condition: on-failure
 
+x-node-agent-deploy-common: &node-agent-deploy-common
+  mode: global
+  placement:
+    constraints:
+      - node.labels.role == vpn
+      - node.labels.channel == dev
+  update_config:
+    order: stop-first
+    failure_action: rollback
+  rollback_config:
+    order: stop-first
+  restart_policy:
+    condition: on-failure
+
 services:
   xray:
     image: ghcr.io/xtls/xray-core:${XRAY_IMAGE_TAG}
@@ -29,7 +43,7 @@ services:
         mode: host
     networks:
       - traefik_swarm
-      - vpn-net
+      - vpn-dev-net
       - monitoring
     configs:
       - source: xray_config_dev
@@ -66,7 +80,7 @@ services:
     image: ${NODE_AGENT_IMAGE_REF_DEV:-harbor.lannister-dev.ru/vpn-service/node-agent:prod}
     command: ["python", "app.py"]
     networks:
-      - vpn-net
+      - vpn-dev-net
       - monitoring
     secrets:
       - bootstrap_token
@@ -82,7 +96,7 @@ services:
       <<: *healthcheck-common
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/healthz', timeout=2).read(); print('ok')"]
     deploy:
-      <<: *deploy-common
+      <<: *node-agent-deploy-common
       labels:
         - "prometheus-scrape=true"
         - "prometheus-app=node-agent"
@@ -105,7 +119,8 @@ secrets:
 networks:
   traefik_swarm:
     external: true
-  vpn-net:
+  vpn-dev-net:
     external: true
+    name: ${VPN_DEV_NETWORK_NAME:-vpn-dev-net}
   monitoring:
     external: true
