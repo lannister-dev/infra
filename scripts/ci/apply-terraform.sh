@@ -120,25 +120,8 @@ prepare_nodes_replace_args() {
   names_csv="$(printf '%s' "${raw}" | tr -d '[:space:]')"
   [ -n "${names_csv}" ] || return 0
 
-  local IFS=','
-  local -a names=()
-  read -r -a names <<< "${names_csv}"
-
-  local name
-  for name in "${names[@]}"; do
-    [ -n "${name}" ] || continue
-    if [[ ! "${name}" =~ ^[A-Za-z0-9._-]+$ ]]; then
-      echo "::error::Invalid node name in REPLACE_VPN_NODES: '${name}'"
-      exit 1
-    fi
-    NODES_REPLACE_ARGS+=(
-      "-replace=module.hostvds_compute[0].openstack_compute_instance_v2.vpn[\"${name}\"]"
-    )
-  done
-
-  if [ "${#NODES_REPLACE_ARGS[@]}" -gt 0 ]; then
-    echo "::notice::terraform/nodes will force-recreate: ${names_csv}"
-  fi
+  echo "::error::REPLACE_VPN_NODES is disabled. Use lifecycle: drain -> migrate -> deactivate, then apply terraform/nodes without force-recreate."
+  exit 1
 }
 
 plan_apply_root() {

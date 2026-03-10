@@ -30,7 +30,7 @@ services:
       restart_policy:
         condition: any
     networks:
-      vpn-net:
+      data-dev-net:
         aliases:
           - postgres-dev
 
@@ -67,7 +67,7 @@ services:
       restart_policy:
         condition: any
     networks:
-      vpn-net:
+      data-dev-net:
         aliases:
           - redis-dev
 
@@ -78,8 +78,9 @@ volumes:
     driver: local
 
 networks:
-  vpn-net:
+  data-dev-net:
     external: true
+    name: ${DATA_DEV_NETWORK_NAME:-data-dev-net}
 
 secrets:
   data_dev_postgres_password:

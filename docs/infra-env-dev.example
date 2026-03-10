@@ -26,18 +26,36 @@ TF_VAR_vpn_dev_xhttp_path=/api/v1/mobile
 # TF_VAR_hostvds_os_interface=public
 # TF_VAR_timeweb_api_token=...
 
+# Runtime HostVDS credentials are also required when reconcile_nodes=true,
+# because verify-hostvds-keypairs.py reads HOSTVDS_OS_* directly:
+# HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
+# HOSTVDS_OS_USERNAME=hostvds-...
+# HOSTVDS_OS_PASSWORD=...
+# HOSTVDS_OS_PROJECT_NAME=hostvds-...
+# HOSTVDS_OS_USER_DOMAIN_NAME=Default
+# HOSTVDS_OS_PROJECT_DOMAIN_ID=default
+# HOSTVDS_OS_REGION_NAME=eu-north1b
+# HOSTVDS_OS_INTERFACE=public
+
 # Ansible runtime toggles
 RUN_SANITY_CHECK=true
 DEPLOY_PROBE_STACK=true
+DEPLOY_NATS_STACK=true
 ENABLE_VPN_DEV_STACK=true
-ALLOW_EMPTY_VPN_NODES=true
+ALLOW_EMPTY_VPN_NODES=false
 DEPLOY_DATA_DEV_STACK=false
+VPN_DEV_NETWORK_NAME=vpn-dev-net
 NODE_AGENT_IMAGE_REF=harbor.lannister-dev.ru/vpn-service/node-agent:prod
 NODE_AGENT_IMAGE_REF_DEV=harbor.lannister-dev.ru/vpn-service/node-agent:dev
 
 # Control plane (development)
 CONTROL_PLANE_URL=https://dev-api.example.com/api/v1/artifacts
 ADMIN_API_KEY=REPLACE_WITH_DEV_ADMIN_TOKEN
+
+# Dev ingress / edge settings
+NATS_AUTH_TOKEN=REPLACE_WITH_STRONG_RANDOM_TOKEN
+NATS_MONITOR_HOST=nats.dev.example.com
+NATS_MONITOR_AUTH_USERS=admin:REPLACE_WITH_HTPASSWD_HASH
 
 # External data services precheck (DB/Redis hosted outside infra repo scope)
 EXTERNAL_DATA_PRECHECK_ENABLED=true
@@ -50,6 +68,7 @@ EXTERNAL_DATA_PRECHECK_TIMEOUT=10
 # Managed data-dev stack (postgres/redis in swarm, optional)
 POSTGRES_IMAGE_TAG=16-alpine
 REDIS_IMAGE_TAG=7-alpine
+DATA_DEV_NETWORK_NAME=data-dev-net
 DEV_POSTGRES_DB=vpn_control_dev
 DEV_POSTGRES_USER=vpn_dev_user
 DEV_POSTGRES_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
@@ -58,7 +77,18 @@ DEV_REDIS_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
 # SSH keys for Ansible reconcile/deploy
 # ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>"}'
 
-# GitHub Actions secrets for node-agent env (set in environment "development", not in INFRA_ENV_DEV):
+# GitHub Actions secrets for node-agent env (required only when ENABLE_VPN_DEV_STACK=true):
 # NODE_AGENT_ENV_DEV=<multiline node-agent.env content>
 # or
 # NODE_AGENT_ENV_DEV_B64=<base64(node-agent.env)>
+
+# Shared edge stack settings are managed outside dev-only workflow.
+# If you still run the full production-oriented deploy path, set:
+# TRAEFIK_ACME_EMAIL=ops@example.com
+# TRAEFIK_DASHBOARD_HOST=traefik.example.com
+# TRAEFIK_DASHBOARD_AUTH_USERS=admin:REPLACE_WITH_BCRYPT_HASH
+# TRAEFIK_WEB_FORWARDED_HEADERS_INSECURE=false
+# TRAEFIK_WEBSECURE_FORWARDED_HEADERS_INSECURE=false
+# PROMETHEUS_HOST=prometheus.example.com
+# PROMETHEUS_AUTH_USERS=admin:REPLACE_WITH_HTPASSWD_HASH
+# GRAFANA_HOST=grafana.example.com
