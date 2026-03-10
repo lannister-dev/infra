@@ -71,6 +71,7 @@ DEPLOY_PROBE_STACK=true
 DEPLOY_NATS_STACK=true
 ENABLE_VPN_DEV_STACK=false
 NATS_AUTH_TOKEN=replace_with_strong_random_token
+DEPLOY_DATA_PROD_STACK=false
 FIREWALL_ENFORCE=false
 FIREWALL_ADMIN_CIDRS=203.0.113.10/32
 FIREWALL_NATS_CLIENT_CIDRS=198.51.100.20/32
@@ -87,6 +88,14 @@ FIREWALL_NATS_CLIENT_CIDRS=198.51.100.20/32
 # XRAY_IMAGE_TAG=latest
 # NATS_IMAGE_TAG=2.11-alpine
 # NATS_EXPORTER_IMAGE_TAG=0.19.1
+# POSTGRES_IMAGE_TAG=16-alpine
+# REDIS_IMAGE_TAG=7-alpine
+
+# Managed data-prod stack (optional)
+DATA_PROD_POSTGRES_DB=vpn_control
+DATA_PROD_POSTGRES_USER=vpn_prod_user
+DATA_PROD_POSTGRES_PASSWORD=replace_with_strong_password
+DATA_PROD_REDIS_PASSWORD=replace_with_strong_password
 
 # ---- Generic alias style (alternative to TF_VAR_*) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity

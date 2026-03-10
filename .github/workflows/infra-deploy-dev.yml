@@ -1,0 +1,262 @@
+---
+name: Infra Deploy Dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Apply Terraform and run Ansible reconciliation/deploy for development"
+        required: true
+        type: boolean
+        default: true
+      confirm_apply:
+        description: "Type DEV to confirm development deployment."
+        required: true
+        type: string
+        default: ""
+      reconcile_nodes:
+        description: "Run VPN node reconciliation playbook"
+        required: true
+        type: boolean
+        default: true
+      apply_infra_nodes:
+        description: "Apply terraform/infra-nodes before Ansible deploy"
+        required: true
+        type: boolean
+        default: true
+      replace_vpn_nodes:
+        description: "Comma-separated VPN node names to force recreate in terraform/nodes (provider_compute only)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-dev-deploy
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "true"
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  checks:
+    uses: ./.github/workflows/infra-checks-reusable.yml
+
+  deploy-dev:
+    if: ${{ inputs.deploy == true && inputs.confirm_apply == 'DEV' }}
+    needs: checks
+    runs-on: [self-hosted, dev]
+    timeout-minutes: 90
+    environment:
+      name: development
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure Terraform CLI exists
+        run: |
+          set -Eeuo pipefail
+          if command -v terraform >/dev/null 2>&1; then
+            terraform version; exit 0
+          fi
+          if command -v tofu >/dev/null 2>&1; then
+            mkdir -p "${RUNNER_TEMP}/bin"
+            printf '#!/usr/bin/env bash\nexec tofu "$@"\n' > "${RUNNER_TEMP}/bin/terraform"
+            chmod +x "${RUNNER_TEMP}/bin/terraform"
+            echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+            terraform version; exit 0
+          fi
+          echo "::error::Neither terraform nor tofu found on runner"
+          exit 1
+
+      - name: Write runtime env
+        env:
+          INFRA_ENV_DEV: ${{ secrets.INFRA_ENV_DEV }}
+        run: |
+          set -Eeuo pipefail
+          test -n "${INFRA_ENV_DEV}" || { echo "::error::Missing secret INFRA_ENV_DEV"; exit 1; }
+          ENV_FILE="${RUNNER_TEMP}/infra.dev.env"
+          printf '%s\n' "${INFRA_ENV_DEV}" > "${ENV_FILE}"
+          chmod 600 "${ENV_FILE}"
+          echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
+
+      - name: Render node-agent env from GitHub Secrets
+        env:
+          NODE_AGENT_ENV_DEV: ${{ secrets.NODE_AGENT_ENV_DEV }}
+          NODE_AGENT_ENV_DEV_B64: ${{ secrets.NODE_AGENT_ENV_DEV_B64 }}
+        run: |
+          set -Eeuo pipefail
+
+          NODE_AGENT_ENV_FILE="${GITHUB_WORKSPACE}/node-agent.env"
+          if [ -n "${NODE_AGENT_ENV_DEV_B64}" ]; then
+            printf '%s' "${NODE_AGENT_ENV_DEV_B64}" | base64 -d > "${NODE_AGENT_ENV_FILE}" || {
+              echo "::error::Failed to decode NODE_AGENT_ENV_DEV_B64"
+              exit 1
+            }
+          elif [ -n "${NODE_AGENT_ENV_DEV}" ]; then
+            printf '%s\n' "${NODE_AGENT_ENV_DEV}" > "${NODE_AGENT_ENV_FILE}"
+          else
+            echo "::error::Missing NODE_AGENT_ENV_DEV or NODE_AGENT_ENV_DEV_B64 secret"
+            exit 1
+          fi
+
+          chmod 600 "${NODE_AGENT_ENV_FILE}"
+          if ! grep -Eq '^AGENT_CONTROL_API=.+$' "${NODE_AGENT_ENV_FILE}"; then
+            echo "::error::node-agent env is invalid: AGENT_CONTROL_API is missing or empty"
+            exit 1
+          fi
+          if ! grep -q '^NATS_SERVER=' "${NODE_AGENT_ENV_FILE}"; then
+            echo "::error::node-agent env is invalid: NATS_SERVER is missing"
+            exit 1
+          fi
+          nats_server_value="$(grep '^NATS_SERVER=' "${NODE_AGENT_ENV_FILE}" | tail -n1 | cut -d= -f2-)"
+          if ! printf '%s' "${nats_server_value}" | grep -Eq '^nats://[^@]+@[^[:space:]]+$'; then
+            echo "::error::node-agent env is invalid: NATS_SERVER must include credentials (expected nats://<token>@host:4222)"
+            exit 1
+          fi
+
+      - name: Prepare SSH key for Ansible
+        run: |
+          set -Eeuo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          KEYS_DIR="${RUNNER_TEMP}/ansible_ssh_keys"
+          mkdir -p "${KEYS_DIR}"
+          chmod 700 "${KEYS_DIR}"
+          keys_written=0
+
+          if [ -n "${ANSIBLE_SSH_KEYS_B64_JSON:-}" ]; then
+            command -v python3 >/dev/null 2>&1 || {
+              echo "::error::python3 is required to parse ANSIBLE_SSH_KEYS_B64_JSON"
+              exit 1
+            }
+
+            export KEYS_DIR
+            json_count="$(python3 ./scripts/core/render-ansible-ssh-keys.py --keys-dir "${KEYS_DIR}")"
+            keys_written=$((keys_written + json_count))
+          fi
+
+          if [ -n "${ANSIBLE_SSH_PRIVATE_KEY_B64:-}" ]; then
+            printf '%s' "${ANSIBLE_SSH_PRIVATE_KEY_B64}" | base64 -d > "${KEYS_DIR}/default" || {
+              echo "::error::Failed to decode ANSIBLE_SSH_PRIVATE_KEY_B64"
+              exit 1
+            }
+            chmod 600 "${KEYS_DIR}/default"
+            keys_written=$((keys_written + 1))
+          elif [ -n "${ANSIBLE_SSH_PRIVATE_KEY:-}" ]; then
+            printf '%s\n' "${ANSIBLE_SSH_PRIVATE_KEY}" > "${KEYS_DIR}/default"
+            chmod 600 "${KEYS_DIR}/default"
+            keys_written=$((keys_written + 1))
+          elif [ -n "${ANSIBLE_SSH_PRIVATE_KEY_FILE:-}" ]; then
+            test -f "${ANSIBLE_SSH_PRIVATE_KEY_FILE}" || {
+              echo "::error::ANSIBLE_SSH_PRIVATE_KEY_FILE points to a missing file: ${ANSIBLE_SSH_PRIVATE_KEY_FILE}"
+              exit 1
+            }
+            cp "${ANSIBLE_SSH_PRIVATE_KEY_FILE}" "${KEYS_DIR}/default"
+            chmod 600 "${KEYS_DIR}/default"
+            keys_written=$((keys_written + 1))
+          fi
+
+          if [ "${keys_written}" -eq 0 ]; then
+            echo "::error::Set ANSIBLE_SSH_KEYS_B64_JSON (recommended) or one of: ANSIBLE_SSH_PRIVATE_KEY_B64 / ANSIBLE_SSH_PRIVATE_KEY / ANSIBLE_SSH_PRIVATE_KEY_FILE in INFRA_ENV_DEV"
+            exit 1
+          fi
+
+          for key_file in "${KEYS_DIR}"/*; do
+            [ -f "${key_file}" ] || continue
+            key_ref="$(basename "${key_file}")"
+            if ! ssh-keygen -y -f "${key_file}" >/dev/null 2>&1; then
+              echo "::error::SSH key ref '${key_ref}' is invalid or passphrase-protected; CI requires unencrypted private keys"
+              exit 1
+            fi
+            key_fp_sha256="$(ssh-keygen -lf "${key_file}" -E sha256 | awk '{print $2}')"
+            key_fp_md5="$(ssh-keygen -lf "${key_file}" -E md5 | awk '{print $2}' | sed 's/^MD5://')"
+            echo "::notice::Loaded SSH key ref '${key_ref}' fingerprint md5=${key_fp_md5} sha256=${key_fp_sha256}"
+          done
+
+          echo "ANSIBLE_SSH_KEYS_DIR=${KEYS_DIR}" >> "${GITHUB_ENV}"
+          if [ -f "${KEYS_DIR}/default" ]; then
+            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEYS_DIR}/default" >> "${GITHUB_ENV}"
+          fi
+
+      - name: Terraform apply
+        env:
+          APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
+          REPLACE_VPN_NODES: ${{ inputs.replace_vpn_nodes }}
+          FOUNDATION_TFVARS_FILE: ${{ github.workspace }}/terraform/foundation/terraform.dev.tfvars
+          NODES_TFVARS_FILE: ${{ github.workspace }}/terraform/nodes/catalog.dev.tfvars
+          INFRA_NODES_TFVARS_FILE: ${{ github.workspace }}/terraform/infra-nodes/catalog.dev.tfvars
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          bash ./scripts/ci/apply-terraform.sh
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements/dev.txt
+            requirements/base.txt
+
+      - name: Install Ansible
+        run: python -m pip install --upgrade pip ansible
+
+      - name: Verify HostVDS keypair fingerprints
+        if: ${{ inputs.reconcile_nodes == true }}
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          inventory_file="ansible/inventory/generated/vpn_nodes.yml"
+          if [ ! -f "${inventory_file}" ]; then
+            echo "::error::Missing generated inventory file: ${inventory_file}"
+            exit 1
+          fi
+
+          key_refs="$(awk '/ssh_key_ref:/{print $2}' "${inventory_file}" | tr -d '"' | sort -u | paste -sd, -)"
+          if [ -z "${key_refs}" ]; then
+            echo "::notice::No ssh_key_ref entries found in ${inventory_file}; skipping HostVDS keypair verification"
+            exit 0
+          fi
+
+          python3 ./scripts/core/verify-hostvds-keypairs.py \
+            --keys-dir "${ANSIBLE_SSH_KEYS_DIR}" \
+            --refs "${key_refs}"
+
+      - name: Reconcile VPN nodes (Ansible)
+        if: ${{ inputs.reconcile_nodes == true }}
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export REPO_ROOT="${GITHUB_WORKSPACE}"
+          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          ansible-playbook -i ansible/inventory/development.ini \
+            ansible/playbooks/reconcile-vpn-nodes.yml
+
+      - name: Deploy stacks (Ansible)
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export REPO_ROOT="${GITHUB_WORKSPACE}"
+          export RUN_SANITY_CHECK="true"
+          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          ansible-playbook -i ansible/inventory/development.ini \
+            ansible/playbooks/deploy-stacks.yml
+
+      - name: Reconcile node configs with control plane
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          ansible-playbook ansible/playbooks/reconcile-node-configs.yml
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "${INFRA_ENV_FILE:-}"
+          rm -f "${GITHUB_WORKSPACE}/node-agent.env"
+          rm -rf "${RUNNER_TEMP}/ansible_ssh_keys"

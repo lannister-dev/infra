@@ -326,7 +326,7 @@
         groups: vpn_targets
         ansible_host: "{{ item.public_ip }}"
         ansible_user: "{{ (effective_ssh_users[item.name] if (effective_ssh_users is defined and effective_ssh_users[item.name] is defined) else item.ssh_user) }}"
-        ansible_port: "{{ item.ssh_port }}"
+        ansible_port: "{{ item.ssh_port | int }}"
         ansible_ssh_private_key_file: >-
           {{
             (ssh_keys_dir_effective ~ '/' ~ (item.ssh_key_ref | default('default', true) | trim))
@@ -549,6 +549,7 @@
         - vpn_xray
         - vpn_node-agent
         - vpn-dev_xray
+        - vpn-dev_node-agent
       when: refresh_registry_auth_effective
       register: registry_result
       changed_when: "registry_result.rc == 10"
