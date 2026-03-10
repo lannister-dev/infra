@@ -173,6 +173,15 @@ plan_apply_root() {
   rm -f "${backend_file}" "terraform/${root}/tfplan"
 }
 
+init_foundation_and_export_outputs() {
+  local backend_file
+  backend_file="$(mktemp)"
+  write_backend_config "foundation.tfstate" "${backend_file}"
+  terraform -chdir="terraform/foundation" init -input=false -backend-config="${backend_file}"
+  export_config_names
+  rm -f "${backend_file}"
+}
+
 # ----- main --------------------------------------------------------------
 main() {
   # Convert IAC_TFVAR_* → TF_VAR_*
