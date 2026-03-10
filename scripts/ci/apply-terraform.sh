@@ -6,6 +6,7 @@
 #   TF_STATE_BUCKET, TF_STATE_REGION, TF_STATE_KEY_PREFIX  (required)
 #   TF_STATE_ENDPOINT, TF_STATE_ACCESS_KEY, …              (optional)
 #   TF_PROVIDER_MIRROR_URL | TF_CLI_CONFIG_CONTENT[_B64]   (optional)
+#   APPLY_FOUNDATION=true|false                            (optional)
 #   APPLY_INFRA_NODES=true|false                            (optional)
 #   FOUNDATION_TFVARS_FILE / NODES_TFVARS_FILE /
 #   INFRA_NODES_TFVARS_FILE                                 (optional)
@@ -173,6 +174,15 @@ plan_apply_root() {
   rm -f "${backend_file}" "terraform/${root}/tfplan"
 }
 
+init_foundation_and_export_outputs() {
+  local backend_file
+  backend_file="$(mktemp)"
+  write_backend_config "foundation.tfstate" "${backend_file}"
+  terraform -chdir="terraform/foundation" init -input=false -backend-config="${backend_file}"
+  export_config_names
+  rm -f "${backend_file}"
+}
+
 # ----- main --------------------------------------------------------------
 main() {
   # Convert IAC_TFVAR_* → TF_VAR_*
@@ -188,7 +198,19 @@ main() {
   validate_tfvars_file "${NODES_TFVARS_FILE}" "nodes"
   validate_tfvars_file "${INFRA_NODES_TFVARS_FILE}" "infra-nodes"
 
-  local roots=(foundation nodes)
+  local apply_foundation
+  apply_foundation="${APPLY_FOUNDATION:-true}"
+
+  local roots=(nodes)
+  if [ "${apply_foundation}" = "true" ]; then
+    roots=(foundation nodes)
+  else
+    echo "::notice::Skipping terraform/foundation apply because APPLY_FOUNDATION=false"
+    echo "::group::terraform/foundation (init+outputs only)"
+    init_foundation_and_export_outputs
+    echo "::endgroup::"
+  fi
+
   [ "${APPLY_INFRA_NODES:-false}" != "true" ] || roots+=(infra-nodes)
 
   for root in "${roots[@]}"; do
