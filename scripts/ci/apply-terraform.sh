@@ -7,6 +7,7 @@
 #   TF_STATE_ENDPOINT, TF_STATE_ACCESS_KEY, …              (optional)
 #   TF_PROVIDER_MIRROR_URL | TF_CLI_CONFIG_CONTENT[_B64]   (optional)
 #   APPLY_FOUNDATION=true|false                            (optional)
+#   APPLY_NODES=true|false                                 (optional)
 #   APPLY_INFRA_NODES=true|false                            (optional)
 #   FOUNDATION_TFVARS_FILE / NODES_TFVARS_FILE /
 #   INFRA_NODES_TFVARS_FILE                                 (optional)
@@ -201,9 +202,12 @@ main() {
   local apply_foundation
   apply_foundation="${APPLY_FOUNDATION:-true}"
 
-  local roots=(nodes)
+  local apply_nodes
+  apply_nodes="${APPLY_NODES:-true}"
+
+  local roots=()
   if [ "${apply_foundation}" = "true" ]; then
-    roots=(foundation nodes)
+    roots+=(foundation)
   else
     echo "::notice::Skipping terraform/foundation apply because APPLY_FOUNDATION=false"
     echo "::group::terraform/foundation (init+outputs only)"
@@ -211,7 +215,18 @@ main() {
     echo "::endgroup::"
   fi
 
+  if [ "${apply_nodes}" = "true" ]; then
+    roots+=(nodes)
+  else
+    echo "::notice::Skipping terraform/nodes apply because APPLY_NODES=false"
+  fi
+
   [ "${APPLY_INFRA_NODES:-false}" != "true" ] || roots+=(infra-nodes)
+
+  if [ "${#roots[@]}" -eq 0 ]; then
+    echo "::notice::No terraform roots selected for apply"
+    return 0
+  fi
 
   for root in "${roots[@]}"; do
     echo "::group::terraform/${root}"

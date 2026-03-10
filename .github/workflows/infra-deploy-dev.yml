@@ -24,6 +24,11 @@ on:
         required: true
         type: boolean
         default: true
+      apply_nodes:
+        description: "Apply terraform/nodes (disable for data-only dev runs)"
+        required: true
+        type: boolean
+        default: false
       apply_foundation:
         description: "Apply terraform/foundation (disable to avoid foundation changes in dev run)"
         required: true
@@ -189,6 +194,7 @@ jobs:
       - name: Terraform apply
         env:
           APPLY_FOUNDATION: ${{ inputs.apply_foundation }}
+          APPLY_NODES: ${{ inputs.apply_nodes }}
           APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
           REPLACE_VPN_NODES: ${{ inputs.replace_vpn_nodes }}
           FOUNDATION_TFVARS_FILE: ${{ github.workspace }}/terraform/foundation/terraform.dev.tfvars

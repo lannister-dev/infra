@@ -66,7 +66,7 @@ Development-specific notes:
   - set `DEV_POSTGRES_PASSWORD` and `DEV_REDIS_PASSWORD` (legacy aliases `DATA_DEV_*` are supported)
 - If you want managed prod data services in swarm:
   - `DEPLOY_DATA_PROD_STACK=true`
-  - set `DATA_PROD_POSTGRES_PASSWORD` and `DATA_PROD_REDIS_PASSWORD`
+  - set `PROD_POSTGRES_PASSWORD` and `PROD_REDIS_PASSWORD`
 
 ## 3. VPN node lifecycle
 
