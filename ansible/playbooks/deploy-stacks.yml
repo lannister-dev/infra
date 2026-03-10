@@ -2,7 +2,7 @@
 - name: Deploy Swarm stacks
   hosts: swarm_managers
   gather_facts: false
-  become: true
+  become: false
 
   vars:
     required_networks:
