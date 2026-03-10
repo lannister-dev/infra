@@ -1,7 +1,7 @@
 # Declarative VPN topology for development environment.
 
-# Allow empty set during initial bootstrap; set to false after first dev nodes are provisioned.
-allow_empty_vpn_nodes = true
+# Safety guard: do not allow accidental full decommission from empty dev catalog.
+allow_empty_vpn_nodes = false
 
 # 1) Manual nodes by public IP (optional fallback mode)
 vpn_nodes = {}
