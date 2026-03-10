@@ -2,12 +2,33 @@
 - name: Deploy data stacks
   hosts: swarm_managers
   gather_facts: false
-  become: true
+  become: false
 
   tasks:
     - name: End play when no data stacks are enabled
       ansible.builtin.meta: end_play
       when: not deploy_data_dev_stack and not deploy_data_prod_stack
+
+    - name: Read local Docker Swarm state
+      ansible.builtin.command:
+        argv:
+          - docker
+          - info
+          - --format
+          - "{{ '{{.Swarm.LocalNodeState}} {{.Swarm.ControlAvailable}}' }}"
+      register: docker_swarm_state_cmd
+      changed_when: false
+
+    - name: Ensure workflow runs on an active Swarm manager
+      ansible.builtin.assert:
+        that:
+          - (docker_swarm_state_cmd.stdout | trim).split(' ') | length >= 2
+          - ((docker_swarm_state_cmd.stdout | trim).split(' '))[0] == 'active'
+          - ((docker_swarm_state_cmd.stdout | trim).split(' '))[1] == 'true'
+        fail_msg: >-
+          Data stack deploy must run on an active Swarm manager.
+          Current docker info state: {{ docker_swarm_state_cmd.stdout | trim }}.
+          Verify that the workflow ran on the correct runner and that Docker Swarm manager is healthy.
 
     - name: Validate data-dev secrets when data-dev stack is enabled
       ansible.builtin.assert:
