@@ -1,0 +1,98 @@
+---
+name: Infra Data Deploy Dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy only development data services (postgres/redis)"
+        required: true
+        type: boolean
+        default: true
+      confirm_apply:
+        description: "Type DEV-DATA to confirm development data deployment."
+        required: true
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-dev-data-deploy
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  checks:
+    uses: ./.github/workflows/infra-checks-reusable.yml
+
+  deploy-dev-data:
+    if: ${{ inputs.deploy == true && inputs.confirm_apply == 'DEV-DATA' }}
+    needs: checks
+    runs-on: [self-hosted, dev]
+    timeout-minutes: 45
+    environment:
+      name: development
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write runtime env
+        env:
+          INFRA_ENV_DEV: ${{ secrets.INFRA_ENV_DEV }}
+        run: |
+          set -Eeuo pipefail
+          test -n "${INFRA_ENV_DEV}" || { echo "::error::Missing secret INFRA_ENV_DEV"; exit 1; }
+          ENV_FILE="${RUNNER_TEMP}/infra.dev.env"
+          printf '%s\n' "${INFRA_ENV_DEV}" > "${ENV_FILE}"
+          chmod 600 "${ENV_FILE}"
+          echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
+
+      - name: Validate development data-only guardrails
+        run: |
+          set -Eeuo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          if [ -z "${TF_STATE_KEY_PREFIX:-}" ]; then
+            echo "::error::TF_STATE_KEY_PREFIX must be set in INFRA_ENV_DEV"
+            exit 1
+          fi
+          if ! printf '%s' "${TF_STATE_KEY_PREFIX}" | grep -Eq '(^|/)dev($|/)'; then
+            echo "::error::TF_STATE_KEY_PREFIX must target dev scope (contains '/dev'): current='${TF_STATE_KEY_PREFIX}'"
+            exit 1
+          fi
+          if [ "${DEPLOY_DATA_PROD_STACK:-false}" = "true" ]; then
+            echo "::error::DEPLOY_DATA_PROD_STACK=true is forbidden in Infra Data Deploy Dev"
+            exit 1
+          fi
+          if [ "${DEPLOY_DATA_DEV_STACK:-false}" != "true" ]; then
+            echo "::error::DEPLOY_DATA_DEV_STACK=true is required for Infra Data Deploy Dev"
+            exit 1
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements/dev.txt
+            requirements/base.txt
+
+      - name: Install Ansible
+        run: python -m pip install --upgrade pip ansible
+
+      - name: Deploy development data stack
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export REPO_ROOT="${GITHUB_WORKSPACE}"
+          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          ansible-playbook -i ansible/inventory/development.ini \
+            ansible/playbooks/deploy-data-stacks.yml
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "${INFRA_ENV_FILE:-}"

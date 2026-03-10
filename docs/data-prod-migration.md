@@ -21,7 +21,18 @@ Deploy:
 ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-stacks.yml
 ```
 
-Managed endpoints in `vpn-net`:
+For a data-only rollout, use:
+
+```bash
+ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-data-stacks.yml
+```
+
+GitHub Actions alternative:
+
+- workflow `Infra Data Deploy`
+- `confirm_apply=PROD-DATA`
+
+Managed endpoints in `data-prod-net`:
 - Postgres: `postgres-prod:5432`
 - Redis: `redis-prod:6379`
 

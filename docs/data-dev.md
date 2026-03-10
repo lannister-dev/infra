@@ -22,6 +22,11 @@ DEV_POSTGRES_PASSWORD=replace_with_strong_password
 DEV_REDIS_PASSWORD=replace_with_strong_password
 ```
 
+Recommended deployment path:
+
+- GitHub Actions workflow `Infra Data Deploy Dev`
+- or `ansible-playbook -i ansible/inventory/development.ini ansible/playbooks/deploy-data-stacks.yml`
+
 Optional overrides:
 
 ```bash
@@ -37,9 +42,10 @@ Playbook auto-creates swarm secrets when missing:
 - `data_dev_postgres_password`
 - `data_dev_redis_password`
 
-## Service endpoints (inside `vpn-net`)
+## Service endpoints (inside `data-dev-net`)
 
 - Postgres: `postgres-dev:5432`
 - Redis: `redis-dev:6379`
 
-Use these endpoints from services attached to `vpn-net`.
+Use these endpoints from services attached to `data-dev-net`.
+Dev data services are intentionally isolated from `vpn-net`.

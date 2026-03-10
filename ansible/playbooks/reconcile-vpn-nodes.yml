@@ -395,6 +395,26 @@
         state: started
         enabled: true
 
+    - name: Set system hostname to peer_name
+      ansible.builtin.hostname:
+        name: "{{ peer_name }}"
+
+    - name: Verify effective hostname
+      ansible.builtin.command:
+        argv:
+          - hostnamectl
+          - --static
+      register: effective_hostname_cmd
+      changed_when: false
+
+    - name: Ensure effective hostname matches peer_name
+      ansible.builtin.assert:
+        that:
+          - (effective_hostname_cmd.stdout | trim) == peer_name
+        fail_msg: >-
+          Effective hostname must match peer_name/node_key.
+          Expected {{ peer_name }}, got {{ effective_hostname_cmd.stdout | trim }}.
+
     - name: Read WireGuard client config from manager
       ansible.builtin.slurp:
         src: "/etc/wireguard/clients/{{ peer_name }}-wg0.conf"
