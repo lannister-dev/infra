@@ -7,6 +7,8 @@
 #   TF_STATE_ENDPOINT, TF_STATE_ACCESS_KEY, …              (optional)
 #   TF_PROVIDER_MIRROR_URL | TF_CLI_CONFIG_CONTENT[_B64]   (optional)
 #   APPLY_INFRA_NODES=true|false                            (optional)
+#   FOUNDATION_TFVARS_FILE / NODES_TFVARS_FILE /
+#   INFRA_NODES_TFVARS_FILE                                 (optional)
 #
 # Outputs (written to GITHUB_ENV when running in Actions):
 #   PROMETHEUS_CONFIG_NAME, GRAFANA_INI_CONFIG_NAME, …
@@ -20,6 +22,10 @@ set -u
 
 GITHUB_ENV="${GITHUB_ENV:-/dev/null}"
 NODES_REPLACE_ARGS=()
+
+FOUNDATION_TFVARS_FILE="${FOUNDATION_TFVARS_FILE:-}"
+NODES_TFVARS_FILE="${NODES_TFVARS_FILE:-}"
+INFRA_NODES_TFVARS_FILE="${INFRA_NODES_TFVARS_FILE:-}"
 
 # ----- provider mirror --------------------------------------------------
 # Sets _TF_MIRROR_CFG_TMP (path to temp file) for cleanup by caller.
@@ -77,6 +83,15 @@ write_backend_config() {
   chmod 600 "${out}"
 }
 
+validate_tfvars_file() {
+  local file_path="$1" root="$2"
+  [ -n "${file_path}" ] || return 0
+  if [ ! -f "${file_path}" ]; then
+    echo "::error::Missing tfvars file for terraform/${root}: ${file_path}"
+    exit 1
+  fi
+}
+
 # ----- export foundation config names -----------------------------------
 export_config_names() {
   terraform -chdir="terraform/foundation" output -json docker_config_names \
@@ -124,6 +139,40 @@ prepare_nodes_replace_args() {
   fi
 }
 
+plan_apply_root() {
+  local root="$1"
+  local tfvars_file="$2"
+  local backend_file
+  local -a plan_args=()
+
+  backend_file="$(mktemp)"
+  write_backend_config "${root}.tfstate" "${backend_file}"
+
+  unset TF_VAR_inventory_output_path
+  case "${root}" in
+    nodes)       export TF_VAR_inventory_output_path="${INVENTORY_OUTPUT_PATH:-}" ;;
+    infra-nodes) export TF_VAR_inventory_output_path="${INFRA_NODES_OUTPUT_PATH:-}" ;;
+  esac
+
+  terraform -chdir="terraform/${root}" init -input=false -backend-config="${backend_file}"
+
+  plan_args=(-input=false -out=tfplan)
+  if [ -n "${tfvars_file}" ]; then
+    plan_args+=("-var-file=${tfvars_file}")
+  fi
+
+  if [ "${root}" = "nodes" ] && [ "${#NODES_REPLACE_ARGS[@]}" -gt 0 ]; then
+    plan_args+=("${NODES_REPLACE_ARGS[@]}")
+  fi
+
+  terraform -chdir="terraform/${root}" plan "${plan_args[@]}"
+  terraform -chdir="terraform/${root}" apply -input=false -auto-approve tfplan
+
+  [ "${root}" != "foundation" ] || export_config_names
+
+  rm -f "${backend_file}" "terraform/${root}/tfplan"
+}
+
 # ----- main --------------------------------------------------------------
 main() {
   # Convert IAC_TFVAR_* → TF_VAR_*
@@ -135,35 +184,20 @@ main() {
   setup_provider_mirror
   prepare_nodes_replace_args
 
+  validate_tfvars_file "${FOUNDATION_TFVARS_FILE}" "foundation"
+  validate_tfvars_file "${NODES_TFVARS_FILE}" "nodes"
+  validate_tfvars_file "${INFRA_NODES_TFVARS_FILE}" "infra-nodes"
+
   local roots=(foundation nodes)
   [ "${APPLY_INFRA_NODES:-false}" != "true" ] || roots+=(infra-nodes)
 
   for root in "${roots[@]}"; do
     echo "::group::terraform/${root}"
-
-    local backend_file
-    backend_file="$(mktemp)"
-    write_backend_config "${root}.tfstate" "${backend_file}"
-
-    unset TF_VAR_inventory_output_path
     case "${root}" in
-      nodes)       export TF_VAR_inventory_output_path="${INVENTORY_OUTPUT_PATH:-}" ;;
-      infra-nodes) export TF_VAR_inventory_output_path="${INFRA_NODES_OUTPUT_PATH:-}" ;;
+      foundation)  plan_apply_root "${root}" "${FOUNDATION_TFVARS_FILE}" ;;
+      nodes)       plan_apply_root "${root}" "${NODES_TFVARS_FILE}" ;;
+      infra-nodes) plan_apply_root "${root}" "${INFRA_NODES_TFVARS_FILE}" ;;
     esac
-
-    terraform -chdir="terraform/${root}" init -input=false -backend-config="${backend_file}"
-
-    if [ "${root}" = "nodes" ] && [ "${#NODES_REPLACE_ARGS[@]}" -gt 0 ]; then
-      terraform -chdir="terraform/${root}" plan -input=false "${NODES_REPLACE_ARGS[@]}" -out=tfplan
-    else
-      terraform -chdir="terraform/${root}" plan -input=false -out=tfplan
-    fi
-
-    terraform -chdir="terraform/${root}" apply -input=false -auto-approve tfplan
-
-    [ "${root}" != "foundation" ] || export_config_names
-
-    rm -f "${backend_file}" "terraform/${root}/tfplan"
     echo "::endgroup::"
   done
 
