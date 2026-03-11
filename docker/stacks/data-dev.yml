@@ -38,10 +38,17 @@ services:
         constraints:
           - node.role == manager
           - node.labels.kind == dev
+      labels:
+        - "traefik.enable=true"
+        - "traefik.tcp.routers.postgres-dev.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.postgres-dev.entrypoints=postgres-dev"
+        - "traefik.tcp.routers.postgres-dev.service=postgres-dev-svc"
+        - "traefik.tcp.services.postgres-dev-svc.loadbalancer.server.port=5432"
     networks:
       data-dev-net:
         aliases:
           - postgres-dev
+      traefik_swarm:
 
   redis:
     image: redis:${REDIS_IMAGE_TAG}
@@ -65,10 +72,17 @@ services:
         constraints:
           - node.role == manager
           - node.labels.kind == dev
+      labels:
+        - "traefik.enable=true"
+        - "traefik.tcp.routers.redis-dev.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.redis-dev.entrypoints=redis-dev"
+        - "traefik.tcp.routers.redis-dev.service=redis-dev-svc"
+        - "traefik.tcp.services.redis-dev-svc.loadbalancer.server.port=6379"
     networks:
       data-dev-net:
         aliases:
           - redis-dev
+      traefik_swarm:
 
 volumes:
   data_dev_postgres_data:
@@ -80,6 +94,8 @@ networks:
   data-dev-net:
     external: true
     name: ${DATA_DEV_NETWORK_NAME:-data-dev-net}
+  traefik_swarm:
+    external: true
 
 secrets:
   data_dev_postgres_password:
