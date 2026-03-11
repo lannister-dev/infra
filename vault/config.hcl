@@ -7,7 +7,7 @@ listener "tcp" {
 }
 
 storage "raft" {
-  path = "/data"
+  path = "/vault/data"
   node_id = "node1"
   retry_join = [
         {
