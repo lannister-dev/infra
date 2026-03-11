@@ -11,8 +11,8 @@ In `INFRA_ENV_PROD`:
 DEPLOY_DATA_PROD_STACK=true
 PROD_POSTGRES_DB=vpn_control
 PROD_POSTGRES_USER=vpn_prod_user
-PROD_POSTGRES_PASSWORD=replace_with_strong_password
-PROD_REDIS_PASSWORD=replace_with_strong_password
+PROD_POSTGRES_PASSWORD=<strong_password>
+PROD_REDIS_PASSWORD=<strong_password>
 ```
 
 Deploy:

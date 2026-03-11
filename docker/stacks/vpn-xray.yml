@@ -13,9 +13,11 @@ x-deploy-common: &deploy-common
       - node.labels.channel != dev
   update_config:
     order: start-first
+    monitor: 2m
     failure_action: rollback
   rollback_config:
     order: start-first
+    monitor: 2m
   restart_policy:
     condition: any
 
@@ -27,9 +29,11 @@ x-node-agent-deploy-common: &node-agent-deploy-common
       - node.labels.channel != dev
   update_config:
     order: stop-first
+    monitor: 2m
     failure_action: rollback
   rollback_config:
     order: stop-first
+    monitor: 2m
   restart_policy:
     condition: any
 
