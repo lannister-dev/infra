@@ -15,6 +15,9 @@ x-deploy-common: &deploy-common
 services:
   vault:
     image: vault:${VAULT_IMAGE_TAG:-1.13.3}
+    user: "0:0"
+    cap_add:
+      - IPC_LOCK
     command:
       - server
       - -config=/vault/config/vault.hcl
@@ -23,7 +26,7 @@ services:
       - monitoring
       - vpn-net
     volumes:
-      - vault_data:/data
+      - vault_data:/vault/data
     configs:
       - source: vault_config
         target: /vault/config/vault.hcl
