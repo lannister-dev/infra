@@ -22,8 +22,8 @@ TF_VAR_vpn_domain=example.com
 TF_VAR_vpn_ws_path=/api/v1/stream
 TF_VAR_vpn_xhttp_path=/api/v1/mobile
 TF_VAR_vpn_reality_server_name=www.cloudflare.com
-TF_VAR_vpn_reality_private_key=REPLACE_WITH_X25519_PRIVATE_KEY
-TF_VAR_vpn_reality_short_id=REPLACE_WITH_SHORT_ID_HEX
+TF_VAR_vpn_reality_private_key=<x25519_private_key>
+TF_VAR_vpn_reality_short_id=<short_id_hex>
 TF_VAR_vpn_reality_dest_host=www.cloudflare.com
 
 # Foundation TF vars (optional)
@@ -58,6 +58,17 @@ TF_VAR_vpn_dev_reality_dest_host=
 # TF_VAR_hostvds_os_region_name=eu-north1b
 # TF_VAR_hostvds_os_interface=public
 
+# Runtime HostVDS credentials are also required when reconcile_nodes=true,
+# because verify-hostvds-keypairs.py reads HOSTVDS_OS_* directly:
+# HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
+# HOSTVDS_OS_USERNAME=hostvds-...
+# HOSTVDS_OS_PASSWORD=...
+# HOSTVDS_OS_PROJECT_NAME=hostvds-...
+# HOSTVDS_OS_USER_DOMAIN_NAME=Default
+# HOSTVDS_OS_PROJECT_DOMAIN_ID=default
+# HOSTVDS_OS_REGION_NAME=eu-north1b
+# HOSTVDS_OS_INTERFACE=public
+
 # Timeweb (terraform/infra-nodes)
 # TF_VAR_timeweb_api_url=https://api.timeweb.cloud/api/v1
 # TF_VAR_timeweb_api_token=...
@@ -70,7 +81,10 @@ RUN_SANITY_CHECK=true
 DEPLOY_PROBE_STACK=true
 DEPLOY_NATS_STACK=true
 ENABLE_VPN_DEV_STACK=false
-NATS_AUTH_TOKEN=replace_with_strong_random_token
+NATS_AUTH_TOKEN=<strong_random_token>
+NATS_MONITOR_HOST=nats.example.com
+NATS_MONITOR_AUTH_USERS=admin:<htpasswd_hash>
+DEPLOY_DATA_PROD_STACK=false
 FIREWALL_ENFORCE=false
 FIREWALL_ADMIN_CIDRS=203.0.113.10/32
 FIREWALL_NATS_CLIENT_CIDRS=198.51.100.20/32
@@ -88,6 +102,34 @@ FIREWALL_NATS_CLIENT_CIDRS=198.51.100.20/32
 # NATS_IMAGE_TAG=2.11-alpine
 # NATS_EXPORTER_IMAGE_TAG=0.19.1
 # VAULT_IMAGE_TAG=1.13.3
+# POSTGRES_IMAGE_TAG=16-alpine
+# REDIS_IMAGE_TAG=7-alpine
+# DATA_PROD_NETWORK_NAME=data-prod-net
+
+# External data services precheck (leave disabled when prod data is deployed from this repo)
+EXTERNAL_DATA_PRECHECK_ENABLED=false
+# EXTERNAL_POSTGRES_HOST=prod-postgres.internal.example.com
+# EXTERNAL_POSTGRES_PORT=5432
+# EXTERNAL_REDIS_HOST=prod-redis.internal.example.com
+# EXTERNAL_REDIS_PORT=6379
+# EXTERNAL_DATA_PRECHECK_TIMEOUT=10
+
+# Edge / dashboard settings
+TRAEFIK_ACME_EMAIL=ops@example.com
+TRAEFIK_DASHBOARD_HOST=traefik.example.com
+TRAEFIK_DASHBOARD_AUTH_USERS=admin:<bcrypt_hash>
+TRAEFIK_WEB_FORWARDED_HEADERS_INSECURE=false
+TRAEFIK_WEBSECURE_FORWARDED_HEADERS_INSECURE=false
+PROMETHEUS_HOST=prometheus.example.com
+PROMETHEUS_AUTH_USERS=admin:<htpasswd_hash>
+GRAFANA_HOST=grafana.example.com
+
+# Managed data-prod stack
+DEPLOY_DATA_PROD_STACK=true
+PROD_POSTGRES_DB=vpn_control
+PROD_POSTGRES_USER=vpn_prod_user
+PROD_POSTGRES_PASSWORD=<strong_password>
+PROD_REDIS_PASSWORD=<strong_password>
 
 # ---- Generic alias style (alternative to TF_VAR_*) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity

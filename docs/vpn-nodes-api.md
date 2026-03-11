@@ -79,15 +79,17 @@ For `provider=hostvds`:
 
 ## Lifecycle semantics
 
-- `enabled = false`: node removed from desired cluster state, VM remains.
-- Removing key from `provider_compute_vpn_nodes`: VM is destroyed.
+- `enabled = false`: node is deactivated from desired cluster state, VM may remain.
+- Removing key from `provider_compute_vpn_nodes`: destructive follow-up action, not the default lifecycle.
 
 ## Provider rotation algorithm (ban/failure scenario)
 
-1. Mark failed node as `enabled = false` (or remove key).
+1. Drain the old node in Swarm.
 2. Add replacement entry in `provider_api_vpn_nodes` or `provider_compute_vpn_nodes`.
 3. Run Terraform + reconcile playbook.
-4. After drain/decommission confirmation, remove old entry completely.
+4. Verify replacement node health and traffic.
+5. Mark old node `enabled = false`.
+6. Only after deactivation confirmation, remove old entry completely if compute destroy is intended.
 
 ## Legacy compatibility
 

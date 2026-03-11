@@ -32,14 +32,14 @@ services:
         condition: any
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.nats-monitor.rule=Host(`nats.lannister-dev.ru`)"
+        - "traefik.http.routers.nats-monitor.rule=Host(`${NATS_MONITOR_HOST}`)"
         - "traefik.http.routers.nats-monitor.entrypoints=websecure"
         - "traefik.http.routers.nats-monitor.tls=true"
+        - "traefik.http.routers.nats-monitor.tls.certresolver=cf"
         - "traefik.http.routers.nats-monitor.service=nats-monitor"
-        - "--entrypoints.websecure.http.tls.certresolver=cf"
         - "traefik.http.routers.nats-monitor.middlewares=nats-auth@swarm"
         - "traefik.http.services.nats-monitor.loadbalancer.server.port=8222"
-        - "traefik.http.middlewares.nats-auth.basicauth.users=admin:$$apr1$$pJrubxMY$$Dvvcwt08XWViGWk/21qv9/"
+        - "traefik.http.middlewares.nats-auth.basicauth.users=${NATS_MONITOR_AUTH_USERS}"
         # TCP client endpoint (node-agent/control-plane)
         - "traefik.tcp.routers.nats-client.rule=HostSNI(`*`)"
         - "traefik.tcp.routers.nats-client.entrypoints=nats"
@@ -47,6 +47,9 @@ services:
         - "traefik.tcp.services.nats-client-svc.loadbalancer.server.port=4222"
     networks:
       vpn-net:
+        aliases:
+          - nats
+      vpn-dev-net:
         aliases:
           - nats
       monitoring:
@@ -89,6 +92,9 @@ networks:
     external: true
   vpn-net:
     external: true
+  vpn-dev-net:
+    external: true
+    name: ${VPN_DEV_NETWORK_NAME:-vpn-dev-net}
   traefik_swarm:
     external: true
 

@@ -1,0 +1,292 @@
+---
+- name: Deploy development-only Swarm stacks
+  hosts: swarm_managers
+  gather_facts: false
+  become: false
+
+  vars:
+    required_networks:
+      - traefik_swarm
+      - monitoring
+      - vpn-net
+
+  tasks:
+    - name: Check required shared networks for dev stacks
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - inspect
+          - "{{ item }}"
+      loop: "{{ required_networks }}"
+      changed_when: false
+
+    - name: Check dev docker config when vpn-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - config
+          - inspect
+          - "{{ xray_config_dev_name }}"
+      when: enable_vpn_dev_stack
+      changed_when: false
+
+    - name: Check required swarm secret bootstrap_token when vpn-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - bootstrap_token
+      when: enable_vpn_dev_stack
+      changed_when: false
+
+    - name: Check required swarm secret probe_token when probe is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - probe_token
+      when: deploy_probe_stack
+      changed_when: false
+
+    - name: Check vpn-dev overlay network when required by vpn-dev or nats
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - inspect
+          - "{{ vpn_dev_network_name }}"
+      when: enable_vpn_dev_stack or deploy_nats_stack
+      register: vpn_dev_network_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create vpn-dev overlay network when missing
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - create
+          - --driver
+          - overlay
+          - --attachable
+          - "{{ vpn_dev_network_name }}"
+      when:
+        - enable_vpn_dev_stack or deploy_nats_stack
+        - vpn_dev_network_inspect.rc != 0
+      changed_when: true
+
+    - name: Validate NATS auth settings when nats is enabled
+      ansible.builtin.assert:
+        that:
+          - (nats_auth_token | trim | length) > 0
+          - (nats_monitor_host | trim | length) > 0
+          - (nats_monitor_auth_users | trim | length) > 0
+        fail_msg: >-
+          DEPLOY_NATS_STACK=true requires:
+          NATS_AUTH_TOKEN, NATS_MONITOR_HOST, NATS_MONITOR_AUTH_USERS.
+      when: deploy_nats_stack
+      changed_when: false
+
+    - name: Validate data-dev secrets when data-dev stack is enabled
+      ansible.builtin.assert:
+        that:
+          - (data_dev_postgres_password | trim | length) > 0
+          - (data_dev_redis_password | trim | length) > 0
+        fail_msg: >-
+          DEPLOY_DATA_DEV_STACK=true requires:
+          DEV_POSTGRES_PASSWORD and DEV_REDIS_PASSWORD.
+      when: deploy_data_dev_stack
+      changed_when: false
+
+    - name: Check nats_auth_token secret when nats is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - nats_auth_token
+      when: deploy_nats_stack
+      register: nats_auth_secret_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create nats_auth_token secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$NATS_AUTH_TOKEN" | docker secret create nats_auth_token -
+      args:
+        executable: /bin/bash
+      environment:
+        NATS_AUTH_TOKEN: "{{ nats_auth_token }}"
+      when:
+        - deploy_nats_stack
+        - nats_auth_secret_inspect.rc != 0
+      no_log: true
+      changed_when: true
+
+    - name: Check data_dev_postgres_password secret when data-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - data_dev_postgres_password
+      when: deploy_data_dev_stack
+      register: data_dev_pg_secret_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create data_dev_postgres_password secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$DEV_POSTGRES_PASSWORD" | docker secret create data_dev_postgres_password -
+      args:
+        executable: /bin/bash
+      environment:
+        DEV_POSTGRES_PASSWORD: "{{ data_dev_postgres_password }}"
+      when:
+        - deploy_data_dev_stack
+        - data_dev_pg_secret_inspect.rc != 0
+      no_log: true
+      changed_when: true
+
+    - name: Check data_dev_redis_password secret when data-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - data_dev_redis_password
+      when: deploy_data_dev_stack
+      register: data_dev_redis_secret_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create data_dev_redis_password secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$DEV_REDIS_PASSWORD" | docker secret create data_dev_redis_password -
+      args:
+        executable: /bin/bash
+      environment:
+        DEV_REDIS_PASSWORD: "{{ data_dev_redis_password }}"
+      when:
+        - deploy_data_dev_stack
+        - data_dev_redis_secret_inspect.rc != 0
+      no_log: true
+      changed_when: true
+
+    - name: Check data-dev overlay network when data-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - inspect
+          - "{{ data_dev_network_name }}"
+      when: deploy_data_dev_stack
+      register: data_dev_network_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create data-dev overlay network when missing
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - create
+          - --driver
+          - overlay
+          - --attachable
+          - "{{ data_dev_network_name }}"
+      when:
+        - deploy_data_dev_stack
+        - data_dev_network_inspect.rc != 0
+      changed_when: true
+
+    - name: Deploy nats stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/nats.yml
+          - nats
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        NATS_IMAGE_TAG: "{{ nats_image_tag }}"
+        NATS_EXPORTER_IMAGE_TAG: "{{ nats_exporter_image_tag }}"
+        NATS_MONITOR_HOST: "{{ nats_monitor_host }}"
+        NATS_MONITOR_AUTH_USERS: "{{ nats_monitor_auth_users }}"
+        VPN_DEV_NETWORK_NAME: "{{ vpn_dev_network_name }}"
+      when: deploy_nats_stack
+      no_log: true
+      changed_when: false
+
+    - name: Deploy data-dev stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/data-dev.yml
+          - data-dev
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        POSTGRES_IMAGE_TAG: "{{ postgres_image_tag }}"
+        REDIS_IMAGE_TAG: "{{ redis_image_tag }}"
+        POSTGRES_DB_NAME: "{{ data_dev_postgres_db }}"
+        POSTGRES_DB_USER: "{{ data_dev_postgres_user }}"
+        DATA_DEV_NETWORK_NAME: "{{ data_dev_network_name }}"
+      when: deploy_data_dev_stack
+      changed_when: false
+
+    - name: Deploy vpn-dev stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/vpn-xray-dev.yml
+          - vpn-dev
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        XRAY_CONFIG_DEV_NAME: "{{ xray_config_dev_name }}"
+        VPN_DEV_DOMAIN: "{{ vpn_dev_domain }}"
+        VPN_DEV_WS_PATH: "{{ vpn_dev_ws_path }}"
+        VPN_DEV_XHTTP_PATH: "{{ vpn_dev_xhttp_path }}"
+        VPN_DEV_NETWORK_NAME: "{{ vpn_dev_network_name }}"
+        XRAY_IMAGE_TAG: "{{ xray_image_tag }}"
+        NODE_AGENT_IMAGE_REF_DEV: "{{ node_agent_image_ref_dev }}"
+      when: enable_vpn_dev_stack
+      changed_when: false
+
+    - name: Deploy probe stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/probe.yml
+          - probe
+      args:
+        chdir: "{{ repo_root }}"
+      when: deploy_probe_stack
+      changed_when: false

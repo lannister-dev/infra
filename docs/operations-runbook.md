@@ -45,7 +45,28 @@ ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-st
 CI policy:
 - `.github/workflows/infra-ci.yml`: checks only on `pull_request` and `push/main`.
 - `.github/workflows/infra-deploy.yml`: production apply only from `workflow_dispatch` with `confirm_apply=APPLY`.
+- `.github/workflows/infra-deploy-dev.yml`: development apply from `workflow_dispatch` with `confirm_apply=DEV`.
 - Terraform variables in CI are centralized via `TF_VAR_*` (or `IAC_TFVAR_*` aliases).
+
+Development-specific notes:
+- Configure separate GitHub secret `INFRA_ENV_DEV`.
+- Configure node-agent env secret in GitHub environment `development`:
+  - `NODE_AGENT_ENV_DEV` (plain multiline) or `NODE_AGENT_ENV_DEV_B64` (base64).
+- Use dedicated state prefix in `INFRA_ENV_DEV`, for example `TF_STATE_KEY_PREFIX=vpn-infra/dev`.
+- Dev workflow uses explicit var-files:
+  - `terraform/foundation/terraform.dev.tfvars`
+  - `terraform/nodes/catalog.dev.tfvars`
+  - `terraform/infra-nodes/catalog.dev.tfvars`
+- If DB/Redis are hosted outside this repo (manual/external services), enable precheck:
+  - `EXTERNAL_DATA_PRECHECK_ENABLED=true`
+  - `EXTERNAL_POSTGRES_HOST` / `EXTERNAL_POSTGRES_PORT`
+  - `EXTERNAL_REDIS_HOST` / `EXTERNAL_REDIS_PORT`
+- If you want managed dev data services in swarm:
+  - `DEPLOY_DATA_DEV_STACK=true`
+  - set `DEV_POSTGRES_PASSWORD` and `DEV_REDIS_PASSWORD` (legacy aliases `DATA_DEV_*` are supported)
+- If you want managed prod data services in swarm:
+  - `DEPLOY_DATA_PROD_STACK=true`
+  - set `PROD_POSTGRES_PASSWORD` and `PROD_REDIS_PASSWORD`
 
 ## 3. VPN node lifecycle
 

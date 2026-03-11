@@ -1,0 +1,255 @@
+---
+- name: Deploy data stacks
+  hosts: swarm_managers
+  gather_facts: false
+  become: false
+
+  tasks:
+    - name: End play when no data stacks are enabled
+      ansible.builtin.meta: end_play
+      when: not deploy_data_dev_stack and not deploy_data_prod_stack
+
+    - name: Read local Docker Swarm state
+      ansible.builtin.command:
+        argv:
+          - docker
+          - info
+          - --format
+          - "{{ '{{.Swarm.LocalNodeState}} {{.Swarm.ControlAvailable}}' }}"
+      register: docker_swarm_state_cmd
+      changed_when: false
+
+    - name: Ensure workflow runs on an active Swarm manager
+      ansible.builtin.assert:
+        that:
+          - (docker_swarm_state_cmd.stdout | trim).split(' ') | length >= 2
+          - ((docker_swarm_state_cmd.stdout | trim).split(' '))[0] == 'active'
+          - ((docker_swarm_state_cmd.stdout | trim).split(' '))[1] == 'true'
+        fail_msg: >-
+          Data stack deploy must run on an active Swarm manager.
+          Current docker info state: {{ docker_swarm_state_cmd.stdout | trim }}.
+          Verify that the workflow ran on the correct runner and that Docker Swarm manager is healthy.
+
+    - name: Validate data-dev secrets when data-dev stack is enabled
+      ansible.builtin.assert:
+        that:
+          - (data_dev_postgres_password | trim | length) > 0
+          - (data_dev_redis_password | trim | length) > 0
+        fail_msg: >-
+          DEPLOY_DATA_DEV_STACK=true requires:
+          DEV_POSTGRES_PASSWORD and DEV_REDIS_PASSWORD.
+      when: deploy_data_dev_stack
+      changed_when: "false"
+
+    - name: Validate data-prod secrets when data-prod stack is enabled
+      ansible.builtin.assert:
+        that:
+          - (data_prod_postgres_password | trim | length) > 0
+          - (data_prod_redis_password | trim | length) > 0
+        fail_msg: >-
+          DEPLOY_DATA_PROD_STACK=true requires:
+          PROD_POSTGRES_PASSWORD and PROD_REDIS_PASSWORD.
+      when: deploy_data_prod_stack
+      changed_when: "false"
+
+    - name: Check data_dev_postgres_password secret when data-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - data_dev_postgres_password
+      when: deploy_data_dev_stack
+      register: data_dev_pg_secret_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create data_dev_postgres_password secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$DEV_POSTGRES_PASSWORD" | docker secret create data_dev_postgres_password -
+      args:
+        executable: /bin/bash
+      environment:
+        DEV_POSTGRES_PASSWORD: "{{ data_dev_postgres_password }}"
+      when:
+        - deploy_data_dev_stack
+        - data_dev_pg_secret_inspect.rc != 0
+      no_log: true
+      changed_when: true
+
+    - name: Check data_dev_redis_password secret when data-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - data_dev_redis_password
+      when: deploy_data_dev_stack
+      register: data_dev_redis_secret_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create data_dev_redis_password secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$DEV_REDIS_PASSWORD" | docker secret create data_dev_redis_password -
+      args:
+        executable: /bin/bash
+      environment:
+        DEV_REDIS_PASSWORD: "{{ data_dev_redis_password }}"
+      when:
+        - deploy_data_dev_stack
+        - data_dev_redis_secret_inspect.rc != 0
+      no_log: true
+      changed_when: true
+
+    - name: Check data_prod_postgres_password secret when data-prod is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - data_prod_postgres_password
+      when: deploy_data_prod_stack
+      register: data_prod_pg_secret_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create data_prod_postgres_password secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$PROD_POSTGRES_PASSWORD" | docker secret create data_prod_postgres_password -
+      args:
+        executable: /bin/bash
+      environment:
+        PROD_POSTGRES_PASSWORD: "{{ data_prod_postgres_password }}"
+      when:
+        - deploy_data_prod_stack
+        - data_prod_pg_secret_inspect.rc != 0
+      no_log: true
+      changed_when: true
+
+    - name: Check data_prod_redis_password secret when data-prod is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - data_prod_redis_password
+      when: deploy_data_prod_stack
+      register: data_prod_redis_secret_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create data_prod_redis_password secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$PROD_REDIS_PASSWORD" | docker secret create data_prod_redis_password -
+      args:
+        executable: /bin/bash
+      environment:
+        PROD_REDIS_PASSWORD: "{{ data_prod_redis_password }}"
+      when:
+        - deploy_data_prod_stack
+        - data_prod_redis_secret_inspect.rc != 0
+      no_log: true
+      changed_when: true
+
+    - name: Check data-dev overlay network when data-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - inspect
+          - "{{ data_dev_network_name }}"
+      when: deploy_data_dev_stack
+      register: data_dev_network_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create data-dev overlay network when missing
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - create
+          - --driver
+          - overlay
+          - --attachable
+          - "{{ data_dev_network_name }}"
+      when:
+        - deploy_data_dev_stack
+        - data_dev_network_inspect.rc != 0
+      changed_when: true
+
+    - name: Check data-prod overlay network when data-prod is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - inspect
+          - "{{ data_prod_network_name }}"
+      when: deploy_data_prod_stack
+      register: data_prod_network_inspect
+      failed_when: false
+      changed_when: false
+
+    - name: Create data-prod overlay network when missing
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - create
+          - --driver
+          - overlay
+          - --attachable
+          - "{{ data_prod_network_name }}"
+      when:
+        - deploy_data_prod_stack
+        - data_prod_network_inspect.rc != 0
+      changed_when: true
+
+    - name: Deploy data-dev stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/data-dev.yml
+          - data-dev
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        POSTGRES_IMAGE_TAG: "{{ postgres_image_tag }}"
+        REDIS_IMAGE_TAG: "{{ redis_image_tag }}"
+        POSTGRES_DB_NAME: "{{ data_dev_postgres_db }}"
+        POSTGRES_DB_USER: "{{ data_dev_postgres_user }}"
+        DATA_DEV_NETWORK_NAME: "{{ data_dev_network_name }}"
+      when: deploy_data_dev_stack
+      changed_when: "false"
+
+    - name: Deploy data-prod stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/data-prod.yml
+          - data-prod
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        POSTGRES_IMAGE_TAG: "{{ postgres_image_tag }}"
+        REDIS_IMAGE_TAG: "{{ redis_image_tag }}"
+        POSTGRES_DB_NAME: "{{ data_prod_postgres_db }}"
+        POSTGRES_DB_USER: "{{ data_prod_postgres_user }}"
+        DATA_PROD_NETWORK_NAME: "{{ data_prod_network_name }}"
+      when: deploy_data_prod_stack
+      changed_when: "false"

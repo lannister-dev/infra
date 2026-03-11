@@ -2,7 +2,7 @@
 - name: Deploy Swarm stacks
   hosts: swarm_managers
   gather_facts: false
-  become: true
+  become: false
 
   vars:
     required_networks:
@@ -64,6 +64,33 @@
       when: enable_vpn_dev_stack
       changed_when: "false"
 
+    - name: Check vpn-dev overlay network when required by vpn-dev or nats
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - inspect
+          - "{{ vpn_dev_network_name }}"
+      when: enable_vpn_dev_stack or deploy_nats_stack
+      register: vpn_dev_network_inspect
+      failed_when: false
+      changed_when: "false"
+
+    - name: Create vpn-dev overlay network when missing
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - create
+          - --driver
+          - overlay
+          - --attachable
+          - "{{ vpn_dev_network_name }}"
+      when:
+        - enable_vpn_dev_stack or deploy_nats_stack
+        - vpn_dev_network_inspect.rc != 0
+      changed_when: "true"
+
     - name: Check required swarm secret bootstrap_token
       ansible.builtin.command:
         argv:
@@ -87,8 +114,58 @@
       ansible.builtin.assert:
         that:
           - (nats_auth_token | trim | length) > 0
+          - (nats_monitor_host | trim | length) > 0
+          - (nats_monitor_auth_users | trim | length) > 0
         fail_msg: "NATS_AUTH_TOKEN env must be set when nats deployment is enabled."
       when: deploy_nats_stack
+      changed_when: "false"
+
+    - name: Validate Traefik edge settings
+      ansible.builtin.assert:
+        that:
+          - (cf_dns_api_token | trim | length) > 0
+          - (traefik_acme_email | trim | length) > 0
+          - (traefik_dashboard_host | trim | length) > 0
+          - (traefik_dashboard_auth_users | trim | length) > 0
+        fail_msg: >-
+          Traefik deployment requires:
+          CF_DNS_API_TOKEN, TRAEFIK_ACME_EMAIL,
+          TRAEFIK_DASHBOARD_HOST, TRAEFIK_DASHBOARD_AUTH_USERS.
+      changed_when: "false"
+
+    - name: Validate monitoring edge settings
+      ansible.builtin.assert:
+        that:
+          - (prometheus_host | trim | length) > 0
+          - (prometheus_auth_users | trim | length) > 0
+          - (grafana_host | trim | length) > 0
+          - (gf_security_admin_password | trim | length) > 0
+        fail_msg: >-
+          Monitoring deployment requires:
+          PROMETHEUS_HOST, PROMETHEUS_AUTH_USERS,
+          GRAFANA_HOST, GF_SECURITY_ADMIN_PASSWORD.
+      changed_when: "false"
+
+    - name: Validate data-dev secrets when data-dev stack is enabled
+      ansible.builtin.assert:
+        that:
+          - (data_dev_postgres_password | trim | length) > 0
+          - (data_dev_redis_password | trim | length) > 0
+        fail_msg: >-
+          DEPLOY_DATA_DEV_STACK=true requires:
+          DEV_POSTGRES_PASSWORD and DEV_REDIS_PASSWORD.
+      when: deploy_data_dev_stack
+      changed_when: "false"
+
+    - name: Validate data-prod secrets when data-prod stack is enabled
+      ansible.builtin.assert:
+        that:
+          - (data_prod_postgres_password | trim | length) > 0
+          - (data_prod_redis_password | trim | length) > 0
+        fail_msg: >-
+          DEPLOY_DATA_PROD_STACK=true requires:
+          PROD_POSTGRES_PASSWORD and PROD_REDIS_PASSWORD.
+      when: deploy_data_prod_stack
       changed_when: "false"
 
     - name: Check nats_auth_token secret when nats is enabled
@@ -101,7 +178,7 @@
       when: deploy_nats_stack
       register: nats_auth_secret_inspect
       failed_when: false
-      changed_when: false
+      changed_when: "false"
 
     - name: Create nats_auth_token secret when missing
       ansible.builtin.shell: |
@@ -115,7 +192,196 @@
         - deploy_nats_stack
         - nats_auth_secret_inspect.rc != 0
       no_log: true
-      changed_when: true
+      changed_when: "true"
+
+    - name: Check data_dev_postgres_password secret when data-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - data_dev_postgres_password
+      when: deploy_data_dev_stack
+      register: data_dev_pg_secret_inspect
+      failed_when: false
+      changed_when: "false"
+
+    - name: Create data_dev_postgres_password secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$DEV_POSTGRES_PASSWORD" | docker secret create data_dev_postgres_password -
+      args:
+        executable: /bin/bash
+      environment:
+        DEV_POSTGRES_PASSWORD: "{{ data_dev_postgres_password }}"
+      when:
+        - deploy_data_dev_stack
+        - data_dev_pg_secret_inspect.rc != 0
+      no_log: true
+      changed_when: "true"
+
+    - name: Check data_dev_redis_password secret when data-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - data_dev_redis_password
+      when: deploy_data_dev_stack
+      register: data_dev_redis_secret_inspect
+      failed_when: false
+      changed_when: "false"
+
+    - name: Create data_dev_redis_password secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$DEV_REDIS_PASSWORD" | docker secret create data_dev_redis_password -
+      args:
+        executable: /bin/bash
+      environment:
+        DEV_REDIS_PASSWORD: "{{ data_dev_redis_password }}"
+      when:
+        - deploy_data_dev_stack
+        - data_dev_redis_secret_inspect.rc != 0
+      no_log: true
+      changed_when: "true"
+
+    - name: Check data_prod_postgres_password secret when data-prod is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - data_prod_postgres_password
+      when: deploy_data_prod_stack
+      register: data_prod_pg_secret_inspect
+      failed_when: false
+      changed_when: "false"
+
+    - name: Create data_prod_postgres_password secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$PROD_POSTGRES_PASSWORD" | docker secret create data_prod_postgres_password -
+      args:
+        executable: /bin/bash
+      environment:
+        PROD_POSTGRES_PASSWORD: "{{ data_prod_postgres_password }}"
+      when:
+        - deploy_data_prod_stack
+        - data_prod_pg_secret_inspect.rc != 0
+      no_log: true
+      changed_when: "true"
+
+    - name: Check data_prod_redis_password secret when data-prod is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - secret
+          - inspect
+          - data_prod_redis_password
+      when: deploy_data_prod_stack
+      register: data_prod_redis_secret_inspect
+      failed_when: false
+      changed_when: "false"
+
+    - name: Create data_prod_redis_password secret when missing
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        printf '%s' "$PROD_REDIS_PASSWORD" | docker secret create data_prod_redis_password -
+      args:
+        executable: /bin/bash
+      environment:
+        PROD_REDIS_PASSWORD: "{{ data_prod_redis_password }}"
+      when:
+        - deploy_data_prod_stack
+        - data_prod_redis_secret_inspect.rc != 0
+      no_log: true
+      changed_when: "true"
+
+    - name: Check data-dev overlay network when data-dev is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - inspect
+          - "{{ data_dev_network_name }}"
+      when: deploy_data_dev_stack
+      register: data_dev_network_inspect
+      failed_when: false
+      changed_when: "false"
+
+    - name: Create data-dev overlay network when missing
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - create
+          - --driver
+          - overlay
+          - --attachable
+          - "{{ data_dev_network_name }}"
+      when:
+        - deploy_data_dev_stack
+        - data_dev_network_inspect.rc != 0
+      changed_when: "true"
+
+    - name: Check data-prod overlay network when data-prod is enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - inspect
+          - "{{ data_prod_network_name }}"
+      when: deploy_data_prod_stack
+      register: data_prod_network_inspect
+      failed_when: false
+      changed_when: "false"
+
+    - name: Create data-prod overlay network when missing
+      ansible.builtin.command:
+        argv:
+          - docker
+          - network
+          - create
+          - --driver
+          - overlay
+          - --attachable
+          - "{{ data_prod_network_name }}"
+      when:
+        - deploy_data_prod_stack
+        - data_prod_network_inspect.rc != 0
+      changed_when: "true"
+
+    - name: Validate external data services precheck settings
+      ansible.builtin.assert:
+        that:
+          - external_postgres_host | trim | length > 0
+          - external_redis_host | trim | length > 0
+          - (external_postgres_port | int) > 0
+          - (external_redis_port | int) > 0
+        fail_msg: >-
+          EXTERNAL_DATA_PRECHECK_ENABLED=true requires:
+          EXTERNAL_POSTGRES_HOST, EXTERNAL_POSTGRES_PORT,
+          EXTERNAL_REDIS_HOST, EXTERNAL_REDIS_PORT.
+      when: external_data_precheck_enabled
+
+    - name: Check external Postgres TCP reachability
+      ansible.builtin.wait_for:
+        host: "{{ external_postgres_host }}"
+        port: "{{ external_postgres_port | int }}"
+        state: started
+        timeout: "{{ external_data_precheck_timeout | int }}"
+      when: external_data_precheck_enabled
+      changed_when: "false"
+
+    - name: Check external Redis TCP reachability
+      ansible.builtin.wait_for:
+        host: "{{ external_redis_host }}"
+        port: "{{ external_redis_port | int }}"
+        state: started
+        timeout: "{{ external_data_precheck_timeout | int }}"
+      when: external_data_precheck_enabled
+      changed_when: "false"
 
     - name: Deploy traefik stack
       ansible.builtin.command:
@@ -132,6 +398,11 @@
       environment:
         TRAEFIK_IMAGE_TAG: "{{ traefik_image_tag }}"
         CF_DNS_API_TOKEN: "{{ cf_dns_api_token }}"
+        TRAEFIK_ACME_EMAIL: "{{ traefik_acme_email }}"
+        TRAEFIK_DASHBOARD_HOST: "{{ traefik_dashboard_host }}"
+        TRAEFIK_DASHBOARD_AUTH_USERS: "{{ traefik_dashboard_auth_users }}"
+        TRAEFIK_WEB_FORWARDED_HEADERS_INSECURE: "{{ traefik_web_forwarded_headers_insecure }}"
+        TRAEFIK_WEBSECURE_FORWARDED_HEADERS_INSECURE: "{{ traefik_websecure_forwarded_headers_insecure }}"
       no_log: true
       changed_when: "false"
 
@@ -157,6 +428,9 @@
         GF_SECURITY_ADMIN_USER: "{{ gf_security_admin_user }}"
         GF_SECURITY_ADMIN_PASSWORD: "{{ gf_security_admin_password }}"
         GF_USERS_ALLOW_SIGN_UP: "{{ gf_users_allow_sign_up }}"
+        PROMETHEUS_HOST: "{{ prometheus_host }}"
+        PROMETHEUS_AUTH_USERS: "{{ prometheus_auth_users }}"
+        GRAFANA_HOST: "{{ grafana_host }}"
       no_log: true
       changed_when: "false"
 
@@ -193,9 +467,56 @@
       environment:
         NATS_IMAGE_TAG: "{{ nats_image_tag }}"
         NATS_EXPORTER_IMAGE_TAG: "{{ nats_exporter_image_tag }}"
+        NATS_MONITOR_HOST: "{{ nats_monitor_host }}"
+        NATS_MONITOR_AUTH_USERS: "{{ nats_monitor_auth_users }}"
+        VPN_DEV_NETWORK_NAME: "{{ vpn_dev_network_name }}"
       when: deploy_nats_stack
+      no_log: true
       changed_when: "false"
 
+    - name: Deploy data-dev stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/data-dev.yml
+          - data-dev
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        POSTGRES_IMAGE_TAG: "{{ postgres_image_tag }}"
+        REDIS_IMAGE_TAG: "{{ redis_image_tag }}"
+        POSTGRES_DB_NAME: "{{ data_dev_postgres_db }}"
+        POSTGRES_DB_USER: "{{ data_dev_postgres_user }}"
+        DATA_DEV_NETWORK_NAME: "{{ data_dev_network_name }}"
+      when: deploy_data_dev_stack
+      changed_when: "false"
+
+    - name: Deploy data-prod stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/data-prod.yml
+          - data-prod
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        POSTGRES_IMAGE_TAG: "{{ postgres_image_tag }}"
+        REDIS_IMAGE_TAG: "{{ redis_image_tag }}"
+        POSTGRES_DB_NAME: "{{ data_prod_postgres_db }}"
+        POSTGRES_DB_USER: "{{ data_prod_postgres_user }}"
+        DATA_PROD_NETWORK_NAME: "{{ data_prod_network_name }}"
+      when: deploy_data_prod_stack
+      changed_when: "false"
     - name: Deploy vpn stack
       ansible.builtin.command:
         argv:
@@ -220,6 +541,7 @@
         VPN_FALLBACK_DOMAIN: "{{ vpn_fallback_domain }}"
         XRAY_IMAGE_TAG: "{{ xray_image_tag }}"
         NGINX_ALPINE_IMAGE_TAG: "{{ nginx_alpine_image_tag }}"
+        NODE_AGENT_IMAGE_REF: "{{ node_agent_image_ref }}"
       changed_when: "false"
 
     - name: Deploy vpn-dev stack
@@ -241,6 +563,7 @@
         VPN_DEV_WS_PATH: "{{ vpn_dev_ws_path }}"
         VPN_DEV_XHTTP_PATH: "{{ vpn_dev_xhttp_path }}"
         XRAY_IMAGE_TAG: "{{ xray_image_tag }}"
+        NODE_AGENT_IMAGE_REF_DEV: "{{ node_agent_image_ref_dev }}"
       when: enable_vpn_dev_stack
       changed_when: "false"
 
