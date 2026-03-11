@@ -36,9 +36,10 @@ Environment variables are used for stack toggles/secrets/version pins, for examp
 `DEPLOY_NATS_STACK` is enabled by default; disable explicitly with `DEPLOY_NATS_STACK=false`.
 When enabled, playbook auto-creates Swarm secret `nats_auth_token` if missing.
 
-`vpn` and `vpn-dev` stacks read node-agent runtime env from `node-agent.env` in repo root.
-In CI this file is rendered from GitHub Secrets (`NODE_AGENT_ENV_*`).
-For local runs use `node-agent.env.example` as a template.
+`vpn` stack reads runtime env from `node-agent.env` in repo root.
+`vpn-dev` stack reads runtime env from `node-agent.dev.env`.
+In CI these files are rendered from GitHub Secrets (`NODE_AGENT_ENV_*`).
+For local runs use `node-agent.env.example` as a template and keep prod/dev files separate.
 
 ## Run
 
