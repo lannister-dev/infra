@@ -118,7 +118,7 @@ terraform -chdir=terraform/infra-nodes apply -input=false
 
 ## Tooling
 
-Use preinstalled `terraform` (or `tofu`) on the target runner/host.
+Deploy workflows install Terraform automatically.
 In restricted regions, configure provider mirror via `TF_PROVIDER_MIRROR_URL`
 or full CLI config vars (`TF_CLI_CONFIG_CONTENT*`) in deploy environment.
 
