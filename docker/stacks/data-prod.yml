@@ -38,10 +38,17 @@ services:
         constraints:
           - node.role == manager
           - node.labels.kind == prod
+      labels:
+        - "traefik.enable=true"
+        - "traefik.tcp.routers.postgres-prod.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.postgres-prod.entrypoints=postgres-prod"
+        - "traefik.tcp.routers.postgres-prod.service=postgres-prod-svc"
+        - "traefik.tcp.services.postgres-prod-svc.loadbalancer.server.port=5432"
     networks:
       data-prod-net:
         aliases:
           - postgres-prod
+      traefik_swarm:
 
   redis:
     image: redis:${REDIS_IMAGE_TAG}
@@ -65,10 +72,17 @@ services:
         constraints:
           - node.role == manager
           - node.labels.kind == prod
+      labels:
+        - "traefik.enable=true"
+        - "traefik.tcp.routers.redis-prod.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.redis-prod.entrypoints=redis-prod"
+        - "traefik.tcp.routers.redis-prod.service=redis-prod-svc"
+        - "traefik.tcp.services.redis-prod-svc.loadbalancer.server.port=6379"
     networks:
       data-prod-net:
         aliases:
           - redis-prod
+      traefik_swarm:
 
 volumes:
   data_prod_postgres_data:
@@ -80,6 +94,8 @@ networks:
   data-prod-net:
     external: true
     name: ${DATA_PROD_NETWORK_NAME:-data-prod-net}
+  traefik_swarm:
+    external: true
 
 secrets:
   data_prod_postgres_password:
