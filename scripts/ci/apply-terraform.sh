@@ -142,6 +142,12 @@ plan_apply_root() {
 
   terraform -chdir="terraform/${root}" init -input=false -backend-config="${backend_file}"
 
+  if [ "${root}" = "foundation" ]; then
+    if terraform -chdir="terraform/${root}" state list 2>/dev/null | grep -qx 'docker_config.vault_config'; then
+      terraform -chdir="terraform/${root}" state rm docker_config.vault_config
+    fi
+  fi
+
   plan_args=(-input=false -out=tfplan)
   if [ -n "${tfvars_file}" ]; then
     plan_args+=("-var-file=${tfvars_file}")
