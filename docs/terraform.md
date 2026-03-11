@@ -118,8 +118,10 @@ terraform -chdir=terraform/infra-nodes apply -input=false
 
 ## Tooling
 
-Deploy workflows install Terraform automatically from `TF_PROVIDER_MIRROR_URL`.
-This variable is required for deploy workflows.
+Deploy workflows install Terraform automatically using `TF_PROVIDER_MIRROR_URL`.
+If it is set to Yandex provider mirror `https://terraform-mirror.yandexcloud.net/`,
+deploy workflows download the Terraform binary from
+`https://hashicorp-releases.yandexcloud.net/terraform`.
 In restricted regions, configure provider mirror via `TF_PROVIDER_MIRROR_URL`
 or full CLI config vars (`TF_CLI_CONFIG_CONTENT*`) in deploy environment.
 
