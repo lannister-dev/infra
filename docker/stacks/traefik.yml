@@ -16,22 +16,6 @@ services:
         published: 4222
         protocol: tcp
         mode: host
-      - target: 5432
-        published: 5432
-        protocol: tcp
-        mode: host
-      - target: 15432
-        published: 15432
-        protocol: tcp
-        mode: host
-      - target: 6379
-        published: 6379
-        protocol: tcp
-        mode: host
-      - target: 16379
-        published: 16379
-        protocol: tcp
-        mode: host
     environment:
       CF_DNS_API_TOKEN: "${CF_DNS_API_TOKEN}"
     volumes:
@@ -48,10 +32,6 @@ services:
       - "--entrypoints.websecure.http.tls=true"
       - "--entrypoints.websecure.http.tls.certresolver=cf"
       - "--entrypoints.nats.address=:4222"
-      - "--entrypoints.postgres-prod.address=:5432"
-      - "--entrypoints.postgres-dev.address=:15432"
-      - "--entrypoints.redis-prod.address=:6379"
-      - "--entrypoints.redis-dev.address=:16379"
       - "--entrypoints.web.forwardedHeaders.insecure=${TRAEFIK_WEB_FORWARDED_HEADERS_INSECURE:-false}"
       - "--entrypoints.websecure.forwardedHeaders.insecure=${TRAEFIK_WEBSECURE_FORWARDED_HEADERS_INSECURE:-false}"
 
