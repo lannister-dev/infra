@@ -9,6 +9,7 @@ output "docker_config_names" {
     xray_dev            = local.xray_config_dev_name
     vpn_fallback_index  = local.vpn_fallback_index_config_name
     vpn_fallback_nginx  = local.vpn_fallback_nginx_config_name
+    vault               = local.vault_config_name
   }
 }
 
