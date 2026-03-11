@@ -22,7 +22,6 @@
       - "{{ xray_config_name }}"
       - "{{ vpn_fallback_index_config_name }}"
       - "{{ vpn_fallback_nginx_config_name }}"
-      - "{{ vault_config_name }}"
 
   tasks:
     - name: Check required networks
@@ -54,6 +53,30 @@
           - "{{ item }}"
       loop: "{{ required_configs }}"
       changed_when: "false"
+
+    - name: Check vault docker config
+      ansible.builtin.command:
+        argv:
+          - docker
+          - config
+          - inspect
+          - "{{ vault_config_name }}"
+      register: vault_config_inspect
+      failed_when: false
+      changed_when: "false"
+
+    - name: Create vault docker config when missing
+      ansible.builtin.command:
+        argv:
+          - docker
+          - config
+          - create
+          - "{{ vault_config_name }}"
+          - vault/config.hcl
+      args:
+        chdir: "{{ repo_root }}"
+      when: vault_config_inspect.rc != 0
+      changed_when: "true"
 
     - name: Check dev docker config when vpn-dev is enabled
       ansible.builtin.command:
