@@ -1,0 +1,88 @@
+---
+x-healthcheck-common: &healthcheck-common
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
+
+x-deploy-common: &deploy-common
+  mode: replicated
+  replicas: 1
+  update_config:
+    order: stop-first
+    monitor: 60s
+    failure_action: rollback
+  rollback_config:
+    order: stop-first
+    monitor: 60s
+  restart_policy:
+    condition: any
+
+services:
+  postgres:
+    image: postgres:${POSTGRES_IMAGE_TAG}
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB_NAME}"
+      POSTGRES_USER: "${POSTGRES_DB_USER}"
+      POSTGRES_PASSWORD_FILE: /run/secrets/data_prod_postgres_password
+    secrets:
+      - data_prod_postgres_password
+    volumes:
+      - data_prod_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      <<: *healthcheck-common
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_DB_USER} -d ${POSTGRES_DB_NAME}"]
+    deploy:
+      <<: *deploy-common
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.kind == prod
+    networks:
+      data-prod-net:
+        aliases:
+          - postgres-prod
+
+  redis:
+    image: redis:${REDIS_IMAGE_TAG}
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        exec redis-server
+        --appendonly yes
+        --requirepass "$$(cat /run/secrets/data_prod_redis_password)"
+    secrets:
+      - data_prod_redis_password
+    volumes:
+      - data_prod_redis_data:/data
+    healthcheck:
+      <<: *healthcheck-common
+      test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/data_prod_redis_password)\" ping | grep -q PONG"]
+    deploy:
+      <<: *deploy-common
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.kind == prod
+    networks:
+      data-prod-net:
+        aliases:
+          - redis-prod
+
+volumes:
+  data_prod_postgres_data:
+    driver: local
+  data_prod_redis_data:
+    driver: local
+
+networks:
+  data-prod-net:
+    external: true
+    name: ${DATA_PROD_NETWORK_NAME:-data-prod-net}
+
+secrets:
+  data_prod_postgres_password:
+    external: true
+  data_prod_redis_password:
+    external: true

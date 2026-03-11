@@ -1,4 +1,10 @@
 ---
+x-healthcheck-common: &healthcheck-common
+  interval: 10s
+  timeout: 5s
+  retries: 3
+  start_period: 10s
+
 # ======= deploy services ========
 x-deploy-common: &deploy-common
   replicas: 1
@@ -6,7 +12,13 @@ x-deploy-common: &deploy-common
     parallelism: 1
     delay: 10s
     order: start-first
+    monitor: 60s
     failure_action: rollback
+  rollback_config:
+    parallelism: 1
+    delay: 10s
+    order: start-first
+    monitor: 60s
   restart_policy:
     condition: on-failure
     max_attempts: 3
@@ -23,6 +35,11 @@ services:
       replicas: 1
       update_config:
         order: stop-first
+        monitor: 60s
+        failure_action: rollback
+      rollback_config:
+        order: stop-first
+        monitor: 60s
       restart_policy:
         condition: on-failure
       placement:
@@ -30,13 +47,13 @@ services:
           - node.role == manager
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.prometheus.rule=Host(`prometheus.lannister-dev.ru`)"
+        - "traefik.http.routers.prometheus.rule=Host(`${PROMETHEUS_HOST}`)"
         - "traefik.http.routers.prometheus.entrypoints=websecure"
         - "traefik.http.routers.prometheus.service=prometheus"
         - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
         # ============ BASIC AUTH =======================
-        - "traefik.http.middlewares.prometheus-auth.basicauth.users=admin:$$apr1$$T2i4WGlb$$Lq66cwv9WVKwB3VodEDU8/"
+        - "traefik.http.middlewares.prometheus-auth.basicauth.users=${PROMETHEUS_AUTH_USERS}"
         - "traefik.http.routers.prometheus.middlewares=prometheus-auth@swarm"
     user: "0"
     volumes:
@@ -46,10 +63,8 @@ services:
       - source: prometheus_config
         target: /etc/prometheus/prometheus.yml
     healthcheck:
+      <<: *healthcheck-common
       test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
     networks:
       - monitoring
       - traefik_swarm
@@ -68,7 +83,7 @@ services:
           - node.labels.kind == prod
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.grafana.rule=Host(`grafana.lannister-dev.ru`)"
+        - "traefik.http.routers.grafana.rule=Host(`${GRAFANA_HOST}`)"
         - "traefik.http.routers.grafana.entrypoints=websecure"
         - "traefik.http.routers.grafana.service=grafana"
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
@@ -82,10 +97,8 @@ services:
       - source: grafana_dashboards
         target: /etc/grafana/provisioning/dashboards/dashboards.yml
     healthcheck:
+      <<: *healthcheck-common
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
     networks:
       - monitoring
       - traefik_swarm

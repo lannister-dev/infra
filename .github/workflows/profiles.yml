@@ -38,7 +38,9 @@ jobs:
 
   publish-prod:
     needs: validate-prod
-    runs-on: [self-hosted, dev]
+    runs-on: [self-hosted, prod]
+    environment:
+      name: production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

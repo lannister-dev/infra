@@ -13,9 +13,27 @@ x-deploy-common: &deploy-common
       - node.labels.channel != dev
   update_config:
     order: start-first
+    monitor: 2m
     failure_action: rollback
   rollback_config:
     order: start-first
+    monitor: 2m
+  restart_policy:
+    condition: any
+
+x-node-agent-deploy-common: &node-agent-deploy-common
+  mode: global
+  placement:
+    constraints:
+      - node.labels.role == vpn
+      - node.labels.channel != dev
+  update_config:
+    order: stop-first
+    monitor: 2m
+    failure_action: rollback
+  rollback_config:
+    order: stop-first
+    monitor: 2m
   restart_policy:
     condition: any
 
@@ -63,7 +81,7 @@ services:
         - traefik.http.services.vpn-xhttp.loadbalancer.server.port=10001
 
   node-agent:
-    image: harbor.lannister-dev.ru/vpn-service/node-agent:prod
+    image: ${NODE_AGENT_IMAGE_REF:-harbor.lannister-dev.ru/vpn-service/node-agent:prod}
     command: ["python", "app.py"]
     networks:
       - vpn-net
@@ -82,11 +100,11 @@ services:
       <<: *healthcheck-common
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/healthz', timeout=2).read(); print('ok')"]
     deploy:
-      <<: *deploy-common
+      <<: *node-agent-deploy-common
       labels:
         - "prometheus-scrape=true"
         - "prometheus-app=node-agent"
-        - "prometheus-env=node-agent"
+        - "prometheus-env=prod"
         - "prometheus-metrics-port=9000"
         - "prometheus-metrics-path=/metrics"
         - "prometheus-scrape-profile=important"

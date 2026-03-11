@@ -17,6 +17,13 @@ services:
       - net
       - traefik_swarm
     deploy:
+      update_config:
+        order: stop-first
+        monitor: 2m
+        failure_action: rollback
+      rollback_config:
+        order: stop-first
+        monitor: 2m
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.swarmpit.rule=Host(`swarmpit.lannister-dev.ru`)"
