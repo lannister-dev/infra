@@ -39,6 +39,7 @@ concurrency:
 
 env:
   TF_IN_AUTOMATION: "true"
+  TERRAFORM_VERSION: "1.8.5"
   PYTHON_VERSION: "3.10"
 
 jobs:
@@ -55,21 +56,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ensure Terraform CLI exists
-        run: |
-          set -Eeuo pipefail
-          if command -v terraform >/dev/null 2>&1; then
-            terraform version; exit 0
-          fi
-          if command -v tofu >/dev/null 2>&1; then
-            mkdir -p "${RUNNER_TEMP}/bin"
-            printf '#!/usr/bin/env bash\nexec tofu "$@"\n' > "${RUNNER_TEMP}/bin/terraform"
-            chmod +x "${RUNNER_TEMP}/bin/terraform"
-            echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
-            terraform version; exit 0
-          fi
-          echo "::error::Neither terraform nor tofu found on runner"
-          exit 1
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Verify Terraform CLI
+        run: terraform version
 
       - name: Write runtime env
         env:
