@@ -118,7 +118,10 @@ terraform -chdir=terraform/infra-nodes apply -input=false
 
 ## Tooling
 
-Deploy workflows install Terraform automatically from official HashiCorp releases.
+Deploy workflows install Terraform automatically.
+For the Terraform binary, use `TERRAFORM_DOWNLOAD_MIRROR_URL` if needed.
+If it is not set, deploy workflows fall back to `TF_PROVIDER_MIRROR_URL`,
+then to official HashiCorp releases.
 In restricted regions, configure provider mirror via `TF_PROVIDER_MIRROR_URL`
 or full CLI config vars (`TF_CLI_CONFIG_CONTENT*`) in deploy environment.
 
