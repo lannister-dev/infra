@@ -104,6 +104,9 @@ jobs:
           tf_zip="terraform_${TERRAFORM_VERSION}_${tf_os}_${tf_arch}.zip"
           tf_base_url="${TF_PROVIDER_MIRROR_URL}"
           tf_base_url="${tf_base_url%/}"
+          if [ "${tf_base_url}" = "https://terraform-mirror.yandexcloud.net" ]; then
+            tf_base_url="https://hashicorp-releases.yandexcloud.net/terraform"
+          fi
           tf_url="${tf_base_url}/${TERRAFORM_VERSION}/${tf_zip}"
           tf_bin_dir="${RUNNER_TEMP}/bin"
 
