@@ -18,8 +18,8 @@ Set in `INFRA_ENV_DEV`:
 
 ```bash
 DEPLOY_DATA_DEV_STACK=true
-DEV_POSTGRES_PASSWORD=replace_with_strong_password
-DEV_REDIS_PASSWORD=replace_with_strong_password
+DEV_POSTGRES_PASSWORD=<strong_password>
+DEV_REDIS_PASSWORD=<strong_password>
 ```
 
 Recommended deployment path:

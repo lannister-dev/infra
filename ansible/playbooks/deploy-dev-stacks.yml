@@ -51,14 +51,14 @@
       when: deploy_probe_stack
       changed_when: false
 
-    - name: Check vpn-dev overlay network when vpn-dev is enabled
+    - name: Check vpn-dev overlay network when required by vpn-dev or nats
       ansible.builtin.command:
         argv:
           - docker
           - network
           - inspect
           - "{{ vpn_dev_network_name }}"
-      when: enable_vpn_dev_stack
+      when: enable_vpn_dev_stack or deploy_nats_stack
       register: vpn_dev_network_inspect
       failed_when: false
       changed_when: false
@@ -74,7 +74,7 @@
           - --attachable
           - "{{ vpn_dev_network_name }}"
       when:
-        - enable_vpn_dev_stack
+        - enable_vpn_dev_stack or deploy_nats_stack
         - vpn_dev_network_inspect.rc != 0
       changed_when: true
 
@@ -224,6 +224,7 @@
         NATS_EXPORTER_IMAGE_TAG: "{{ nats_exporter_image_tag }}"
         NATS_MONITOR_HOST: "{{ nats_monitor_host }}"
         NATS_MONITOR_AUTH_USERS: "{{ nats_monitor_auth_users }}"
+        VPN_DEV_NETWORK_NAME: "{{ vpn_dev_network_name }}"
       when: deploy_nats_stack
       no_log: true
       changed_when: false
