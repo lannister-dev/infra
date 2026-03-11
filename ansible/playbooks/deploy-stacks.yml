@@ -22,6 +22,7 @@
       - "{{ xray_config_name }}"
       - "{{ vpn_fallback_index_config_name }}"
       - "{{ vpn_fallback_nginx_config_name }}"
+      - "{{ vault_config_name }}"
 
   tasks:
     - name: Check required networks
@@ -432,6 +433,24 @@
         PROMETHEUS_AUTH_USERS: "{{ prometheus_auth_users }}"
         GRAFANA_HOST: "{{ grafana_host }}"
       no_log: true
+      changed_when: "false"
+
+    - name: Deploy vault stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/vault.yml
+          - vault
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        VAULT_IMAGE_TAG: "{{ vault_image_tag }}"
+        VAULT_CONFIG_NAME: "{{ vault_config_name }}"
       changed_when: "false"
 
     - name: Deploy swarmpit stack

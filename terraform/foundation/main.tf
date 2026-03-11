@@ -100,3 +100,8 @@ resource "docker_config" "vpn_fallback_nginx_conf" {
   name = local.vpn_fallback_nginx_config_name
   data = local.vpn_fallback_nginx_data
 }
+
+resource "docker_config" "vault_config" {
+  name = local.vault_config_name
+  data = local.vault_config_data
+}
