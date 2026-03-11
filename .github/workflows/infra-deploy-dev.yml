@@ -66,9 +66,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Write runtime env
+        env:
+          INFRA_ENV_DEV: ${{ secrets.INFRA_ENV_DEV }}
+        run: |
+          set -Eeuo pipefail
+          test -n "${INFRA_ENV_DEV}" || { echo "::error::Missing secret INFRA_ENV_DEV"; exit 1; }
+          ENV_FILE="${RUNNER_TEMP}/infra.dev.env"
+          printf '%s\n' "${INFRA_ENV_DEV}" > "${ENV_FILE}"
+          chmod 600 "${ENV_FILE}"
+          echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
+
       - name: Install Terraform CLI
         run: |
           set -Eeuo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
 
           case "$(uname -s)" in
             Linux) tf_os="linux" ;;
@@ -101,17 +113,6 @@ jobs:
           chmod +x "${tf_bin_dir}/terraform"
           echo "${tf_bin_dir}" >> "${GITHUB_PATH}"
           "${tf_bin_dir}/terraform" version
-
-      - name: Write runtime env
-        env:
-          INFRA_ENV_DEV: ${{ secrets.INFRA_ENV_DEV }}
-        run: |
-          set -Eeuo pipefail
-          test -n "${INFRA_ENV_DEV}" || { echo "::error::Missing secret INFRA_ENV_DEV"; exit 1; }
-          ENV_FILE="${RUNNER_TEMP}/infra.dev.env"
-          printf '%s\n' "${INFRA_ENV_DEV}" > "${ENV_FILE}"
-          chmod 600 "${ENV_FILE}"
-          echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
 
       - name: Validate development isolation guardrails
         run: |
