@@ -35,6 +35,7 @@ services:
           - node.role == manager
           - node.labels.kind == dev
 
+
 volumes:
   vault_data:
     driver: local
