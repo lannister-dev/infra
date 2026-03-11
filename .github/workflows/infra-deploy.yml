@@ -56,14 +56,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
+      - name: Install Terraform CLI
+        run: |
+          set -Eeuo pipefail
 
-      - name: Verify Terraform CLI
-        run: terraform version
+          case "$(uname -s)" in
+            Linux) tf_os="linux" ;;
+            Darwin) tf_os="darwin" ;;
+            *)
+              echo "::error::Unsupported runner OS: $(uname -s)"
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64|amd64) tf_arch="amd64" ;;
+            arm64|aarch64) tf_arch="arm64" ;;
+            *)
+              echo "::error::Unsupported runner architecture: $(uname -m)"
+              exit 1
+              ;;
+          esac
+
+          tf_zip="terraform_${TERRAFORM_VERSION}_${tf_os}_${tf_arch}.zip"
+          tf_url="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/${tf_zip}"
+          tf_bin_dir="${RUNNER_TEMP}/bin"
+
+          mkdir -p "${tf_bin_dir}"
+          curl -fsSL "${tf_url}" -o "${RUNNER_TEMP}/${tf_zip}"
+          unzip -oq "${RUNNER_TEMP}/${tf_zip}" -d "${tf_bin_dir}"
+          chmod +x "${tf_bin_dir}/terraform"
+          echo "${tf_bin_dir}" >> "${GITHUB_PATH}"
+          "${tf_bin_dir}/terraform" version
 
       - name: Write runtime env
         env:
