@@ -15,6 +15,8 @@ Production workflows must never run on the `dev` runner.
 - dedicated Unix user for runner, for example `github-runner`
 - repository must be private
 
+Terraform does not need to be preinstalled on the runner host; deploy workflows install it automatically via GitHub Actions.
+
 ## Runner layout
 
 Recommended directories:
