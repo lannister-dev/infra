@@ -8,6 +8,7 @@ locals {
   grafana_dashboards_config_data  = filebase64("${local.root_dir}/monitoring/grafana/provisioning/dashboards/dashboards.yml")
   vpn_fallback_index_data         = filebase64("${local.root_dir}/vpn/nginx/index.html")
   vpn_fallback_nginx_data         = filebase64("${local.root_dir}/vpn/nginx/server.conf")
+  vault_config_data         = filebase64("${local.root_dir}/vault/config.hcl")
 
   vpn_dev_domain              = trimspace(var.vpn_dev_domain) != "" ? var.vpn_dev_domain : var.vpn_domain
   vpn_dev_ws_path             = trimspace(var.vpn_dev_ws_path) != "" ? var.vpn_dev_ws_path : var.vpn_ws_path
@@ -55,4 +56,5 @@ locals {
   xray_config_dev_name            = "xray_config_dev__${substr(sha256(local.xray_config_dev_data), 0, 8)}"
   vpn_fallback_index_config_name  = "vpn_fallback_index__${substr(sha256(local.vpn_fallback_index_data), 0, 8)}"
   vpn_fallback_nginx_config_name  = "vpn_fallback_nginx_conf__${substr(sha256(local.vpn_fallback_nginx_data), 0, 8)}"
+  vault_config_name  = "vault_conf__${substr(sha256(local.vault_config_data), 0, 8)}"
 }

@@ -1,0 +1,44 @@
+# TODO
+---
+volumes:
+  vault_data:
+    driver: local
+
+networks:
+  monitoring:
+    external: true
+  vpn-net:
+    external: true
+
+configs:
+  vault_config:
+    external: true
+    name: ${VAULT_CONFIG_NAME}
+
+services:
+  vault:
+    image: vault:${VAULT_IMAGE_TAG}
+    command:
+      - "server"
+      - "-config=/vault/config/vault.hcl"
+    networks:
+    volumes:
+      - vault_data:/data
+    configs:
+      - source: vault_config
+        target: /etc/vault/config.hcl
+        mode: 292
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.kind == dev
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      rollback_config:
+        order: stop-first
+      restart_policy:
+        condition: any
