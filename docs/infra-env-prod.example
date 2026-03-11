@@ -22,8 +22,8 @@ TF_VAR_vpn_domain=example.com
 TF_VAR_vpn_ws_path=/api/v1/stream
 TF_VAR_vpn_xhttp_path=/api/v1/mobile
 TF_VAR_vpn_reality_server_name=www.cloudflare.com
-TF_VAR_vpn_reality_private_key=REPLACE_WITH_X25519_PRIVATE_KEY
-TF_VAR_vpn_reality_short_id=REPLACE_WITH_SHORT_ID_HEX
+TF_VAR_vpn_reality_private_key=<x25519_private_key>
+TF_VAR_vpn_reality_short_id=<short_id_hex>
 TF_VAR_vpn_reality_dest_host=www.cloudflare.com
 
 # Foundation TF vars (optional)
@@ -81,9 +81,9 @@ RUN_SANITY_CHECK=true
 DEPLOY_PROBE_STACK=true
 DEPLOY_NATS_STACK=true
 ENABLE_VPN_DEV_STACK=false
-NATS_AUTH_TOKEN=replace_with_strong_random_token
+NATS_AUTH_TOKEN=<strong_random_token>
 NATS_MONITOR_HOST=nats.example.com
-NATS_MONITOR_AUTH_USERS=admin:REPLACE_WITH_HTPASSWD_HASH
+NATS_MONITOR_AUTH_USERS=admin:<htpasswd_hash>
 DEPLOY_DATA_PROD_STACK=false
 FIREWALL_ENFORCE=false
 FIREWALL_ADMIN_CIDRS=203.0.113.10/32
@@ -105,25 +105,30 @@ FIREWALL_NATS_CLIENT_CIDRS=198.51.100.20/32
 # REDIS_IMAGE_TAG=7-alpine
 # DATA_PROD_NETWORK_NAME=data-prod-net
 
+# External data services precheck (leave disabled when prod data is deployed from this repo)
+EXTERNAL_DATA_PRECHECK_ENABLED=false
+# EXTERNAL_POSTGRES_HOST=prod-postgres.internal.example.com
+# EXTERNAL_POSTGRES_PORT=5432
+# EXTERNAL_REDIS_HOST=prod-redis.internal.example.com
+# EXTERNAL_REDIS_PORT=6379
+# EXTERNAL_DATA_PRECHECK_TIMEOUT=10
+
 # Edge / dashboard settings
 TRAEFIK_ACME_EMAIL=ops@example.com
 TRAEFIK_DASHBOARD_HOST=traefik.example.com
-TRAEFIK_DASHBOARD_AUTH_USERS=admin:REPLACE_WITH_BCRYPT_HASH
+TRAEFIK_DASHBOARD_AUTH_USERS=admin:<bcrypt_hash>
 TRAEFIK_WEB_FORWARDED_HEADERS_INSECURE=false
 TRAEFIK_WEBSECURE_FORWARDED_HEADERS_INSECURE=false
 PROMETHEUS_HOST=prometheus.example.com
-PROMETHEUS_AUTH_USERS=admin:REPLACE_WITH_HTPASSWD_HASH
+PROMETHEUS_AUTH_USERS=admin:<htpasswd_hash>
 GRAFANA_HOST=grafana.example.com
 
-# Managed data-prod stack (optional)
+# Managed data-prod stack
+DEPLOY_DATA_PROD_STACK=true
 PROD_POSTGRES_DB=vpn_control
 PROD_POSTGRES_USER=vpn_prod_user
-PROD_POSTGRES_PASSWORD=replace_with_strong_password
-PROD_REDIS_PASSWORD=replace_with_strong_password
-
-# Separate data-only production workflow reads the same INFRA_ENV_PROD
-# and requires:
-# DEPLOY_DATA_PROD_STACK=true
+PROD_POSTGRES_PASSWORD=<strong_password>
+PROD_REDIS_PASSWORD=<strong_password>
 
 # ---- Generic alias style (alternative to TF_VAR_*) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity

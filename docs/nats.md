@@ -1,6 +1,7 @@
 # NATS (Swarm Stack)
 
-This repository includes optional `nats` stack deployment for development messaging between node agents and control plane components.
+This repository includes optional shared `nats` stack deployment for node agents and control plane components.
+Recommended layout: a single NATS instance runs on the dev manager node and is shared by both prod and dev channels.
 
 ## What gets deployed
 
@@ -38,12 +39,13 @@ ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-st
 
 ## Connection endpoints
 
-From services attached to `vpn-net`:
+From services attached to `vpn-net` or `vpn-dev-net`:
 - `nats://<token>@nats:4222` (network alias)
-- fallback: `nats://<token>@nats_nats:4222` (stack service name)
 
 From external node agents / control-plane clients:
 - `nats://<token>@nats.lannister-dev.ru:4222`
+
+The stack is attached to both overlay networks so prod and dev node agents can use the same internal alias while the NATS task itself remains pinned to the dev manager.
 
 For monitoring:
 - exporter metrics: `nats_nats-exporter:7777/metrics` (auto-scraped via existing Prometheus Swarm discovery labels)

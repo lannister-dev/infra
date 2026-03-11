@@ -137,7 +137,7 @@ jobs:
         run: |
           set -Eeuo pipefail
 
-          NODE_AGENT_ENV_FILE="${GITHUB_WORKSPACE}/node-agent.env"
+          NODE_AGENT_ENV_FILE="${GITHUB_WORKSPACE}/node-agent.dev.env"
           if [ -n "${NODE_AGENT_ENV_DEV_B64}" ]; then
             printf '%s' "${NODE_AGENT_ENV_DEV_B64}" | base64 -d > "${NODE_AGENT_ENV_FILE}" || {
               echo "::error::Failed to decode NODE_AGENT_ENV_DEV_B64"
@@ -309,5 +309,5 @@ jobs:
         if: always()
         run: |
           rm -f "${INFRA_ENV_FILE:-}"
-          rm -f "${GITHUB_WORKSPACE}/node-agent.env"
+          rm -f "${GITHUB_WORKSPACE}/node-agent.dev.env"
           rm -rf "${RUNNER_TEMP}/ansible_ssh_keys"

@@ -49,6 +49,9 @@ services:
       vpn-net:
         aliases:
           - nats
+      vpn-dev-net:
+        aliases:
+          - nats
       monitoring:
       traefik_swarm:
 
@@ -89,6 +92,9 @@ networks:
     external: true
   vpn-net:
     external: true
+  vpn-dev-net:
+    external: true
+    name: ${VPN_DEV_NETWORK_NAME:-vpn-dev-net}
   traefik_swarm:
     external: true
 

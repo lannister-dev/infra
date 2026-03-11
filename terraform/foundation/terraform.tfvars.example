@@ -3,15 +3,15 @@ vpn_ws_path    = "/api/v1/stream"
 vpn_xhttp_path = "/api/v1/mobile"
 # Optional REALITY knobs:
 # vpn_reality_server_name = "www.cloudflare.com"
-# vpn_reality_private_key = "REPLACE_WITH_X25519_PRIVATE_KEY"
-# vpn_reality_short_id    = "REPLACE_WITH_SHORT_ID_HEX"
+# vpn_reality_private_key = "<x25519_private_key>"
+# vpn_reality_short_id    = "<short_id_hex>"
 # vpn_reality_dest_host   = "www.cloudflare.com"
 
 # Optional:
 # enable_vpn_dev_stack = true
 # vpn_dev_reality_server_name = "www.cloudflare.com"
-# vpn_dev_reality_private_key = "REPLACE_WITH_X25519_PRIVATE_KEY"
-# vpn_dev_reality_short_id    = "REPLACE_WITH_SHORT_ID_HEX"
+# vpn_dev_reality_private_key = "<x25519_private_key>"
+# vpn_dev_reality_short_id    = "<short_id_hex>"
 # vpn_dev_reality_dest_host   = "www.cloudflare.com"
 
 # Bump these when config content changes (docker config is immutable).
