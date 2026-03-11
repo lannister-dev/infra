@@ -12,24 +12,6 @@ x-deploy-common: &deploy-common
   restart_policy:
     condition: any
 
-volumes:
-  vault_data:
-    driver: local
-
-networks:
-  traefik_proxy:
-    external: true
-    name: traefik_swarm
-  monitoring:
-    external: true
-  vpn-net:
-    external: true
-
-configs:
-  vault_config:
-    external: true
-    name: ${VAULT_CONFIG_NAME}
-
 services:
   vault:
     image: vault:${VAULT_IMAGE_TAG:-1.13.3}
@@ -52,3 +34,21 @@ services:
         constraints:
           - node.role == manager
           - node.labels.kind == dev
+
+volumes:
+  vault_data:
+    driver: local
+
+networks:
+  traefik_proxy:
+    external: true
+    name: traefik_swarm
+  monitoring:
+    external: true
+  vpn-net:
+    external: true
+
+configs:
+  vault_config:
+    external: true
+    name: ${VAULT_CONFIG_NAME}
