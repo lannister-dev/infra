@@ -1,10 +1,25 @@
-# TODO
 ---
+x-deploy-common: &deploy-common
+  mode: replicated
+  replicas: 1
+  update_config:
+    order: stop-first
+    monitor: 60s
+    failure_action: rollback
+  rollback_config:
+    order: stop-first
+    monitor: 60s
+  restart_policy:
+    condition: any
+
 volumes:
   vault_data:
     driver: local
 
 networks:
+  traefik_proxy:
+    external: true
+    name: traefik_swarm
   monitoring:
     external: true
   vpn-net:
@@ -17,28 +32,23 @@ configs:
 
 services:
   vault:
-    image: vault:${VAULT_IMAGE_TAG}
+    image: vault:${VAULT_IMAGE_TAG:-1.13.3}
     command:
-      - "server"
-      - "-config=/vault/config/vault.hcl"
+      - server
+      - -config=/vault/config/vault.hcl
     networks:
+      - traefik_proxy
+      - monitoring
+      - vpn-net
     volumes:
       - vault_data:/data
     configs:
       - source: vault_config
-        target: /etc/vault/config.hcl
+        target: /vault/config/vault.hcl
         mode: 292
     deploy:
-      mode: replicated
-      replicas: 1
+      <<: *deploy-common
       placement:
         constraints:
           - node.role == manager
           - node.labels.kind == dev
-      update_config:
-        order: stop-first
-        failure_action: rollback
-      rollback_config:
-        order: stop-first
-      restart_policy:
-        condition: any
