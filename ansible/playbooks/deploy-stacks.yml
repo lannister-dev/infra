@@ -22,6 +22,7 @@
       - "{{ xray_config_name }}"
       - "{{ vpn_fallback_index_config_name }}"
       - "{{ vpn_fallback_nginx_config_name }}"
+      - "{{ vault_config_name }}"
 
   tasks:
     - name: Check required networks

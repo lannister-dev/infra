@@ -109,6 +109,7 @@ for env_name, key in {
     "XRAY_CONFIG_DEV_NAME":            "xray_dev",
     "VPN_FALLBACK_INDEX_CONFIG_NAME":  "vpn_fallback_index",
     "VPN_FALLBACK_NGINX_CONFIG_NAME":  "vpn_fallback_nginx",
+    "VAULT_CONFIG_NAME":               "vault",
 }.items():
     print("{}={}".format(env_name, m.get(key, "")))
 ' >> "${GITHUB_ENV}"
