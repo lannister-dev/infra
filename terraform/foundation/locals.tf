@@ -61,3 +61,20 @@ locals {
   vpn_fallback_nginx_config_name  = "vpn_fallback_nginx_conf__${substr(sha256(local.vpn_fallback_nginx_data), 0, 8)}"
   vault_config_name               = "vault_conf__${substr(sha256(local.vault_config_data), 0, 8)}"
 }
+
+check "vpn_dev_explicit_values" {
+  assert {
+    condition = !var.enable_vpn_dev_stack || alltrue([
+      trimspace(var.vpn_dev_domain) != "",
+      trimspace(var.vpn_dev_ws_path) != "",
+      trimspace(var.vpn_dev_xhttp_path) != "",
+      trimspace(var.vpn_dev_reality_server_name) != "",
+      trimspace(var.vpn_dev_reality_private_key) != "",
+      trimspace(var.vpn_dev_reality_private_key) != "<x25519_private_key>",
+      trimspace(var.vpn_dev_reality_short_id) != "",
+      trimspace(var.vpn_dev_reality_short_id) != "<short_id_hex>",
+      trimspace(var.vpn_dev_reality_dest_host) != "",
+    ])
+    error_message = "When enable_vpn_dev_stack=true, set all vpn_dev_* fields explicitly with real values."
+  }
+}
