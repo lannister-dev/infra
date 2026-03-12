@@ -3,17 +3,13 @@ ui = true
 
 listener "tcp" {
   address     = "0.0.0.0:8200"
-  tls_disable = "true"
+  tls_disable = 1
 }
 
 storage "raft" {
-  path = "/vault/data"
+  # Single-node Raft should bootstrap itself from local storage.
+  path    = "/vault/data"
   node_id = "node1"
-  retry_join = [
-        {
-            leader_api_addr = "http://vault:8200"
-        }
-    ]
 }
 
 api_addr = "https://vault.lannister-dev.ru"
