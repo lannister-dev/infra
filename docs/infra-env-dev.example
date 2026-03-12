@@ -10,12 +10,20 @@ TF_STATE_KEY_PREFIX=vpn-infra/dev
 TF_VAR_vpn_domain=dev.vpn.example.com
 TF_VAR_vpn_ws_path=/api/v1/stream
 TF_VAR_vpn_xhttp_path=/api/v1/mobile
+TF_VAR_vpn_reality_server_name=www.cloudflare.com
+TF_VAR_vpn_reality_private_key=<x25519_private_key>
+TF_VAR_vpn_reality_short_id=<short_id_hex>
+TF_VAR_vpn_reality_dest_host=www.cloudflare.com
 
 # Enable dev channel stack in development environment
 TF_VAR_enable_vpn_dev_stack=true
 TF_VAR_vpn_dev_domain=dev-vpn.example.com
 TF_VAR_vpn_dev_ws_path=/api/v1/stream
 TF_VAR_vpn_dev_xhttp_path=/api/v1/mobile
+TF_VAR_vpn_dev_reality_server_name=www.cloudflare.com
+TF_VAR_vpn_dev_reality_private_key=<x25519_private_key>
+TF_VAR_vpn_dev_reality_short_id=<short_id_hex>
+TF_VAR_vpn_dev_reality_dest_host=www.cloudflare.com
 
 # Provider credentials (if provider modes are enabled in dev catalogs)
 # TF_VAR_hostvds_os_auth_url=...

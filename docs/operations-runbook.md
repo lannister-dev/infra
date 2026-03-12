@@ -57,6 +57,9 @@ Development-specific notes:
   - `terraform/foundation/terraform.dev.tfvars`
   - `terraform/nodes/catalog.dev.tfvars`
   - `terraform/infra-nodes/catalog.dev.tfvars`
+- For `terraform/foundation`, keep real Xray domains, paths and REALITY values in
+  `INFRA_ENV_DEV` as `TF_VAR_*`; there is no fallback from primary fields to dev
+  fields. `terraform.dev.tfvars` should only carry repo-safe dev toggles.
 - If DB/Redis are hosted outside this repo (manual/external services), enable precheck:
   - `EXTERNAL_DATA_PRECHECK_ENABLED=true`
   - `EXTERNAL_POSTGRES_HOST` / `EXTERNAL_POSTGRES_PORT`

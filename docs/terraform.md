@@ -19,7 +19,7 @@ Topology is declared in versioned tfvars files:
 
 - `terraform/nodes/catalog.auto.tfvars`
 - `terraform/infra-nodes/catalog.auto.tfvars`
-- `terraform/foundation/terraform.dev.tfvars` (dev workflow var-file)
+- `terraform/foundation/terraform.dev.tfvars` (dev workflow toggles only)
 - `terraform/nodes/catalog.dev.tfvars` (dev workflow var-file)
 - `terraform/infra-nodes/catalog.dev.tfvars` (dev workflow var-file)
 
@@ -155,6 +155,12 @@ Dev workflow pins explicit var-files:
 - `terraform/foundation/terraform.dev.tfvars`
 - `terraform/nodes/catalog.dev.tfvars`
 - `terraform/infra-nodes/catalog.dev.tfvars`
+
+For `terraform/foundation`, real Xray domains, paths and REALITY values should come
+from `INFRA_ENV_DEV` / `INFRA_ENV_PROD` via `TF_VAR_*`. There is no fallback or
+inheritance between primary and dev Xray fields; if `enable_vpn_dev_stack=true`,
+set the full dev value set explicitly. The repository var-file is only for
+non-secret dev toggles such as `enable_vpn_dev_stack`.
 
 Recommended `INFRA_ENV_PROD` style:
 
