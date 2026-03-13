@@ -175,6 +175,15 @@ jobs:
           fi
 
           if [ "${tf_enable_vpn_dev_stack}" = "true" ]; then
+            required_primary_tfvars=(
+              TF_VAR_vpn_domain
+              TF_VAR_vpn_ws_path
+              TF_VAR_vpn_xhttp_path
+              TF_VAR_vpn_reality_server_name
+              TF_VAR_vpn_reality_private_key
+              TF_VAR_vpn_reality_short_id
+              TF_VAR_vpn_reality_dest_host
+            )
             required_dev_tfvars=(
               TF_VAR_vpn_dev_domain
               TF_VAR_vpn_dev_ws_path
@@ -185,7 +194,7 @@ jobs:
               TF_VAR_vpn_dev_reality_dest_host
             )
 
-            for var_name in "${required_dev_tfvars[@]}"; do
+            for var_name in "${required_primary_tfvars[@]}" "${required_dev_tfvars[@]}"; do
               if [ -z "${!var_name:-}" ]; then
                 echo "::error::${var_name} is required when vpn-dev stack is enabled"
                 exit 1
