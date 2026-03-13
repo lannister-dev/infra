@@ -28,8 +28,8 @@ Do not keep topology in JSON env variables anymore.
 Credentials/tokens remain in local `.env` or CI secrets and are passed as `TF_VAR_*`.
 
 CI convention for variables:
-- preferred: define `TF_VAR_<terraform_variable_name>` directly in secret env.
-- alias supported: `IAC_TFVAR_<UPPER_SNAKE_NAME>` (auto-converted to `TF_VAR_<lower_snake_name>`).
+- if your environment supports lowercase names, you can define `TF_VAR_<terraform_variable_name>` directly.
+- for uppercase-only environments, use `IAC_TFVAR_<UPPER_SNAKE_NAME>`; it is auto-converted to `TF_VAR_<lower_snake_name>`.
 - conversion is done by `scripts/core/prepare-terraform-env.sh`.
 
 This keeps workflow provider-agnostic: adding/removing providers does not require
