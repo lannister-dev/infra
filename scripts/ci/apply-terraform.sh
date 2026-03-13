@@ -97,7 +97,9 @@ validate_tfvars_file() {
 # ----- export foundation config names -----------------------------------
 export_config_names() {
   local config_names_json
+  local exported_env_file
   config_names_json="$(terraform -chdir="terraform/foundation" output -json docker_config_names)"
+  exported_env_file="$(mktemp)"
 
   printf '%s' "${config_names_json}" \
     | python3 -c '
@@ -115,7 +117,14 @@ for env_name, key in {
     "VAULT_CONFIG_NAME":               "vault",
 }.items():
     print("{}={}".format(env_name, m.get(key, "")))
-' >> "${GITHUB_ENV}"
+' > "${exported_env_file}"
+
+  cat "${exported_env_file}" >> "${GITHUB_ENV}"
+  set -a
+  # shellcheck disable=SC1090
+  source "${exported_env_file}"
+  set +a
+  rm -f "${exported_env_file}"
 
   printf '%s' "${config_names_json}" \
     | python3 -c '
@@ -129,6 +138,82 @@ for notice_name, key in {
 }.items():
     print("::notice::{}={}".format(notice_name, m.get(key, "")))
 '
+}
+
+log_foundation_input_fingerprints() {
+  python3 - <<'PY'
+import hashlib
+import os
+
+def short_hash(value: str) -> str:
+    if not value:
+        return ""
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+
+fields = {
+    "foundation.var.vpn_domain": os.getenv("TF_VAR_vpn_domain", ""),
+    "foundation.var.vpn_ws_path": os.getenv("TF_VAR_vpn_ws_path", ""),
+    "foundation.var.vpn_xhttp_path": os.getenv("TF_VAR_vpn_xhttp_path", ""),
+    "foundation.var.vpn_reality_server_name": os.getenv("TF_VAR_vpn_reality_server_name", ""),
+    "foundation.var.vpn_reality_dest_host": os.getenv("TF_VAR_vpn_reality_dest_host", ""),
+    "foundation.var.vpn_dev_domain": os.getenv("TF_VAR_vpn_dev_domain", ""),
+    "foundation.var.vpn_dev_ws_path": os.getenv("TF_VAR_vpn_dev_ws_path", ""),
+    "foundation.var.vpn_dev_xhttp_path": os.getenv("TF_VAR_vpn_dev_xhttp_path", ""),
+    "foundation.var.vpn_dev_reality_server_name": os.getenv("TF_VAR_vpn_dev_reality_server_name", ""),
+    "foundation.var.vpn_dev_reality_dest_host": os.getenv("TF_VAR_vpn_dev_reality_dest_host", ""),
+    "foundation.var.enable_vpn_dev_stack": os.getenv("TF_VAR_enable_vpn_dev_stack", ""),
+}
+secret_fields = {
+    "foundation.var.vpn_reality_private_key.sha256_12": os.getenv("TF_VAR_vpn_reality_private_key", ""),
+    "foundation.var.vpn_reality_short_id.sha256_12": os.getenv("TF_VAR_vpn_reality_short_id", ""),
+    "foundation.var.vpn_dev_reality_private_key.sha256_12": os.getenv("TF_VAR_vpn_dev_reality_private_key", ""),
+    "foundation.var.vpn_dev_reality_short_id.sha256_12": os.getenv("TF_VAR_vpn_dev_reality_short_id", ""),
+}
+for name, value in fields.items():
+    print(f"::notice::{name}={value}")
+for name, value in secret_fields.items():
+    print(f"::notice::{name}={short_hash(value)}")
+PY
+}
+
+log_foundation_plan_summary() {
+  terraform -chdir="terraform/foundation" show -json tfplan \
+    | python3 -c '
+import json, sys
+
+plan = json.load(sys.stdin)
+changes = []
+for item in plan.get("resource_changes", []):
+    addr = item.get("address", "")
+    if addr.startswith("docker_config.xray_config"):
+        actions = ",".join(item.get("change", {}).get("actions", []))
+        after = item.get("change", {}).get("after", {}) or {}
+        before = item.get("change", {}).get("before", {}) or {}
+        changes.append((addr, actions, before.get("name", ""), after.get("name", "")))
+
+if not changes:
+    print("::notice::foundation.plan.xray_configs=no resource_changes")
+else:
+    for addr, actions, before_name, after_name in changes:
+        print(f"::notice::foundation.plan.{addr}.actions={actions}")
+        print(f"::notice::foundation.plan.{addr}.before_name={before_name}")
+        print(f"::notice::foundation.plan.{addr}.after_name={after_name}")
+'
+}
+
+verify_foundation_config_presence() {
+  local config_name="$1"
+  local label="$2"
+  [ -n "${config_name}" ] || return 0
+  command -v docker >/dev/null 2>&1 || return 0
+
+  if docker config inspect "${config_name}" --format '{{.Spec.Name}} {{.CreatedAt}} {{.ID}}' >/tmp/foundation_config_inspect.out 2>/tmp/foundation_config_inspect.err; then
+    printf '::notice::foundation.%s.inspect=%s\n' "${label}" "$(cat /tmp/foundation_config_inspect.out)"
+  else
+    echo "::error::Expected docker config '${config_name}' for ${label} is missing after terraform apply"
+    cat /tmp/foundation_config_inspect.err >&2 || true
+    exit 1
+  fi
 }
 
 prepare_nodes_replace_args() {
@@ -159,6 +244,7 @@ plan_apply_root() {
   terraform -chdir="terraform/${root}" init -input=false -backend-config="${backend_file}"
 
   if [ "${root}" = "foundation" ]; then
+    log_foundation_input_fingerprints
     if terraform -chdir="terraform/${root}" state list 2>/dev/null | grep -qx 'docker_config.vault_config'; then
       terraform -chdir="terraform/${root}" state rm docker_config.vault_config
     fi
@@ -174,9 +260,14 @@ plan_apply_root() {
   fi
 
   terraform -chdir="terraform/${root}" plan "${plan_args[@]}"
+  [ "${root}" != "foundation" ] || log_foundation_plan_summary
   terraform -chdir="terraform/${root}" apply -input=false -auto-approve tfplan
 
-  [ "${root}" != "foundation" ] || export_config_names
+  if [ "${root}" = "foundation" ]; then
+    export_config_names
+    verify_foundation_config_presence "${XRAY_CONFIG_NAME:-}" "xray"
+    verify_foundation_config_presence "${XRAY_CONFIG_DEV_NAME:-}" "xray_dev"
+  fi
 
   rm -f "${backend_file}" "terraform/${root}/tfplan"
 }
