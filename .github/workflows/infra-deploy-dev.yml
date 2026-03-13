@@ -33,7 +33,7 @@ on:
         description: "Apply terraform/foundation (disable to avoid foundation changes in dev run)"
         required: true
         type: boolean
-        default: false
+        default: true
       replace_vpn_nodes:
         description: "Deprecated. Leave empty; use drain -> migrate -> deactivate lifecycle instead."
         required: false
@@ -121,6 +121,9 @@ jobs:
         run: |
           set -Eeuo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          source ./scripts/core/prepare-terraform-env.sh
+
+          tf_enable_vpn_dev_stack="${TF_VAR_enable_vpn_dev_stack:-false}"
 
           # Dev workflow must use a dev state scope.
           if [ -z "${TF_STATE_KEY_PREFIX:-}" ]; then
@@ -141,6 +144,35 @@ jobs:
           if [ "${{ inputs.reconcile_nodes }}" = "true" ] && [ "${{ inputs.apply_nodes }}" != "true" ]; then
             echo "::error::reconcile_nodes=true requires apply_nodes=true in Infra Deploy Dev"
             exit 1
+          fi
+
+          if [ "${ENABLE_VPN_DEV_STACK:-false}" != "${tf_enable_vpn_dev_stack}" ]; then
+            echo "::error::ENABLE_VPN_DEV_STACK (${ENABLE_VPN_DEV_STACK:-false}) must match Terraform toggle TF_VAR/IAC_TFVAR_enable_vpn_dev_stack (${tf_enable_vpn_dev_stack})"
+            exit 1
+          fi
+
+          if [ "${tf_enable_vpn_dev_stack}" = "true" ] && [ "${{ inputs.apply_foundation }}" != "true" ]; then
+            echo "::error::apply_foundation=true is required when vpn-dev stack is enabled, otherwise stale xray_config_dev from state may be reused"
+            exit 1
+          fi
+
+          if [ "${tf_enable_vpn_dev_stack}" = "true" ]; then
+            required_dev_tfvars=(
+              TF_VAR_vpn_dev_domain
+              TF_VAR_vpn_dev_ws_path
+              TF_VAR_vpn_dev_xhttp_path
+              TF_VAR_vpn_dev_reality_server_name
+              TF_VAR_vpn_dev_reality_private_key
+              TF_VAR_vpn_dev_reality_short_id
+              TF_VAR_vpn_dev_reality_dest_host
+            )
+
+            for var_name in "${required_dev_tfvars[@]}"; do
+              if [ -z "${!var_name:-}" ]; then
+                echo "::error::${var_name} is required when vpn-dev stack is enabled"
+                exit 1
+              fi
+            done
           fi
 
       - name: Resolve dev workflow scope
