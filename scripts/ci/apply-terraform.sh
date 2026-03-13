@@ -94,6 +94,12 @@ validate_tfvars_file() {
   fi
 }
 
+tf_state_has() {
+  local root="$1"
+  local addr="$2"
+  terraform -chdir="terraform/${root}" state show "${addr}" >/dev/null 2>&1
+}
+
 # ----- export foundation config names -----------------------------------
 export_config_names() {
   local config_names_json
@@ -216,6 +222,69 @@ verify_foundation_config_presence() {
   fi
 }
 
+foundation_reconcile_state_from_plan() {
+  local json_file
+  json_file="$(mktemp)"
+  terraform -chdir="terraform/foundation" show -json tfplan > "${json_file}"
+
+  python3 - "${json_file}" <<'PY' | while IFS='|' read -r addr kind actions name; do
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as fh:
+    plan = json.load(fh)
+
+for item in plan.get("resource_changes", []):
+    addr = item.get("address", "")
+    actions = ",".join(item.get("change", {}).get("actions", []))
+    after = item.get("change", {}).get("after", {}) or {}
+    rtype = item.get("type", "")
+    name = after.get("name", "")
+    print(f"{addr}|{rtype}|{actions}|{name}")
+PY
+    [ -n "${addr}" ] || continue
+    case "${kind}" in
+      docker_network)
+        if [ "${actions}" = "create" ] && [ -n "${name}" ] && ! tf_state_has foundation "${addr}"; then
+          local id=""
+          id="$(docker network inspect -f '{{ .Id }}' "${name}" 2>/dev/null || true)"
+          if [ -n "${id}" ]; then
+            echo "::notice::foundation.import.network ${addr} <- ${name}"
+            terraform -chdir="terraform/foundation" import "${addr}" "${id}" >/dev/null
+          fi
+        fi
+        ;;
+      docker_volume)
+        if [ "${actions}" = "create" ] && [ -n "${name}" ] && ! tf_state_has foundation "${addr}"; then
+          local id=""
+          id="$(docker volume inspect -f '{{ .Name }}' "${name}" 2>/dev/null || true)"
+          if [ -n "${id}" ]; then
+            echo "::notice::foundation.import.volume ${addr} <- ${name}"
+            terraform -chdir="terraform/foundation" import "${addr}" "${id}" >/dev/null
+          fi
+        fi
+        ;;
+      docker_config)
+        if [ "${actions}" = "create" ] && [ -n "${name}" ] && ! tf_state_has foundation "${addr}"; then
+          local id=""
+          id="$(docker config inspect -f '{{ .ID }}' "${name}" 2>/dev/null || true)"
+          if [ -n "${id}" ]; then
+            echo "::notice::foundation.import.config ${addr} <- ${name}"
+            terraform -chdir="terraform/foundation" import "${addr}" "${id}" >/dev/null
+          fi
+        fi
+
+        if [ "${actions}" = "delete,create" ] && tf_state_has foundation "${addr}"; then
+          echo "::notice::foundation.state_rm ${addr} to avoid destroying in-use immutable config"
+          terraform -chdir="terraform/foundation" state rm "${addr}" >/dev/null
+        fi
+        ;;
+    esac
+  done
+
+  rm -f "${json_file}"
+}
+
 prepare_nodes_replace_args() {
   local raw names_csv
   raw="${REPLACE_VPN_NODES:-}"
@@ -260,7 +329,12 @@ plan_apply_root() {
   fi
 
   terraform -chdir="terraform/${root}" plan "${plan_args[@]}"
-  [ "${root}" != "foundation" ] || log_foundation_plan_summary
+  if [ "${root}" = "foundation" ]; then
+    log_foundation_plan_summary
+    foundation_reconcile_state_from_plan
+    terraform -chdir="terraform/${root}" plan "${plan_args[@]}"
+    log_foundation_plan_summary
+  fi
   terraform -chdir="terraform/${root}" apply -input=false -auto-approve tfplan
 
   if [ "${root}" = "foundation" ]; then
