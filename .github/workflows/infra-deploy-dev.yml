@@ -124,6 +124,12 @@ jobs:
           source ./scripts/core/prepare-terraform-env.sh
 
           tf_enable_vpn_dev_stack="${TF_VAR_enable_vpn_dev_stack:-false}"
+          reserved_control_vars=(
+            APPLY_FOUNDATION
+            APPLY_NODES
+            APPLY_INFRA_NODES
+            REPLACE_VPN_NODES
+          )
 
           # Dev workflow must use a dev state scope.
           if [ -z "${TF_STATE_KEY_PREFIX:-}" ]; then
@@ -145,6 +151,13 @@ jobs:
             echo "::error::reconcile_nodes=true requires apply_nodes=true in Infra Deploy Dev"
             exit 1
           fi
+
+          for var_name in "${reserved_control_vars[@]}"; do
+            if [ -n "${!var_name:-}" ]; then
+              echo "::error::${var_name} must not be defined in INFRA_ENV_DEV. These controls come only from workflow_dispatch inputs."
+              exit 1
+            fi
+          done
 
           if [ "${ENABLE_VPN_DEV_STACK:-false}" != "${tf_enable_vpn_dev_stack}" ]; then
             echo "::error::ENABLE_VPN_DEV_STACK (${ENABLE_VPN_DEV_STACK:-false}) must match Terraform toggle TF_VAR/IAC_TFVAR_enable_vpn_dev_stack (${tf_enable_vpn_dev_stack})"
