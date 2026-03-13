@@ -12,11 +12,11 @@ x-deploy-common: &deploy-common
       - node.labels.role == vpn
       - node.labels.channel != dev
   update_config:
-    order: start-first
+    order: stop-first
     monitor: 2m
     failure_action: rollback
   rollback_config:
-    order: start-first
+    order: stop-first
     monitor: 2m
   restart_policy:
     condition: any
