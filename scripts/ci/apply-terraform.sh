@@ -96,7 +96,10 @@ validate_tfvars_file() {
 
 # ----- export foundation config names -----------------------------------
 export_config_names() {
-  terraform -chdir="terraform/foundation" output -json docker_config_names \
+  local config_names_json
+  config_names_json="$(terraform -chdir="terraform/foundation" output -json docker_config_names)"
+
+  printf '%s' "${config_names_json}" \
     | python3 -c '
 import sys, json
 m = json.load(sys.stdin)
@@ -113,6 +116,19 @@ for env_name, key in {
 }.items():
     print("{}={}".format(env_name, m.get(key, "")))
 ' >> "${GITHUB_ENV}"
+
+  printf '%s' "${config_names_json}" \
+    | python3 -c '
+import sys, json
+m = json.load(sys.stdin)
+for notice_name, key in {
+    "foundation.xray": "xray",
+    "foundation.xray_dev": "xray_dev",
+    "foundation.prometheus": "prometheus",
+    "foundation.grafana_ini": "grafana_ini",
+}.items():
+    print("::notice::{}={}".format(notice_name, m.get(key, "")))
+'
 }
 
 prepare_nodes_replace_args() {
