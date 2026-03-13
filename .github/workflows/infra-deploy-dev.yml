@@ -72,6 +72,11 @@ jobs:
         run: |
           set -Eeuo pipefail
           test -n "${INFRA_ENV_DEV}" || { echo "::error::Missing secret INFRA_ENV_DEV"; exit 1; }
+          forbidden_keys_regex='^(APPLY_FOUNDATION|APPLY_NODES|APPLY_INFRA_NODES|REPLACE_VPN_NODES)='
+          if printf '%s\n' "${INFRA_ENV_DEV}" | grep -Eq "${forbidden_keys_regex}"; then
+            echo "::error::INFRA_ENV_DEV must not define APPLY_FOUNDATION, APPLY_NODES, APPLY_INFRA_NODES, or REPLACE_VPN_NODES"
+            exit 1
+          fi
           ENV_FILE="${RUNNER_TEMP}/infra.dev.env"
           printf '%s\n' "${INFRA_ENV_DEV}" > "${ENV_FILE}"
           chmod 600 "${ENV_FILE}"
@@ -302,16 +307,20 @@ jobs:
 
       - name: Terraform apply
         env:
-          APPLY_FOUNDATION: ${{ inputs.apply_foundation }}
-          APPLY_NODES: ${{ inputs.apply_nodes }}
-          APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
-          REPLACE_VPN_NODES: ${{ inputs.replace_vpn_nodes }}
+          WF_APPLY_FOUNDATION: ${{ inputs.apply_foundation }}
+          WF_APPLY_NODES: ${{ inputs.apply_nodes }}
+          WF_APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
+          WF_REPLACE_VPN_NODES: ${{ inputs.replace_vpn_nodes }}
           FOUNDATION_TFVARS_FILE: ${{ github.workspace }}/terraform/foundation/terraform.dev.tfvars
           NODES_TFVARS_FILE: ${{ github.workspace }}/terraform/nodes/catalog.dev.tfvars
           INFRA_NODES_TFVARS_FILE: ${{ github.workspace }}/terraform/infra-nodes/catalog.dev.tfvars
         run: |
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export APPLY_FOUNDATION="${WF_APPLY_FOUNDATION}"
+          export APPLY_NODES="${WF_APPLY_NODES}"
+          export APPLY_INFRA_NODES="${WF_APPLY_INFRA_NODES}"
+          export REPLACE_VPN_NODES="${WF_REPLACE_VPN_NODES}"
           bash ./scripts/ci/apply-terraform.sh
 
       - uses: actions/setup-python@v5
