@@ -83,6 +83,7 @@ REDIS_IMAGE_TAG=7-alpine
 DATA_DEV_NETWORK_NAME=data-dev-net
 DEV_POSTGRES_DB=vpn_control_dev
 DEV_POSTGRES_USER=vpn_dev_user
+DEV_POSTGRES_PUBLISHED_PORT=15434
 DEV_POSTGRES_PASSWORD=<strong_password>
 DEV_REDIS_PASSWORD=<strong_password>
 

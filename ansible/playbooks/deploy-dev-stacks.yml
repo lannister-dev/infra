@@ -247,6 +247,7 @@
         REDIS_IMAGE_TAG: "{{ redis_image_tag }}"
         POSTGRES_DB_NAME: "{{ data_dev_postgres_db }}"
         POSTGRES_DB_USER: "{{ data_dev_postgres_user }}"
+        POSTGRES_PUBLISHED_PORT: "{{ data_dev_postgres_published_port | string }}"
         DATA_DEV_NETWORK_NAME: "{{ data_dev_network_name }}"
       when: deploy_data_dev_stack
       changed_when: false
