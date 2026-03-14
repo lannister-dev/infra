@@ -22,6 +22,10 @@ set -u
 : "${TF_STATE_REGION:?TF_STATE_REGION is required}"
 : "${TF_STATE_KEY_PREFIX:?TF_STATE_KEY_PREFIX is required}"
 
+# Normalize provider-agnostic aliases like IAC_TFVAR_FOO into TF_VAR_foo
+# before any logging, planning, or apply steps read Terraform inputs.
+source "$(dirname "${BASH_SOURCE[0]}")/../core/prepare-terraform-env.sh"
+
 GITHUB_ENV="${GITHUB_ENV:-/dev/null}"
 NODES_REPLACE_ARGS=()
 
