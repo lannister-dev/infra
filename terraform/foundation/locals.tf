@@ -26,6 +26,7 @@ locals {
   vpn_dev_reality_short_id    = trimspace(var.vpn_dev_reality_short_id)
 
   xray_config_rendered = templatefile("${local.root_dir}/vpn/xray/config.json.j2", {
+    XRAY_LOG_LEVEL          = "info"
     VPN_DOMAIN              = local.vpn_domain
     VPN_WS_PATH             = local.vpn_ws_path
     VPN_XHTTP_PATH          = local.vpn_xhttp_path
@@ -37,6 +38,7 @@ locals {
   })
 
   xray_config_dev_rendered = var.enable_vpn_dev_stack ? templatefile("${local.root_dir}/vpn/xray/config.json.j2", {
+    XRAY_LOG_LEVEL          = "debug"
     VPN_DOMAIN              = local.vpn_dev_domain
     VPN_WS_PATH             = local.vpn_dev_ws_path
     VPN_XHTTP_PATH          = local.vpn_dev_xhttp_path
