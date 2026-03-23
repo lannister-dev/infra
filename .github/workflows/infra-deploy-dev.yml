@@ -356,6 +356,17 @@ jobs:
             echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEYS_DIR}/default" >> "${GITHUB_ENV}"
           fi
 
+      - name: Show loaded SSH key fingerprints
+        if: ${{ inputs.reconcile_nodes == true }}
+        run: |
+          set -Eeuo pipefail
+          for key_file in "${ANSIBLE_SSH_KEYS_DIR}"/*; do
+            [ -f "${key_file}" ] || continue
+            key_ref="$(basename "${key_file}")"
+            key_fp_sha256="$(ssh-keygen -lf "${key_file}" -E sha256 | awk '{print $2}')"
+            echo "::notice::workflow.ssh_key.${key_ref}.sha256=${key_fp_sha256}"
+          done
+
       - name: Terraform apply
         env:
           WF_APPLY_FOUNDATION: ${{ inputs.apply_foundation }}
