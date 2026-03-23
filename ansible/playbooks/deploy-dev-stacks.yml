@@ -41,16 +41,6 @@
       when: enable_vpn_dev_stack
       changed_when: false
 
-    - name: Check required swarm secret probe_token when probe is enabled
-      ansible.builtin.command:
-        argv:
-          - docker
-          - secret
-          - inspect
-          - probe_token
-      when: deploy_probe_stack
-      changed_when: false
-
     - name: Check vpn-dev overlay network when required by vpn-dev or nats
       ansible.builtin.command:
         argv:
@@ -300,20 +290,4 @@
           vpn-dev_xray is not using expected docker config {{ xray_config_dev_name }}.
           Current service config payload: {{ vpn_dev_service_configs.stdout }}
       when: enable_vpn_dev_stack
-      changed_when: false
-
-    - name: Deploy probe stack
-      ansible.builtin.command:
-        argv:
-          - docker
-          - stack
-          - deploy
-          - --with-registry-auth
-          - --prune
-          - -c
-          - docker/stacks/probe.yml
-          - probe
-      args:
-        chdir: "{{ repo_root }}"
-      when: deploy_probe_stack
       changed_when: false

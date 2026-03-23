@@ -78,7 +78,6 @@ IAC_TFVAR_ENABLE_VPN_DEV_STACK=false
 
 # ---- Ansible runtime toggles (not Terraform vars) ----
 RUN_SANITY_CHECK=true
-DEPLOY_PROBE_STACK=true
 DEPLOY_NATS_STACK=true
 ENABLE_VPN_DEV_STACK=false
 NATS_AUTH_TOKEN=<strong_random_token>

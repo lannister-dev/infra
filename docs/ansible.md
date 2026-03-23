@@ -11,7 +11,7 @@ Ansible handles reconciliation after Terraform converges infrastructure state.
 
 - `ansible/playbooks/deploy-stacks.yml`
   - validates foundation dependencies
-  - deploys stacks (`traefik`, `monitoring`, `swarmpit`, optional `nats`, `vpn`, optional `vpn-dev`, optional `probe`)
+  - deploys stacks (`traefik`, `monitoring`, `swarmpit`, optional `nats`, `vpn`, optional `vpn-dev`)
 
 ## Inputs
 
@@ -21,7 +21,6 @@ Topology is not read directly from env JSON. It is read from generated inventory
 
 Environment variables are used for stack toggles/secrets/version pins, for example:
 - `ENABLE_VPN_DEV_STACK`
-- `DEPLOY_PROBE_STACK`
 - `DEPLOY_NATS_STACK`
 - `DEPLOY_DATA_DEV_STACK`
 - `DEPLOY_DATA_PROD_STACK`
@@ -40,6 +39,10 @@ When enabled, playbook auto-creates Swarm secret `nats_auth_token` if missing.
 `vpn-dev` stack reads runtime env from `node-agent.dev.env`.
 In CI these files are rendered from GitHub Secrets (`NODE_AGENT_ENV_*`).
 For local runs use `node-agent.env.example` as a template and keep prod/dev files separate.
+
+Probe deployment is intentionally not handled by this repository anymore.
+Deploy probe workers from the standalone `probe` repository via its
+`deploy/swarm-stack.yml`.
 
 ## Run
 
