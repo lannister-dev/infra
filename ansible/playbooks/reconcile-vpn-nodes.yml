@@ -203,6 +203,7 @@
         path: "{{ lookup('env', 'HOME') + '/.ssh' }}"
         state: directory
         mode: "0700"
+      become: false
 
     - name: Remove stale SSH host keys for desired nodes
       ansible.builtin.command:
@@ -215,6 +216,7 @@
         label: "{{ item.name }} -> {{ item.public_ip }}"
       changed_when: "false"
       failed_when: "false"
+      become: false
 
     - name: Remove stale SSH host keys with port form for desired nodes
       ansible.builtin.command:
@@ -227,6 +229,7 @@
         label: "{{ item.name }} -> [{{ item.public_ip }}]:{{ item.ssh_port }}"
       changed_when: "false"
       failed_when: "false"
+      become: false
 
     - name: Wait for SSH port to become reachable on desired nodes
       ansible.builtin.wait_for:
@@ -240,6 +243,7 @@
       loop_control:
         label: "{{ item.name }} -> {{ item.public_ip }}:{{ item.ssh_port }}"
       changed_when: "false"
+      become: false
 
     - name: Scan SSH host keys for desired nodes
       ansible.builtin.command:
@@ -259,6 +263,7 @@
       until: scan_known_host_result.rc == 0 and (scan_known_host_result.stdout | trim) != ""
       changed_when: "false"
       failed_when: scan_known_host_result.rc != 0 or (scan_known_host_result.stdout | trim) == ""
+      become: false
 
     - name: Save scanned SSH host keys into known_hosts
       ansible.builtin.known_hosts:
@@ -269,6 +274,7 @@
       loop: "{{ scan_known_host_result.results }}"
       loop_control:
         label: "{{ item.item.name }} -> {{ item.item.public_ip }}"
+      become: false
 
     - name: Verify SSH authentication works for desired nodes
       ansible.builtin.shell: |
@@ -304,6 +310,7 @@
       delay: "{{ ssh_auth_delay_effective | int }}"
       until: ssh_auth_check_result.rc == 0
       changed_when: false
+      become: false
 
     - name: Build effective SSH user map from auth checks
       ansible.builtin.set_fact:
