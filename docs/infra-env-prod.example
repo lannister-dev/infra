@@ -59,8 +59,7 @@ IAC_TFVAR_ENABLE_VPN_DEV_STACK=false
 # IAC_TFVAR_HOSTVDS_OS_REGION_NAME=eu-north1b
 # IAC_TFVAR_HOSTVDS_OS_INTERFACE=public
 
-# Runtime HostVDS credentials are also required when reconcile_nodes=true,
-# because verify-hostvds-keypairs.py reads HOSTVDS_OS_* directly:
+# Runtime HostVDS credentials may still be required by other HostVDS/OpenStack operations:
 # HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
 # HOSTVDS_OS_USERNAME=hostvds-...
 # HOSTVDS_OS_PASSWORD=...
