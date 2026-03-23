@@ -144,7 +144,7 @@ PROD_REDIS_PASSWORD=<strong_password>
 
 # ---- SSH keys for Ansible reconcile/deploy ----
 # Recommended multi-key map (node selects by ssh_key_ref):
-# ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>","backup":"<base64_private_key>"}'
+# ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>","yc":"<base64_private_key>","backup":"<base64_private_key>"}'
 # Backward-compatible single-key options:
 # ANSIBLE_SSH_PRIVATE_KEY_B64=<base64_private_key>
 # ANSIBLE_SSH_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----..

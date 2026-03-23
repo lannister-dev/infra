@@ -92,7 +92,7 @@ DEV_POSTGRES_PASSWORD=<strong_password>
 DEV_REDIS_PASSWORD=<strong_password>
 
 # SSH keys for Ansible reconcile/deploy
-# ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>"}'
+# ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>","yc":"<base64_private_key>"}'
 
 # Vault layout:
 # kv/infra/dev field: config      -> this file content

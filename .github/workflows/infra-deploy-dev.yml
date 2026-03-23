@@ -395,6 +395,19 @@ jobs:
             exit 0
           fi
 
+          missing_refs=""
+          IFS=',' read -r -a key_ref_list <<< "${key_refs}"
+          for key_ref in "${key_ref_list[@]}"; do
+            [ -n "${key_ref}" ] || continue
+            if [ ! -f "${ANSIBLE_SSH_KEYS_DIR}/${key_ref}" ]; then
+              missing_refs="${missing_refs}${missing_refs:+,}${key_ref}"
+            fi
+          done
+          if [ -n "${missing_refs}" ]; then
+            echo "::error::Missing SSH key refs required by ${inventory_file}: ${missing_refs}. Add them to ANSIBLE_SSH_KEYS_B64_JSON in INFRA_ENV_DEV."
+            exit 1
+          fi
+
           python3 ./scripts/core/verify-hostvds-keypairs.py \
             --keys-dir "${ANSIBLE_SSH_KEYS_DIR}" \
             --refs "${key_refs}"

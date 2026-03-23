@@ -51,7 +51,7 @@ export VPN_WHITELIST_ENTRY_UPSTREAM_PORT=443
 - For HostVDS Ubuntu images in this project, use `ssh_user = "root"` in node catalog.
 - Server must be created with a known key pair (for example `dev`).
 - CI secret `INFRA_ENV_PROD` should provide `ANSIBLE_SSH_KEYS_B64_JSON`:
-  - JSON object: `'{"dev":"<base64_private_key>","other":"<base64_private_key>"}'`.
+  - JSON object: `'{"dev":"<base64_private_key>","yc":"<base64_private_key>","other":"<base64_private_key>"}'`.
   - each node picks key by `ssh_key_ref`.
 - Backward compatibility still works:
   - `ANSIBLE_SSH_PRIVATE_KEY_B64`,

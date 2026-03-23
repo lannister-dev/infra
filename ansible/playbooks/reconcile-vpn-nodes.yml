@@ -273,6 +273,8 @@
     - name: Verify SSH authentication works for desired nodes
       ansible.builtin.shell: |
         set -Eeuo pipefail
+        ssh_error_log="$(mktemp)"
+        trap 'rm -f "${ssh_error_log}"' EXIT
         for ssh_user_candidate in {{ (([item.ssh_user] + ssh_auth_fallback_users_effective) | unique | map('quote') | join(' ')) }}; do
           if ssh \
             -o BatchMode=yes \
@@ -282,10 +284,12 @@
             -i {{ ((ssh_keys_dir_effective ~ '/' ~ (item.ssh_key_ref | default('default', true) | trim)) if ssh_keys_dir_effective != '' else ssh_private_key_file_effective) | quote }} \
             -p {{ (item.ssh_port | string) | quote }} \
             "${ssh_user_candidate}@{{ item.public_ip }}" \
-            true >/dev/null 2>&1; then
+            true >/dev/null 2>"${ssh_error_log}"; then
             printf '%s\n' "${ssh_user_candidate}"
             exit 0
           fi
+          printf '[%s] ' "${ssh_user_candidate}" >&2
+          tail -n 1 "${ssh_error_log}" >&2 || true
         done
         echo "SSH auth failed for node {{ item.name }}@{{ item.public_ip }} with users: {{ (([item.ssh_user] + ssh_auth_fallback_users_effective) | unique | join(', ')) }}." \
           "If this node was reprovisioned, ensure key_pair/authorized_keys matches ssh_key_ref={{ item.ssh_key_ref | default('default', true) }} or replace the VM." >&2
