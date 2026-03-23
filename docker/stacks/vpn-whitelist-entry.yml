@@ -40,11 +40,11 @@ services:
         sed \
           -e "s#__UPSTREAM_HOST__#${VPN_WHITELIST_ENTRY_UPSTREAM_HOST}#g" \
           -e "s#__UPSTREAM_PORT__#${VPN_WHITELIST_ENTRY_UPSTREAM_PORT}#g" \
-          /usr/local/etc/haproxy/haproxy.cfg.template > /usr/local/etc/haproxy/haproxy.cfg
-        exec haproxy -W -db -f /usr/local/etc/haproxy/haproxy.cfg
+          /usr/local/etc/haproxy/haproxy.cfg.template > /tmp/haproxy.cfg
+        exec haproxy -W -db -f /tmp/haproxy.cfg
     healthcheck:
       <<: *healthcheck-common
-      test: ["CMD", "haproxy", "-c", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+      test: ["CMD", "haproxy", "-c", "-f", "/tmp/haproxy.cfg"]
     deploy:
       <<: *deploy-common
 
