@@ -89,30 +89,24 @@ set +a
 terraform -chdir=terraform/nodes init -input=false -backend-config="$(pwd)/terraform/backends/nodes.hcl"
 ```
 
-## 4. Import existing resources into state
-
-Import all three objects before running `plan`:
-
-```bash
-terraform -chdir=terraform/nodes import 'module.yandex_whitelist_entry[0].yandex_vpc_address.whitelist_entry["vpn-yc-whitelist-entry-01"]' <ADDRESS_ID>
-terraform -chdir=terraform/nodes import 'module.yandex_whitelist_entry[0].yandex_vpc_security_group.whitelist_entry["vpn-yc-whitelist-entry-01"]' <SECURITY_GROUP_ID>
-terraform -chdir=terraform/nodes import 'module.yandex_whitelist_entry[0].yandex_compute_instance.whitelist_entry["vpn-yc-whitelist-entry-01"]' <INSTANCE_ID>
-```
-
-Recommended immediate state inspection:
-
-```bash
-terraform -chdir=terraform/nodes state show 'module.yandex_whitelist_entry[0].yandex_vpc_address.whitelist_entry["vpn-yc-whitelist-entry-01"]'
-terraform -chdir=terraform/nodes state show 'module.yandex_whitelist_entry[0].yandex_vpc_security_group.whitelist_entry["vpn-yc-whitelist-entry-01"]'
-terraform -chdir=terraform/nodes state show 'module.yandex_whitelist_entry[0].yandex_compute_instance.whitelist_entry["vpn-yc-whitelist-entry-01"]'
-```
-
-## 5. Check the plan before any apply
+## 4. Check the plan before any apply
 
 Run:
 
 ```bash
 terraform -chdir=terraform/nodes plan -input=false
+```
+
+Terraform will import the existing address, security group, and instance into
+state declaratively from `yandex_whitelist_entry_nodes`. No separate
+`terraform import` commands are required.
+
+Recommended immediate state inspection after the first successful apply:
+
+```bash
+terraform -chdir=terraform/nodes state show 'module.yandex_whitelist_entry[0].yandex_vpc_address.whitelist_entry["vpn-yc-whitelist-entry-01"]'
+terraform -chdir=terraform/nodes state show 'module.yandex_whitelist_entry[0].yandex_vpc_security_group.whitelist_entry["vpn-yc-whitelist-entry-01"]'
+terraform -chdir=terraform/nodes state show 'module.yandex_whitelist_entry[0].yandex_compute_instance.whitelist_entry["vpn-yc-whitelist-entry-01"]'
 ```
 
 Safe/expected outcomes:
@@ -132,7 +126,7 @@ yc compute instance get <INSTANCE_ID> --full --format json
 
 The usual causes are wrong imported IDs, wrong catalog key, or an SSH metadata mismatch.
 
-## 6. Reconcile node labels and deploy relay runtime
+## 5. Reconcile node labels and deploy relay runtime
 
 Set relay upstream for the first-hop node:
 
@@ -158,7 +152,7 @@ Expected runtime result:
 - regular `vpn` / `vpn-dev` backend stacks do not schedule there
 - `vpn-whitelist-entry` relay schedules there and publishes `443/tcp` in host mode
 
-## 7. Verification checklist
+## 6. Verification checklist
 
 - IP did not change: VM still uses `158.160.224.236`.
 - VM is not planned for recreate.
