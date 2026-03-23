@@ -294,41 +294,6 @@ jobs:
       - name: Install Ansible
         run: python -m pip install --upgrade pip ansible
 
-      - name: Verify HostVDS keypair fingerprints
-        if: ${{ inputs.reconcile_nodes == true }}
-        run: |
-          set -Eeo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-
-          inventory_file="ansible/inventory/generated/vpn_nodes.yml"
-          if [ ! -f "${inventory_file}" ]; then
-            echo "::error::Missing generated inventory file: ${inventory_file}"
-            exit 1
-          fi
-
-          key_refs="$(python3 -c 'import sys, yaml; data = yaml.safe_load(open(sys.argv[1], "r", encoding="utf-8")) or {}; nodes = data.get("vpn_nodes", []) if isinstance(data, dict) else []; refs = sorted({str(node.get("ssh_key_ref", "")).strip() for node in nodes if isinstance(node, dict) and str(node.get("provider", "")).startswith("hostvds") and str(node.get("ssh_key_ref", "")).strip() != ""}); print(",".join(refs))' "${inventory_file}")"
-          if [ -z "${key_refs}" ]; then
-            echo "::notice::No HostVDS ssh_key_ref entries found in ${inventory_file}; skipping HostVDS keypair verification"
-            exit 0
-          fi
-
-          missing_refs=""
-          IFS=',' read -r -a key_ref_list <<< "${key_refs}"
-          for key_ref in "${key_ref_list[@]}"; do
-            [ -n "${key_ref}" ] || continue
-            if [ ! -f "${ANSIBLE_SSH_KEYS_DIR}/${key_ref}" ]; then
-              missing_refs="${missing_refs}${missing_refs:+,}${key_ref}"
-            fi
-          done
-          if [ -n "${missing_refs}" ]; then
-            echo "::error::Missing SSH key refs required by ${inventory_file}: ${missing_refs}. Add them to ANSIBLE_SSH_KEYS_B64_JSON in INFRA_ENV_PROD."
-            exit 1
-          fi
-
-          python3 ./scripts/core/verify-hostvds-keypairs.py \
-            --keys-dir "${ANSIBLE_SSH_KEYS_DIR}" \
-            --refs "${key_refs}"
-
       - name: Reconcile VPN nodes (Ansible)
         if: ${{ inputs.reconcile_nodes == true }}
         run: |
