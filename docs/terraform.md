@@ -41,6 +41,7 @@ editing workflow `export` lists.
 - Manual catalog: `vpn_nodes`
 - Provider API lookup for existing servers: `provider_api_vpn_nodes`
 - Provider compute create/destroy: `provider_compute_vpn_nodes`
+- Yandex Cloud whitelist entry adoption: `yandex_whitelist_entry_nodes`
 
 Legacy compatibility:
 - `hostvds_vpn_nodes`
@@ -71,6 +72,12 @@ HostVDS (OpenStack) for `terraform/nodes` entries with `provider=hostvds`:
 - `HOSTVDS_OS_PROJECT_DOMAIN_NAME` or `HOSTVDS_OS_PROJECT_DOMAIN_ID`
 - `HOSTVDS_OS_REGION_NAME`
 - `HOSTVDS_OS_INTERFACE`
+
+Yandex Cloud for `terraform/nodes` entries in `yandex_whitelist_entry_nodes`:
+- `YC_TOKEN` or `TF_VAR_yandex_token`
+- `YC_CLOUD_ID` or `TF_VAR_yandex_cloud_id`
+- `YC_FOLDER_ID` or `TF_VAR_yandex_folder_id`
+- optional: `TF_VAR_yandex_zone`
 
 Timeweb for `terraform/infra-nodes` provider modes:
 - `TIMEWEB_API_TOKEN`
@@ -142,11 +149,12 @@ Deploy gate:
 - dev deploy gate: `workflow_dispatch` + `confirm_apply=DEV`.
 - Optional input `apply_infra_nodes=true`: also applies `terraform/infra-nodes`.
 
-Topology for CI comes from repository tfvars; secrets come from `INFRA_ENV_PROD`.
-Development deploy reads secrets from `INFRA_ENV_DEV`.
-
-`node-agent.env` is rendered at runtime in dev CI from GitHub environment secrets:
-- development workflow: `NODE_AGENT_ENV_DEV` or `NODE_AGENT_ENV_DEV_B64`.
+Topology for CI comes from repository tfvars.
+Runtime secrets are read from Vault:
+- prod infra env: `kv/infra/prod#config`
+- dev infra env: `kv/infra/dev#config`
+- prod node-agent env: `kv/node-agent/prod#config`
+- dev node-agent env: `kv/node-agent/dev#config`
 
 Repository stores only non-secret template:
 - `node-agent.env.example`
@@ -162,7 +170,7 @@ inheritance between primary and dev Xray fields; if `enable_vpn_dev_stack=true`,
 set the full dev value set explicitly. The repository var-file is only for
 non-secret dev toggles such as `enable_vpn_dev_stack`.
 
-Recommended `INFRA_ENV_PROD` style:
+Recommended Vault `kv/infra/prod#config` style:
 
 ```bash
 TF_STATE_BUCKET=...

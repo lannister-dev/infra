@@ -43,9 +43,10 @@ locals {
   hostvds_compute_input_nodes       = merge(var.hostvds_provisioned_vpn_nodes, local.hostvds_compute_from_provider_catalog)
   hostvds_compute_enabled_effective = var.hostvds_compute_enabled || length(local.hostvds_compute_input_nodes) > 0
 
-  hostvds_compute_vpn_nodes = local.hostvds_compute_enabled_effective ? module.hostvds_compute[0].vpn_nodes : {}
-  hostvds_api_input_nodes   = merge(var.hostvds_vpn_nodes, local.hostvds_api_from_provider_catalog, local.hostvds_compute_vpn_nodes)
-  hostvds_api_enabled       = var.provider_api_enabled || local.hostvds_compute_enabled_effective || length(var.hostvds_vpn_nodes) > 0 || length(local.hostvds_api_from_provider_catalog) > 0
+  hostvds_compute_vpn_nodes        = local.hostvds_compute_enabled_effective ? module.hostvds_compute[0].vpn_nodes : {}
+  yandex_whitelist_entry_vpn_nodes = length(var.yandex_whitelist_entry_nodes) > 0 ? module.yandex_whitelist_entry[0].vpn_nodes : {}
+  hostvds_api_input_nodes          = merge(var.hostvds_vpn_nodes, local.hostvds_api_from_provider_catalog, local.hostvds_compute_vpn_nodes)
+  hostvds_api_enabled              = var.provider_api_enabled || local.hostvds_compute_enabled_effective || length(var.hostvds_vpn_nodes) > 0 || length(local.hostvds_api_from_provider_catalog) > 0
   hostvds_credentials_required = (
     length(var.hostvds_vpn_nodes) > 0
     || length(local.hostvds_api_from_provider_catalog) > 0
@@ -54,7 +55,7 @@ locals {
 
   provider_api_vpn_nodes = module.hostvds_api_catalog.vpn_nodes
 
-  merged_vpn_nodes_raw = merge(var.vpn_nodes, local.provider_api_vpn_nodes)
+  merged_vpn_nodes_raw = merge(var.vpn_nodes, local.provider_api_vpn_nodes, local.yandex_whitelist_entry_vpn_nodes)
 
   merged_vpn_nodes = {
     for name, node in local.merged_vpn_nodes_raw : name => {
@@ -67,6 +68,7 @@ locals {
       provider        = tostring(try(node["provider"], "api"))
       region          = tostring(try(node["region"], ""))
       platform_region = tostring(try(node["platform_region"], ""))
+      traffic_role    = tostring(try(node["traffic_role"], "standard"))
     }
   }
 
@@ -82,6 +84,7 @@ locals {
       provider        = local.merged_vpn_nodes[name]["provider"]
       region          = local.merged_vpn_nodes[name]["region"]
       platform_region = local.merged_vpn_nodes[name]["platform_region"]
+      traffic_role    = local.merged_vpn_nodes[name]["traffic_role"]
     }
   ]
 

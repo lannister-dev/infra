@@ -9,6 +9,17 @@ module "hostvds_compute" {
   nodes = local.hostvds_compute_input_nodes
 }
 
+module "yandex_whitelist_entry" {
+  source = "./modules/yandex-whitelist-entry"
+  count  = length(var.yandex_whitelist_entry_nodes) > 0 ? 1 : 0
+
+  providers = {
+    yandex = yandex
+  }
+
+  nodes = var.yandex_whitelist_entry_nodes
+}
+
 module "hostvds_api_catalog" {
   source = "./modules/hostvds-api"
 

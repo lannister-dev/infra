@@ -47,11 +47,16 @@ CI policy:
 - `.github/workflows/infra-deploy.yml`: production apply only from `workflow_dispatch` with `confirm_apply=APPLY`.
 - `.github/workflows/infra-deploy-dev.yml`: development apply from `workflow_dispatch` with `confirm_apply=DEV`.
 - Terraform variables in CI are centralized via `TF_VAR_*` (or `IAC_TFVAR_*` aliases).
+- Vault layout used by deploy workflows:
+  - `kv/infra/prod#config`
+  - `kv/infra/dev#config`
+  - `kv/node-agent/prod#config`
+  - `kv/node-agent/dev#config`
 
 Development-specific notes:
-- Configure separate GitHub secret `INFRA_ENV_DEV`.
-- Configure node-agent env secret in GitHub environment `development`:
-  - `NODE_AGENT_ENV_DEV` (plain multiline) or `NODE_AGENT_ENV_DEV_B64` (base64).
+- Development deploy also reads Vault:
+  - `kv/infra/dev#config`
+  - `kv/node-agent/dev#config`
 - Use dedicated state prefix in `INFRA_ENV_DEV`, for example `TF_STATE_KEY_PREFIX=vpn-infra/dev`.
 - Dev workflow uses explicit var-files:
   - `terraform/foundation/terraform.dev.tfvars`
@@ -76,11 +81,21 @@ Development-specific notes:
 Source of truth: `terraform/nodes/catalog.auto.tfvars`.
 
 Add node:
-1. Add entry into one of maps (`vpn_nodes`, `provider_api_vpn_nodes`, `provider_compute_vpn_nodes`).
+1. Add entry into one of maps (`vpn_nodes`, `provider_api_vpn_nodes`, `provider_compute_vpn_nodes`, `yandex_whitelist_entry_nodes`).
 2. Set `ssh_key_ref` for the node (for example `dev`).
 3. Ensure matching private key exists in `INFRA_ENV_PROD` via `ANSIBLE_SSH_KEYS_B64_JSON`.
 4. Apply `terraform/nodes`.
 5. Run `reconcile-vpn-nodes.yml`.
+6. Run `deploy-stacks.yml`.
+
+Whitelist entry node specifics:
+1. It still joins Swarm as a worker.
+2. It must receive `traffic_role=whitelist_entry`.
+3. It must not run regular backend stacks `vpn_xray` and `vpn_node-agent`.
+4. It runs the dedicated `vpn-whitelist-entry` relay stack instead.
+5. Set relay upstream before deploy:
+   `VPN_WHITELIST_ENTRY_UPSTREAM_HOST=<backend_ip_or_dns>`
+   `VPN_WHITELIST_ENTRY_UPSTREAM_PORT=443`
 
 Disable node without deleting VPS:
 1. Set `enabled = false`.

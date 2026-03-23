@@ -51,6 +51,9 @@ env:
   TF_IN_AUTOMATION: "true"
   TERRAFORM_VERSION: "1.8.5"
   PYTHON_VERSION: "3.10"
+  VAULT_KV_MOUNT: "kv"
+  VAULT_INFRA_SECRET_PATH: "infra/dev"
+  VAULT_NODE_AGENT_SECRET_PATH: "node-agent/dev"
 
 jobs:
   checks:
@@ -66,20 +69,60 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Write runtime env
-        env:
-          INFRA_ENV_DEV: ${{ secrets.INFRA_ENV_DEV }}
+      - name: Prepare Vault auth inputs
         run: |
           set -Eeuo pipefail
-          test -n "${INFRA_ENV_DEV}" || { echo "::error::Missing secret INFRA_ENV_DEV"; exit 1; }
+          : "${VAULT_ADDR:?VAULT_ADDR must be set on the runner}"
+          echo "VAULT_ACTION_URL=${VAULT_ADDR}" >> "${GITHUB_ENV}"
+          if [ -n "${VAULT_NAMESPACE:-}" ]; then
+            echo "VAULT_ACTION_NAMESPACE=${VAULT_NAMESPACE}" >> "${GITHUB_ENV}"
+          fi
+          if [ -n "${VAULT_TOKEN:-}" ]; then
+            echo "::add-mask::${VAULT_TOKEN}"
+            echo "VAULT_ACTION_METHOD=token" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_TOKEN=${VAULT_TOKEN}" >> "${GITHUB_ENV}"
+          else
+            : "${VAULT_ROLE_ID:?Set VAULT_TOKEN or VAULT_ROLE_ID on the runner}"
+            : "${VAULT_SECRET_ID:?Set VAULT_TOKEN or VAULT_SECRET_ID on the runner}"
+            echo "::add-mask::${VAULT_ROLE_ID}"
+            echo "::add-mask::${VAULT_SECRET_ID}"
+            echo "VAULT_ACTION_METHOD=approle" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_ROLE_ID=${VAULT_ROLE_ID}" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_SECRET_ID=${VAULT_SECRET_ID}" >> "${GITHUB_ENV}"
+          fi
+
+      - name: Load infra env from Vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ env.VAULT_ACTION_URL }}
+          namespace: ${{ env.VAULT_ACTION_NAMESPACE }}
+          method: ${{ env.VAULT_ACTION_METHOD }}
+          token: ${{ env.VAULT_ACTION_TOKEN }}
+          roleId: ${{ env.VAULT_ACTION_ROLE_ID }}
+          secretId: ${{ env.VAULT_ACTION_SECRET_ID }}
+          secrets: |
+            ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_INFRA_SECRET_PATH }} config | INFRA_ENV_CONTENT ;
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements/dev.txt
+            requirements/base.txt
+
+      - name: Load runtime env from Vault
+        run: |
+          set -Eeuo pipefail
           forbidden_keys_regex='^(APPLY_FOUNDATION|APPLY_NODES|APPLY_INFRA_NODES|REPLACE_VPN_NODES)='
-          if printf '%s\n' "${INFRA_ENV_DEV}" | grep -Eq "${forbidden_keys_regex}"; then
-            echo "::error::INFRA_ENV_DEV must not define APPLY_FOUNDATION, APPLY_NODES, APPLY_INFRA_NODES, or REPLACE_VPN_NODES"
+          ENV_FILE="${RUNNER_TEMP}/infra.dev.env"
+          printf '%s\n' "${INFRA_ENV_CONTENT}" > "${ENV_FILE}"
+          chmod 600 "${ENV_FILE}"
+          if grep -Eq "${forbidden_keys_regex}" "${ENV_FILE}"; then
+            echo "::error::Vault infra env must not define APPLY_FOUNDATION, APPLY_NODES, APPLY_INFRA_NODES, or REPLACE_VPN_NODES"
             exit 1
           fi
-          ENV_FILE="${RUNNER_TEMP}/infra.dev.env"
-          printf '%s\n' "${INFRA_ENV_DEV}" > "${ENV_FILE}"
-          chmod 600 "${ENV_FILE}"
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
 
       - name: Install Terraform CLI
@@ -213,27 +256,26 @@ jobs:
             echo "REQUIRE_NODE_AGENT_ENV=false" >> "${GITHUB_ENV}"
           fi
 
-      - name: Render node-agent env from GitHub Secrets
+      - name: Load node-agent env from Vault
         if: ${{ env.REQUIRE_NODE_AGENT_ENV == 'true' }}
-        env:
-          NODE_AGENT_ENV_DEV: ${{ secrets.NODE_AGENT_ENV_DEV }}
-          NODE_AGENT_ENV_DEV_B64: ${{ secrets.NODE_AGENT_ENV_DEV_B64 }}
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ env.VAULT_ACTION_URL }}
+          namespace: ${{ env.VAULT_ACTION_NAMESPACE }}
+          method: ${{ env.VAULT_ACTION_METHOD }}
+          token: ${{ env.VAULT_ACTION_TOKEN }}
+          roleId: ${{ env.VAULT_ACTION_ROLE_ID }}
+          secretId: ${{ env.VAULT_ACTION_SECRET_ID }}
+          secrets: |
+            ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_NODE_AGENT_SECRET_PATH }} config | NODE_AGENT_ENV_CONTENT ;
+
+      - name: Render node-agent env from Vault
+        if: ${{ env.REQUIRE_NODE_AGENT_ENV == 'true' }}
         run: |
           set -Eeuo pipefail
 
           NODE_AGENT_ENV_FILE="${GITHUB_WORKSPACE}/node-agent.dev.env"
-          if [ -n "${NODE_AGENT_ENV_DEV_B64}" ]; then
-            printf '%s' "${NODE_AGENT_ENV_DEV_B64}" | base64 -d > "${NODE_AGENT_ENV_FILE}" || {
-              echo "::error::Failed to decode NODE_AGENT_ENV_DEV_B64"
-              exit 1
-            }
-          elif [ -n "${NODE_AGENT_ENV_DEV}" ]; then
-            printf '%s\n' "${NODE_AGENT_ENV_DEV}" > "${NODE_AGENT_ENV_FILE}"
-          else
-            echo "::error::Missing NODE_AGENT_ENV_DEV or NODE_AGENT_ENV_DEV_B64 secret"
-            exit 1
-          fi
-
+          printf '%s\n' "${NODE_AGENT_ENV_CONTENT}" > "${NODE_AGENT_ENV_FILE}"
           chmod 600 "${NODE_AGENT_ENV_FILE}"
           if ! grep -Eq '^AGENT_CONTROL_API=.+$' "${NODE_AGENT_ENV_FILE}"; then
             echo "::error::node-agent env is invalid: AGENT_CONTROL_API is missing or empty"
@@ -331,15 +373,6 @@ jobs:
           export APPLY_INFRA_NODES="${WF_APPLY_INFRA_NODES}"
           export REPLACE_VPN_NODES="${WF_REPLACE_VPN_NODES}"
           bash ./scripts/ci/apply-terraform.sh
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: |
-            requirements.txt
-            requirements/dev.txt
-            requirements/base.txt
 
       - name: Install Ansible
         run: python -m pip install --upgrade pip ansible

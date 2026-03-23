@@ -11,6 +11,7 @@ x-deploy-common: &deploy-common
     constraints:
       - node.labels.role == vpn
       - node.labels.channel != dev
+      - node.labels.traffic_role == standard
   update_config:
     order: stop-first
     monitor: 2m
@@ -27,6 +28,7 @@ x-node-agent-deploy-common: &node-agent-deploy-common
     constraints:
       - node.labels.role == vpn
       - node.labels.channel != dev
+      - node.labels.traffic_role == standard
   update_config:
     order: stop-first
     monitor: 2m

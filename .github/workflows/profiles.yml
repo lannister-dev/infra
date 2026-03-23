@@ -15,6 +15,10 @@ on:
       - "tests/profiles/**/*.py"
   workflow_dispatch:
 
+env:
+  VAULT_KV_MOUNT: "secrets"
+  VAULT_PROFILES_SECRET_PATH: "kv/control-plane/prod/config"
+
 jobs:
   validate-prod:
     runs-on: ubuntu-latest
@@ -43,20 +47,43 @@ jobs:
       name: production
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare Vault auth inputs
+        run: |
+          set -Eeuo pipefail
+          : "${VAULT_ADDR:?VAULT_ADDR must be set on the runner}"
+          echo "VAULT_ACTION_URL=${VAULT_ADDR}" >> "${GITHUB_ENV}"
+          if [ -n "${VAULT_NAMESPACE:-}" ]; then
+            echo "VAULT_ACTION_NAMESPACE=${VAULT_NAMESPACE}" >> "${GITHUB_ENV}"
+          fi
+          if [ -n "${VAULT_TOKEN:-}" ]; then
+            echo "::add-mask::${VAULT_TOKEN}"
+            echo "VAULT_ACTION_METHOD=token" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_TOKEN=${VAULT_TOKEN}" >> "${GITHUB_ENV}"
+          else
+            : "${VAULT_ROLE_ID:?Set VAULT_TOKEN or VAULT_ROLE_ID on the runner}"
+            : "${VAULT_SECRET_ID:?Set VAULT_TOKEN or VAULT_SECRET_ID on the runner}"
+            echo "::add-mask::${VAULT_ROLE_ID}"
+            echo "::add-mask::${VAULT_SECRET_ID}"
+            echo "VAULT_ACTION_METHOD=approle" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_ROLE_ID=${VAULT_ROLE_ID}" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_SECRET_ID=${VAULT_SECRET_ID}" >> "${GITHUB_ENV}"
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
       - name: Install deps
         run: python -m pip install -r requirements/profiles-ci.txt
-      - name: Check prod secrets
-        env:
-          CONTROL_PLANE_URL: ${{ secrets.CONTROL_PLANE_URL }}
-          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-        run: |
-          test -n "$CONTROL_PLANE_URL" || (echo "Missing secret: CONTROL_PLANE_URL" && exit 1)
-          test -n "$ADMIN_API_KEY" || (echo "Missing secret: ADMIN_API_KEY" && exit 1)
+      - name: Load publish credentials from Vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ env.VAULT_ACTION_URL }}
+          namespace: ${{ env.VAULT_ACTION_NAMESPACE }}
+          method: ${{ env.VAULT_ACTION_METHOD }}
+          token: ${{ env.VAULT_ACTION_TOKEN }}
+          roleId: ${{ env.VAULT_ACTION_ROLE_ID }}
+          secretId: ${{ env.VAULT_ACTION_SECRET_ID }}
+          secrets: |
+            ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_PROFILES_SECRET_PATH }} control_plane_url | CONTROL_PLANE_URL ;
+            ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_PROFILES_SECRET_PATH }} admin_api_key | ADMIN_API_KEY ;
       - name: Publish prod artifact to control plane
-        env:
-          CONTROL_PLANE_URL: ${{ secrets.CONTROL_PLANE_URL }}
-          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
         run: python -m services.profiles.cli.build --overrides vpn/xray/artifact.overrides.yml --output artifacts/profiles/artifact.prod.json --publish
