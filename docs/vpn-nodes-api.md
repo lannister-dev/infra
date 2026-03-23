@@ -89,7 +89,7 @@ yandex_whitelist_entry_nodes = {
 Flow:
 1. Read current VM/IP/SG IDs from Yandex Cloud.
 2. Add entry into `yandex_whitelist_entry_nodes`.
-3. Import `yandex_compute_instance`, `yandex_vpc_address`, and `yandex_vpc_security_group` into `terraform/nodes` state.
+3. Terraform imports `yandex_compute_instance`, `yandex_vpc_address`, and `yandex_vpc_security_group` into `terraform/nodes` state declaratively via `import` blocks.
 4. Run `terraform plan` and confirm there is no recreate and the reserved IP stays attached.
 
 ## Credentials
