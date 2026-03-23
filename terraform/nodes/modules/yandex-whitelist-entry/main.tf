@@ -130,8 +130,8 @@ locals {
 resource "yandex_vpc_address" "whitelist_entry" {
   for_each = var.nodes
 
-  name                = trimspace(try(data.yandex_vpc_address.existing[each.key].name, "")) != "" ? data.yandex_vpc_address.existing[each.key].name : null
-  description         = trimspace(try(data.yandex_vpc_address.existing[each.key].description, "")) != "" ? data.yandex_vpc_address.existing[each.key].description : null
+  name                = try(data.yandex_vpc_address.existing[each.key].name, null) != null ? (trimspace(data.yandex_vpc_address.existing[each.key].name) != "" ? data.yandex_vpc_address.existing[each.key].name : null) : null
+  description         = try(data.yandex_vpc_address.existing[each.key].description, null) != null ? (trimspace(data.yandex_vpc_address.existing[each.key].description) != "" ? data.yandex_vpc_address.existing[each.key].description : null) : null
   folder_id           = try(data.yandex_vpc_address.existing[each.key].folder_id, null)
   deletion_protection = try(each.value.prevent_destroy, true)
   labels = merge(
@@ -157,8 +157,8 @@ resource "yandex_vpc_address" "whitelist_entry" {
 resource "yandex_vpc_security_group" "whitelist_entry" {
   for_each = var.nodes
 
-  name        = trimspace(try(data.yandex_vpc_security_group.existing[each.key].name, "")) != "" ? data.yandex_vpc_security_group.existing[each.key].name : null
-  description = trimspace(try(data.yandex_vpc_security_group.existing[each.key].description, "")) != "" ? data.yandex_vpc_security_group.existing[each.key].description : null
+  name        = try(data.yandex_vpc_security_group.existing[each.key].name, null) != null ? (trimspace(data.yandex_vpc_security_group.existing[each.key].name) != "" ? data.yandex_vpc_security_group.existing[each.key].name : null) : null
+  description = try(data.yandex_vpc_security_group.existing[each.key].description, null) != null ? (trimspace(data.yandex_vpc_security_group.existing[each.key].description) != "" ? data.yandex_vpc_security_group.existing[each.key].description : null) : null
   folder_id   = try(data.yandex_vpc_security_group.existing[each.key].folder_id, null)
   network_id  = data.yandex_vpc_security_group.existing[each.key].network_id
   labels = merge(
@@ -213,14 +213,14 @@ resource "yandex_compute_instance" "whitelist_entry" {
   for_each = var.nodes
 
   name                     = data.yandex_compute_instance.existing[each.key].name
-  hostname                 = trimspace(try(data.yandex_compute_instance.existing[each.key].hostname, "")) != "" ? data.yandex_compute_instance.existing[each.key].hostname : null
-  description              = trimspace(try(data.yandex_compute_instance.existing[each.key].description, "")) != "" ? data.yandex_compute_instance.existing[each.key].description : null
+  hostname                 = try(data.yandex_compute_instance.existing[each.key].hostname, null) != null ? (trimspace(data.yandex_compute_instance.existing[each.key].hostname) != "" ? data.yandex_compute_instance.existing[each.key].hostname : null) : null
+  description              = try(data.yandex_compute_instance.existing[each.key].description, null) != null ? (trimspace(data.yandex_compute_instance.existing[each.key].description) != "" ? data.yandex_compute_instance.existing[each.key].description : null) : null
   folder_id                = try(data.yandex_compute_instance.existing[each.key].folder_id, null)
   zone                     = data.yandex_compute_instance.existing[each.key].zone
   platform_id              = data.yandex_compute_instance.existing[each.key].platform_id
-  service_account_id       = trimspace(try(data.yandex_compute_instance.existing[each.key].service_account_id, "")) != "" ? data.yandex_compute_instance.existing[each.key].service_account_id : null
-  maintenance_policy       = trimspace(try(data.yandex_compute_instance.existing[each.key].maintenance_policy, "")) != "" ? data.yandex_compute_instance.existing[each.key].maintenance_policy : null
-  maintenance_grace_period = trimspace(try(data.yandex_compute_instance.existing[each.key].maintenance_grace_period, "")) != "" ? data.yandex_compute_instance.existing[each.key].maintenance_grace_period : null
+  service_account_id       = try(data.yandex_compute_instance.existing[each.key].service_account_id, null) != null ? (trimspace(data.yandex_compute_instance.existing[each.key].service_account_id) != "" ? data.yandex_compute_instance.existing[each.key].service_account_id : null) : null
+  maintenance_policy       = try(data.yandex_compute_instance.existing[each.key].maintenance_policy, null) != null ? (trimspace(data.yandex_compute_instance.existing[each.key].maintenance_policy) != "" ? data.yandex_compute_instance.existing[each.key].maintenance_policy : null) : null
+  maintenance_grace_period = try(data.yandex_compute_instance.existing[each.key].maintenance_grace_period, null) != null ? (trimspace(data.yandex_compute_instance.existing[each.key].maintenance_grace_period) != "" ? data.yandex_compute_instance.existing[each.key].maintenance_grace_period : null) : null
   labels = merge(
     try(data.yandex_compute_instance.existing[each.key].labels, {}),
     {
@@ -262,7 +262,7 @@ resource "yandex_compute_instance" "whitelist_entry" {
       subnet_id          = network_interface.value.subnet_id
       ip_address         = try(network_interface.value.ip_address, null)
       ipv4               = true
-      nat                = trimspace(try(network_interface.value.nat_ip_address, "")) != ""
+      nat                = try(network_interface.value.nat_ip_address, null) != null ? trimspace(network_interface.value.nat_ip_address) != "" : false
       nat_ip_address     = network_interface.key == 0 ? yandex_vpc_address.whitelist_entry[each.key].external_ipv4_address[0].address : try(network_interface.value.nat_ip_address, null)
       security_group_ids = network_interface.key == 0 ? local.instance_security_group_ids[each.key] : tolist(try(network_interface.value.security_group_ids, []))
     }
