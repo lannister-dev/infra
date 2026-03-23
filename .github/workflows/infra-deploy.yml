@@ -306,26 +306,7 @@ jobs:
             exit 1
           fi
 
-          key_refs="$(
-            python3 - "${inventory_file}" <<'PY'
-import sys
-import yaml
-
-with open(sys.argv[1], "r", encoding="utf-8") as fh:
-    data = yaml.safe_load(fh) or {}
-
-nodes = data.get("vpn_nodes", []) if isinstance(data, dict) else []
-refs = sorted({
-    str(node.get("ssh_key_ref", "")).strip()
-    for node in nodes
-    if isinstance(node, dict)
-    and str(node.get("provider", "")).startswith("hostvds")
-    and str(node.get("ssh_key_ref", "")).strip() != ""
-})
-
-print(",".join(refs))
-PY
-          )"
+          key_refs="$(python3 -c 'import sys, yaml; data = yaml.safe_load(open(sys.argv[1], "r", encoding="utf-8")) or {}; nodes = data.get("vpn_nodes", []) if isinstance(data, dict) else []; refs = sorted({str(node.get("ssh_key_ref", "")).strip() for node in nodes if isinstance(node, dict) and str(node.get("provider", "")).startswith("hostvds") and str(node.get("ssh_key_ref", "")).strip() != ""}); print(",".join(refs))' "${inventory_file}")"
           if [ -z "${key_refs}" ]; then
             echo "::notice::No HostVDS ssh_key_ref entries found in ${inventory_file}; skipping HostVDS keypair verification"
             exit 0
