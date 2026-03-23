@@ -2,7 +2,6 @@
 repo_root: "{{ lookup('env', 'REPO_ROOT') | default('/opt/vpn-infra', true) }}"
 
 enable_vpn_dev_stack: "{{ (lookup('env', 'ENABLE_VPN_DEV_STACK') | default('false', true)) | bool }}"
-deploy_probe_stack: "{{ (lookup('env', 'DEPLOY_PROBE_STACK') | default('true', true)) | bool }}"
 deploy_nats_stack: "{{ (lookup('env', 'DEPLOY_NATS_STACK') | default('true', true)) | bool }}"
 deploy_data_dev_stack: "{{ (lookup('env', 'DEPLOY_DATA_DEV_STACK') | default('false', true)) | bool }}"
 deploy_data_prod_stack: "{{ (lookup('env', 'DEPLOY_DATA_PROD_STACK') | default('false', true)) | bool }}"
