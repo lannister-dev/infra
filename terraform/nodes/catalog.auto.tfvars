@@ -50,6 +50,26 @@ provider_compute_vpn_nodes = {
   }
 }
 
+# 4) Existing Yandex Cloud whitelist entry nodes (import/adoption mode, no recreate).
+# These are first-hop VPN entry nodes and must keep their current VM + public IP.
+yandex_whitelist_entry_nodes = {
+ "vpn-yc-whitelist-entry-01" = {
+      instance_id         = "fv49f95hm100jq8vgk23"
+      address_id          = "fl86b7623dahu02oij23"
+      security_group_id   = "enplegc9n5jud1sict6j"
+      channel             = "prod"
+      ssh_user            = "lannister"
+      ssh_port            = 22
+      ssh_key_ref         = "yc"
+      enabled             = true
+      region              = "ru-central1-d"
+      platform_region     = "ru"
+      ssh_ingress_cidrs   = ["0.0.0.0/0"]
+      https_ingress_cidrs = ["0.0.0.0/0"]
+      prevent_destroy     = true
+    }
+}
+
 # Optional legacy switch/legacy map for backward compatibility.
 hostvds_compute_enabled       = false
 hostvds_vpn_nodes             = {}

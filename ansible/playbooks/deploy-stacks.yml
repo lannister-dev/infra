@@ -3,6 +3,8 @@
   hosts: swarm_managers
   gather_facts: false
   become: false
+  vars_files:
+    - ../inventory/generated/vpn_nodes.yml
 
   vars:
     required_networks:
@@ -24,6 +26,17 @@
       - "{{ vpn_fallback_nginx_config_name }}"
 
   tasks:
+    - name: Build enabled whitelist entry node list
+      ansible.builtin.set_fact:
+        enabled_whitelist_entry_nodes: >-
+          {{
+            vpn_nodes
+            | default([])
+            | selectattr('enabled', 'equalto', true)
+            | selectattr('traffic_role', 'equalto', 'whitelist_entry')
+            | list
+          }}
+
     - name: Check required networks
       ansible.builtin.command:
         argv:
@@ -190,6 +203,17 @@
           DEPLOY_DATA_PROD_STACK=true requires:
           PROD_POSTGRES_PASSWORD and PROD_REDIS_PASSWORD.
       when: deploy_data_prod_stack
+      changed_when: "false"
+
+    - name: Validate whitelist entry relay settings when whitelist nodes are enabled
+      ansible.builtin.assert:
+        that:
+          - (vpn_whitelist_entry_upstream_host | trim | length) > 0
+          - (vpn_whitelist_entry_upstream_port | int) > 0
+        fail_msg: >-
+          Enabled whitelist entry nodes require:
+          VPN_WHITELIST_ENTRY_UPSTREAM_HOST and VPN_WHITELIST_ENTRY_UPSTREAM_PORT.
+      when: (enabled_whitelist_entry_nodes | default([]) | length) > 0
       changed_when: "false"
 
     - name: Check nats_auth_token secret when nats is enabled
@@ -587,6 +611,51 @@
         NGINX_ALPINE_IMAGE_TAG: "{{ nginx_alpine_image_tag }}"
         NODE_AGENT_IMAGE_REF: "{{ node_agent_image_ref }}"
       changed_when: "false"
+
+    - name: Deploy vpn whitelist entry stack
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --resolve-image=always
+          - --prune
+          - -c
+          - docker/stacks/vpn-whitelist-entry.yml
+          - vpn-whitelist-entry
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        HAPROXY_ALPINE_IMAGE_TAG: "{{ haproxy_alpine_image_tag }}"
+        VPN_WHITELIST_ENTRY_UPSTREAM_HOST: "{{ vpn_whitelist_entry_upstream_host }}"
+        VPN_WHITELIST_ENTRY_UPSTREAM_PORT: "{{ vpn_whitelist_entry_upstream_port | string }}"
+      when: (enabled_whitelist_entry_nodes | default([]) | length) > 0
+      changed_when: "false"
+
+    - name: Check whitelist entry stack presence when no whitelist nodes are enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - services
+          - vpn-whitelist-entry
+      register: whitelist_entry_stack_inspect
+      failed_when: false
+      changed_when: false
+      when: (enabled_whitelist_entry_nodes | default([]) | length) == 0
+
+    - name: Remove whitelist entry stack when no whitelist nodes are enabled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - rm
+          - vpn-whitelist-entry
+      when:
+        - (enabled_whitelist_entry_nodes | default([]) | length) == 0
+        - whitelist_entry_stack_inspect.rc == 0
+      changed_when: true
 
     - name: Deploy vpn-dev stack
       ansible.builtin.command:

@@ -100,12 +100,17 @@ FIREWALL_NATS_CLIENT_CIDRS=198.51.100.20/32
 # PROMETHEUS_IMAGE_TAG=v2.55.1
 # GRAFANA_IMAGE_TAG=11.5.2
 # XRAY_IMAGE_TAG=latest
+# HAPROXY_ALPINE_IMAGE_TAG=3.1-alpine
 # NATS_IMAGE_TAG=2.11-alpine
 # NATS_EXPORTER_IMAGE_TAG=0.19.1
 # VAULT_IMAGE_TAG=1.13.3
 # POSTGRES_IMAGE_TAG=16-alpine
 # REDIS_IMAGE_TAG=7-alpine
 # DATA_PROD_NETWORK_NAME=data-prod-net
+
+# Required only when enabled VPN nodes include traffic_role=whitelist_entry
+# VPN_WHITELIST_ENTRY_UPSTREAM_HOST=203.0.113.10
+# VPN_WHITELIST_ENTRY_UPSTREAM_PORT=443
 
 # External data services precheck (leave disabled when prod data is deployed from this repo)
 EXTERNAL_DATA_PRECHECK_ENABLED=false
@@ -145,7 +150,6 @@ PROD_REDIS_PASSWORD=<strong_password>
 # ANSIBLE_SSH_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----..
 # ANSIBLE_SSH_PRIVATE_KEY_FILE=/home/github-runner/.ssh/dev
 
-# ---- GitHub Secrets (set in Actions environment, not here) ----
-# NODE_AGENT_ENV_PROD=<multiline node-agent.env content>
-# or
-# NODE_AGENT_ENV_PROD_B64=<base64(node-agent.env)>
+# ---- Vault layout ----
+# kv/infra/prod field: config      -> this file content
+# kv/node-agent/prod field: config -> node-agent.env content

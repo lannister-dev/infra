@@ -8,7 +8,12 @@ Edit `terraform/nodes/catalog.auto.tfvars`:
 - `vpn_nodes` for manual IP,
 - or `provider_api_vpn_nodes` for existing server IDs (recommended),
 - or `provider_compute_vpn_nodes` for Terraform-managed compute (recommended for frequent rotation).
+- or `yandex_whitelist_entry_nodes` for already existing Yandex Cloud whitelist entry nodes that must be imported without recreate.
 - set `ssh_key_ref` per node (example: `dev`, `hostvds`, `timeweb`).
+
+Important runtime rule:
+- `traffic_role=standard` nodes run the regular backend stacks (`vpn_xray`, `vpn_node-agent`).
+- `traffic_role=whitelist_entry` nodes join Swarm but do not run backend stacks; they run the dedicated `vpn-whitelist-entry` relay stack instead.
 
 Legacy compatibility:
 - `hostvds_vpn_nodes` and `hostvds_provisioned_vpn_nodes` still work but are deprecated.
@@ -34,6 +39,13 @@ ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/reconcile
 ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-stacks.yml
 ```
 
+If you are enabling a whitelist entry node, set relay upstream before deploy:
+
+```bash
+export VPN_WHITELIST_ENTRY_UPSTREAM_HOST=<backend_ip_or_dns>
+export VPN_WHITELIST_ENTRY_UPSTREAM_PORT=443
+```
+
 ## SSH requirements
 
 - For HostVDS Ubuntu images in this project, use `ssh_user = "root"` in node catalog.
@@ -54,6 +66,14 @@ If keys are missing, deploy workflow fails fast before Ansible.
 docker node ls
 docker node inspect <node> --format '{{ json .Spec.Labels }}'
 wg show wg0
+```
+
+For whitelist entry nodes also verify:
+
+```bash
+docker service ps vpn-whitelist-entry_relay
+docker service ps vpn_xray
+docker service ps vpn_node-agent
 ```
 
 ## Emergency fallback

@@ -24,6 +24,8 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.10"
+  VAULT_KV_MOUNT: "kv"
+  VAULT_INFRA_SECRET_PATH: "infra/prod"
 
 jobs:
   checks:
@@ -39,14 +41,54 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Write runtime env
-        env:
-          INFRA_ENV_PROD: ${{ secrets.INFRA_ENV_PROD }}
+      - name: Prepare Vault auth inputs
         run: |
           set -Eeuo pipefail
-          test -n "${INFRA_ENV_PROD}" || { echo "::error::Missing secret INFRA_ENV_PROD"; exit 1; }
+          : "${VAULT_ADDR:?VAULT_ADDR must be set on the runner}"
+          echo "VAULT_ACTION_URL=${VAULT_ADDR}" >> "${GITHUB_ENV}"
+          if [ -n "${VAULT_NAMESPACE:-}" ]; then
+            echo "VAULT_ACTION_NAMESPACE=${VAULT_NAMESPACE}" >> "${GITHUB_ENV}"
+          fi
+          if [ -n "${VAULT_TOKEN:-}" ]; then
+            echo "::add-mask::${VAULT_TOKEN}"
+            echo "VAULT_ACTION_METHOD=token" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_TOKEN=${VAULT_TOKEN}" >> "${GITHUB_ENV}"
+          else
+            : "${VAULT_ROLE_ID:?Set VAULT_TOKEN or VAULT_ROLE_ID on the runner}"
+            : "${VAULT_SECRET_ID:?Set VAULT_TOKEN or VAULT_SECRET_ID on the runner}"
+            echo "::add-mask::${VAULT_ROLE_ID}"
+            echo "::add-mask::${VAULT_SECRET_ID}"
+            echo "VAULT_ACTION_METHOD=approle" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_ROLE_ID=${VAULT_ROLE_ID}" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_SECRET_ID=${VAULT_SECRET_ID}" >> "${GITHUB_ENV}"
+          fi
+
+      - name: Load infra env from Vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ env.VAULT_ACTION_URL }}
+          namespace: ${{ env.VAULT_ACTION_NAMESPACE }}
+          method: ${{ env.VAULT_ACTION_METHOD }}
+          token: ${{ env.VAULT_ACTION_TOKEN }}
+          roleId: ${{ env.VAULT_ACTION_ROLE_ID }}
+          secretId: ${{ env.VAULT_ACTION_SECRET_ID }}
+          secrets: |
+            ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_INFRA_SECRET_PATH }} config | INFRA_ENV_CONTENT ;
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements/dev.txt
+            requirements/base.txt
+
+      - name: Load runtime env from Vault
+        run: |
+          set -Eeuo pipefail
           ENV_FILE="${RUNNER_TEMP}/infra.prod.env"
-          printf '%s\n' "${INFRA_ENV_PROD}" > "${ENV_FILE}"
+          printf '%s\n' "${INFRA_ENV_CONTENT}" > "${ENV_FILE}"
           chmod 600 "${ENV_FILE}"
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
 
@@ -71,15 +113,6 @@ jobs:
             echo "::error::DEPLOY_DATA_PROD_STACK=true is required for Infra Data Deploy"
             exit 1
           fi
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: |
-            requirements.txt
-            requirements/dev.txt
-            requirements/base.txt
 
       - name: Install Ansible
         run: python -m pip install --upgrade pip ansible

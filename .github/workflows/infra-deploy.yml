@@ -41,6 +41,9 @@ env:
   TF_IN_AUTOMATION: "true"
   TERRAFORM_VERSION: "1.8.5"
   PYTHON_VERSION: "3.10"
+  VAULT_KV_MOUNT: "kv"
+  VAULT_INFRA_SECRET_PATH: "infra/prod"
+  VAULT_NODE_AGENT_SECRET_PATH: "node-agent/prod"
 
 jobs:
   checks:
@@ -56,14 +59,66 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Write runtime env
-        env:
-          INFRA_ENV_PROD: ${{ secrets.INFRA_ENV_PROD }}
+      - name: Prepare Vault auth inputs
         run: |
           set -Eeuo pipefail
-          test -n "${INFRA_ENV_PROD}" || { echo "::error::Missing secret INFRA_ENV_PROD"; exit 1; }
+          : "${VAULT_ADDR:?VAULT_ADDR must be set on the runner}"
+          echo "VAULT_ACTION_URL=${VAULT_ADDR}" >> "${GITHUB_ENV}"
+          if [ -n "${VAULT_NAMESPACE:-}" ]; then
+            echo "VAULT_ACTION_NAMESPACE=${VAULT_NAMESPACE}" >> "${GITHUB_ENV}"
+          fi
+          if [ -n "${VAULT_TOKEN:-}" ]; then
+            echo "::add-mask::${VAULT_TOKEN}"
+            echo "VAULT_ACTION_METHOD=token" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_TOKEN=${VAULT_TOKEN}" >> "${GITHUB_ENV}"
+          else
+            : "${VAULT_ROLE_ID:?Set VAULT_TOKEN or VAULT_ROLE_ID on the runner}"
+            : "${VAULT_SECRET_ID:?Set VAULT_TOKEN or VAULT_SECRET_ID on the runner}"
+            echo "::add-mask::${VAULT_ROLE_ID}"
+            echo "::add-mask::${VAULT_SECRET_ID}"
+            echo "VAULT_ACTION_METHOD=approle" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_ROLE_ID=${VAULT_ROLE_ID}" >> "${GITHUB_ENV}"
+            echo "VAULT_ACTION_SECRET_ID=${VAULT_SECRET_ID}" >> "${GITHUB_ENV}"
+          fi
+
+      - name: Load infra env from Vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ env.VAULT_ACTION_URL }}
+          namespace: ${{ env.VAULT_ACTION_NAMESPACE }}
+          method: ${{ env.VAULT_ACTION_METHOD }}
+          token: ${{ env.VAULT_ACTION_TOKEN }}
+          roleId: ${{ env.VAULT_ACTION_ROLE_ID }}
+          secretId: ${{ env.VAULT_ACTION_SECRET_ID }}
+          secrets: |
+            ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_INFRA_SECRET_PATH }} config | INFRA_ENV_CONTENT ;
+
+      - name: Load node-agent env from Vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ env.VAULT_ACTION_URL }}
+          namespace: ${{ env.VAULT_ACTION_NAMESPACE }}
+          method: ${{ env.VAULT_ACTION_METHOD }}
+          token: ${{ env.VAULT_ACTION_TOKEN }}
+          roleId: ${{ env.VAULT_ACTION_ROLE_ID }}
+          secretId: ${{ env.VAULT_ACTION_SECRET_ID }}
+          secrets: |
+            ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_NODE_AGENT_SECRET_PATH }} config | NODE_AGENT_ENV_CONTENT ;
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements/dev.txt
+            requirements/base.txt
+
+      - name: Load runtime env from Vault
+        run: |
+          set -Eeuo pipefail
           ENV_FILE="${RUNNER_TEMP}/infra.env"
-          printf '%s\n' "${INFRA_ENV_PROD}" > "${ENV_FILE}"
+          printf '%s\n' "${INFRA_ENV_CONTENT}" > "${ENV_FILE}"
           chmod 600 "${ENV_FILE}"
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
 
@@ -111,6 +166,17 @@ jobs:
         run: |
           set -Eeuo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          source ./scripts/core/prepare-terraform-env.sh
+
+          required_primary_tfvars=(
+            TF_VAR_vpn_domain
+            TF_VAR_vpn_ws_path
+            TF_VAR_vpn_xhttp_path
+            TF_VAR_vpn_reality_server_name
+            TF_VAR_vpn_reality_private_key
+            TF_VAR_vpn_reality_short_id
+            TF_VAR_vpn_reality_dest_host
+          )
 
           if [ -z "${TF_STATE_KEY_PREFIX:-}" ]; then
             echo "::error::TF_STATE_KEY_PREFIX must be set in INFRA_ENV_PROD"
@@ -125,26 +191,21 @@ jobs:
             exit 1
           fi
 
-      - name: Render node-agent env from GitHub Secrets
-        env:
-          NODE_AGENT_ENV_PROD: ${{ secrets.NODE_AGENT_ENV_PROD }}
-          NODE_AGENT_ENV_PROD_B64: ${{ secrets.NODE_AGENT_ENV_PROD_B64 }}
+          for var_name in "${required_primary_tfvars[@]}"; do
+            if [ -z "${!var_name:-}" ]; then
+              alias_name="IAC_TFVAR_${var_name#TF_VAR_}"
+              alias_name="${alias_name^^}"
+              echo "::error::${var_name} is required in INFRA_ENV_PROD (or set ${alias_name})"
+              exit 1
+            fi
+          done
+
+      - name: Render node-agent env from Vault
         run: |
           set -Eeuo pipefail
 
           NODE_AGENT_ENV_FILE="${GITHUB_WORKSPACE}/node-agent.env"
-          if [ -n "${NODE_AGENT_ENV_PROD_B64}" ]; then
-            printf '%s' "${NODE_AGENT_ENV_PROD_B64}" | base64 -d > "${NODE_AGENT_ENV_FILE}" || {
-              echo "::error::Failed to decode NODE_AGENT_ENV_PROD_B64"
-              exit 1
-            }
-          elif [ -n "${NODE_AGENT_ENV_PROD}" ]; then
-            printf '%s\n' "${NODE_AGENT_ENV_PROD}" > "${NODE_AGENT_ENV_FILE}"
-          else
-            echo "::error::Missing NODE_AGENT_ENV_PROD or NODE_AGENT_ENV_PROD_B64 secret"
-            exit 1
-          fi
-
+          printf '%s\n' "${NODE_AGENT_ENV_CONTENT}" > "${NODE_AGENT_ENV_FILE}"
           chmod 600 "${NODE_AGENT_ENV_FILE}"
           if ! grep -q '^AGENT_CONTROL_API=' "${NODE_AGENT_ENV_FILE}"; then
             echo "::error::node-agent env is invalid: AGENT_CONTROL_API is missing"
@@ -232,15 +293,6 @@ jobs:
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
           bash ./scripts/ci/apply-terraform.sh
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: |
-            requirements.txt
-            requirements/dev.txt
-            requirements/base.txt
 
       - name: Install Ansible
         run: python -m pip install --upgrade pip ansible

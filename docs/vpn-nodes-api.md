@@ -1,6 +1,6 @@
 # VPN Nodes Catalog (Provider-Agnostic)
 
-`terraform/nodes` supports three modes and keeps one normalized inventory output for Ansible.
+`terraform/nodes` supports four modes and keeps one normalized inventory output for Ansible.
 
 ## 1) Manual nodes (fallback)
 
@@ -65,6 +65,33 @@ Flow:
 3. Terraform writes normalized inventory.
 4. Ansible reconciles WireGuard + Swarm.
 
+## 4) Existing Yandex Cloud whitelist entry nodes (safe import/adoption mode)
+
+Declare already existing first-hop whitelist entry nodes in `yandex_whitelist_entry_nodes`:
+
+```hcl
+yandex_whitelist_entry_nodes = {
+  "vpn-yc-whitelist-entry-01" = {
+    instance_id       = "fhm..."
+    address_id        = "e9b..."
+    security_group_id = "enp..."
+    channel           = "prod"
+    ssh_user          = "ubuntu"
+    ssh_port          = 22
+    ssh_key_ref       = "yc"
+    enabled           = true
+    region            = "ru-central1-a"
+    platform_region   = "ru"
+  }
+}
+```
+
+Flow:
+1. Read current VM/IP/SG IDs from Yandex Cloud.
+2. Add entry into `yandex_whitelist_entry_nodes`.
+3. Import `yandex_compute_instance`, `yandex_vpc_address`, and `yandex_vpc_security_group` into `terraform/nodes` state.
+4. Run `terraform plan` and confirm there is no recreate and the reserved IP stays attached.
+
 ## Credentials
 
 For `provider=hostvds`:
@@ -76,6 +103,11 @@ For `provider=hostvds`:
 - `HOSTVDS_OS_PROJECT_DOMAIN_NAME` or `HOSTVDS_OS_PROJECT_DOMAIN_ID`
 - `HOSTVDS_OS_REGION_NAME`
 - `HOSTVDS_OS_INTERFACE`
+
+For `yandex_whitelist_entry_nodes`:
+- `YC_TOKEN` or `TF_VAR_yandex_token`
+- `YC_CLOUD_ID` or `TF_VAR_yandex_cloud_id`
+- `YC_FOLDER_ID` or `TF_VAR_yandex_folder_id`
 
 ## Lifecycle semantics
 

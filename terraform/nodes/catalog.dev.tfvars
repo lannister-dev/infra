@@ -12,6 +12,9 @@ provider_api_vpn_nodes = {}
 # 3) Provider compute mode (create/destroy VPS via Terraform)
 provider_compute_vpn_nodes = {}
 
+# 4) Existing Yandex Cloud whitelist entry nodes (import/adoption mode)
+yandex_whitelist_entry_nodes = {}
+
 # Legacy compatibility maps (keep empty for new setup).
 hostvds_compute_enabled       = false
 hostvds_vpn_nodes             = {}

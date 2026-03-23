@@ -22,6 +22,7 @@
 #
 # NOTE: In this root module provider=hostvds is currently implemented.
 # Additional providers should follow modules/provider-template contract.
+# For Yandex Cloud whitelist entry adoption, use yandex_whitelist_entry_nodes below.
 #
 # HostVDS OpenStack credentials (use HOSTVDS_OS_* in .env/CI and map to TF_VAR_hostvds_os_*):
 # hostvds_os_auth_url = "https://<keystone-host>/identity/v3"
@@ -64,6 +65,33 @@
 #     ssh_key_ref = "default"
 #     enabled     = true
 #     region      = "eu-west2"
+#   }
+# }
+
+# Yandex Cloud credentials (optional when YC_TOKEN / YC_CLOUD_ID / YC_FOLDER_ID are already exported):
+# yandex_token = "..."
+# yandex_cloud_id = "b1g..."
+# yandex_folder_id = "b1g..."
+# yandex_zone = "ru-central1-a"
+#
+# Existing Yandex Cloud whitelist entry nodes adopted by import:
+# yandex_whitelist_entry_nodes = {
+#   "vpn-yc-whitelist-entry-01" = {
+#     instance_id       = "fhm***************"
+#     address_id        = "e9b***************"
+#     security_group_id = "enp***************"
+#     channel           = "prod"
+#     ssh_user          = "ubuntu"
+#     ssh_port          = 22
+#     ssh_key_ref       = "yc"
+#     enabled           = true
+#     region            = "ru-central1-a"
+#     platform_region   = "ru"
+#     ssh_ingress_cidrs = ["0.0.0.0/0"]
+#     https_ingress_cidrs = ["0.0.0.0/0"]
+#     metadata = {
+#       ssh-keys = "ubuntu:${file(\"~/.ssh/id_ed25519.pub\")}"
+#     }
 #   }
 # }
 

@@ -39,6 +39,31 @@ variable "allow_empty_vpn_nodes" {
   default     = false
 }
 
+variable "yandex_token" {
+  description = "Yandex Cloud IAM token. Optional when YC_TOKEN is already set in the environment."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "yandex_cloud_id" {
+  description = "Yandex Cloud cloud ID. Optional when YC_CLOUD_ID is already set in the environment."
+  type        = string
+  default     = ""
+}
+
+variable "yandex_folder_id" {
+  description = "Yandex Cloud folder ID. Optional when YC_FOLDER_ID is already set in the environment."
+  type        = string
+  default     = ""
+}
+
+variable "yandex_zone" {
+  description = "Default Yandex Cloud availability zone. Optional when resource data already carries zone information."
+  type        = string
+  default     = ""
+}
+
 variable "provider_api_enabled" {
   description = "Legacy switch to force provider API catalog enrichment. Preferred flow is provider_api_vpn_nodes."
   type        = bool
@@ -249,5 +274,42 @@ variable "provider_compute_vpn_nodes" {
       )
     ])
     error_message = "provider_compute_vpn_nodes entries must include valid peer_name, provider=hostvds, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
+  }
+}
+
+variable "yandex_whitelist_entry_nodes" {
+  description = "Existing Yandex Cloud whitelist entry nodes to adopt into Terraform without recreate."
+  type = map(object({
+    instance_id         = string
+    address_id          = string
+    security_group_id   = string
+    channel             = optional(string, "prod")
+    ssh_user            = optional(string, "root")
+    ssh_port            = optional(number, 22)
+    ssh_key_ref         = optional(string, "default")
+    enabled             = optional(bool, true)
+    region              = optional(string, "")
+    platform_region     = optional(string, "")
+    labels              = optional(map(string), {})
+    metadata            = optional(map(string), {})
+    ssh_ingress_cidrs   = optional(list(string), ["0.0.0.0/0"])
+    https_ingress_cidrs = optional(list(string), ["0.0.0.0/0"])
+    prevent_destroy     = optional(bool, true)
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for peer_name, node in var.yandex_whitelist_entry_nodes : (
+        can(regex("^[a-zA-Z0-9._-]+$", peer_name))
+        && length(trimspace(node.instance_id)) > 0
+        && length(trimspace(node.address_id)) > 0
+        && length(trimspace(node.security_group_id)) > 0
+        && contains(["prod", "dev"], node.channel)
+        && node.ssh_port > 0
+        && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
+      )
+    ])
+    error_message = "yandex_whitelist_entry_nodes entries must include valid peer_name, non-empty instance_id/address_id/security_group_id, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }

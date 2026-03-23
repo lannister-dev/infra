@@ -18,6 +18,11 @@ terraform {
       source  = "terraform-provider-openstack/openstack"
       version = "~> 1.54"
     }
+
+    yandex = {
+      source  = "yandex-cloud/yandex"
+      version = "~> 0.191"
+    }
   }
 }
 
@@ -37,4 +42,11 @@ provider "openstack" {
 
   region        = trimspace(var.hostvds_os_region_name) != "" ? var.hostvds_os_region_name : null
   endpoint_type = trimspace(var.hostvds_os_interface) != "" ? var.hostvds_os_interface : null
+}
+
+provider "yandex" {
+  token     = trimspace(var.yandex_token) != "" ? var.yandex_token : null
+  cloud_id  = trimspace(var.yandex_cloud_id) != "" ? var.yandex_cloud_id : null
+  folder_id = trimspace(var.yandex_folder_id) != "" ? var.yandex_folder_id : null
+  zone      = trimspace(var.yandex_zone) != "" ? var.yandex_zone : null
 }

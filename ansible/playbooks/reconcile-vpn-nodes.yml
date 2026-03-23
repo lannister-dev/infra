@@ -59,6 +59,7 @@
           - item.name is match('^[a-zA-Z0-9._-]+$')
           - item.public_ip | length > 0
           - item.channel in ['prod', 'dev']
+          - (item.traffic_role | default('standard', true)) in ['standard', 'whitelist_entry']
           - (item.ssh_port | int) > 0
           - item.ssh_key_ref is defined
           - (item.ssh_key_ref | default('default', true)) is match('^[a-zA-Z0-9._-]+$')
@@ -335,6 +336,7 @@
           }}
         peer_name: "{{ item.name }}"
         node_channel: "{{ item.channel }}"
+        node_traffic_role: "{{ item.traffic_role | default('standard', true) }}"
       loop: "{{ desired_enabled_nodes }}"
 
     - name: Get swarm join token
@@ -551,6 +553,8 @@
           - "{{ hostvars[item].node_channel }}"
           - --peer-name
           - "{{ hostvars[item].peer_name }}"
+          - --traffic-role
+          - "{{ hostvars[item].node_traffic_role | default('standard', true) }}"
       loop: "{{ joined_vpn_targets }}"
       loop_control:
         label: "{{ item }} -> {{ hostvars[item].swarm_node_id }}"
