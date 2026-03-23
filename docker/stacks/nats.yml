@@ -8,6 +8,8 @@ services:
       - >-
         exec nats-server
         --jetstream
+        --js_max_store=512MB
+        --js_max_mem=128MB
         --store_dir=/data
         --http_port=8222
         --server_name=nats
