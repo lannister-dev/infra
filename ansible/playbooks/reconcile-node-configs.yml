@@ -43,7 +43,13 @@
 
     - name: Build enabled node list
       ansible.builtin.set_fact:
-        enabled_nodes: "{{ vpn_nodes | selectattr('enabled', 'equalto', true) | list }}"
+        enabled_nodes: >-
+          {{
+            vpn_nodes
+            | selectattr('enabled', 'equalto', true)
+            | rejectattr('traffic_role', 'equalto', 'whitelist_entry')
+            | list
+          }}
 
     - name: Skip reconciliation when no enabled nodes
       ansible.builtin.meta: end_play
@@ -83,4 +89,4 @@
         fail_msg: >-
           Nodes not found in control plane after retries:
           {{ patch_results.results | selectattr('status', 'equalto', 404) | map(attribute='item') | map(attribute='name') | list | join(', ') }}.
-          Ensure node-agent has bootstrapped (POST /agent/initial).
+          Ensure node-agent has bootstrapped (POST /agent/initial). Whitelist entry nodes are excluded from this reconciliation.
