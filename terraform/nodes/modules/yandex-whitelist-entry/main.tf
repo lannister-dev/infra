@@ -89,14 +89,14 @@ locals {
     for name, node in var.nodes : name => values({
       for rule in concat(local.existing_ingress_rules[name], local.required_ingress_rules[name]) :
       join("|", [
-        upper(rule.protocol),
-        tostring(try(rule.port, 0)),
-        tostring(try(rule.from_port, 0)),
-        tostring(try(rule.to_port, 0)),
+        upper(coalesce(rule.protocol, "ANY")),
+        tostring(coalesce(rule.port, 0)),
+        tostring(coalesce(rule.from_port, 0)),
+        tostring(coalesce(rule.to_port, 0)),
         join(",", sort(try(rule.v4_cidr_blocks, []))),
         join(",", sort(try(rule.v6_cidr_blocks, []))),
-        try(rule.predefined_target, ""),
-        try(rule.security_group_id, ""),
+        coalesce(rule.predefined_target, ""),
+        coalesce(rule.security_group_id, ""),
       ]) => rule
     })
   }
