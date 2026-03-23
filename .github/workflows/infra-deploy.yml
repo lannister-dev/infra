@@ -275,26 +275,12 @@ jobs:
               echo "::error::SSH key ref '${key_ref}' is invalid or passphrase-protected; CI requires unencrypted private keys"
               exit 1
             fi
-            key_fp_sha256="$(ssh-keygen -lf "${key_file}" -E sha256 | awk '{print $2}')"
-            key_fp_md5="$(ssh-keygen -lf "${key_file}" -E md5 | awk '{print $2}' | sed 's/^MD5://')"
-            echo "::notice::Loaded SSH key ref '${key_ref}' fingerprint md5=${key_fp_md5} sha256=${key_fp_sha256}"
           done
 
           echo "ANSIBLE_SSH_KEYS_DIR=${KEYS_DIR}" >> "${GITHUB_ENV}"
           if [ -f "${KEYS_DIR}/default" ]; then
             echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEYS_DIR}/default" >> "${GITHUB_ENV}"
           fi
-
-      - name: Show loaded SSH key fingerprints
-        if: ${{ inputs.reconcile_nodes == true }}
-        run: |
-          set -Eeuo pipefail
-          for key_file in "${ANSIBLE_SSH_KEYS_DIR}"/*; do
-            [ -f "${key_file}" ] || continue
-            key_ref="$(basename "${key_file}")"
-            key_fp_sha256="$(ssh-keygen -lf "${key_file}" -E sha256 | awk '{print $2}')"
-            echo "::notice::workflow.ssh_key.${key_ref}.sha256=${key_fp_sha256}"
-          done
 
       - name: Terraform apply
         env:
@@ -320,9 +306,28 @@ jobs:
             exit 1
           fi
 
-          key_refs="$(awk '/ssh_key_ref:/{print $2}' "${inventory_file}" | tr -d '"' | sort -u | paste -sd, -)"
+          key_refs="$(
+            python3 - "${inventory_file}" <<'PY'
+import sys
+import yaml
+
+with open(sys.argv[1], "r", encoding="utf-8") as fh:
+    data = yaml.safe_load(fh) or {}
+
+nodes = data.get("vpn_nodes", []) if isinstance(data, dict) else []
+refs = sorted({
+    str(node.get("ssh_key_ref", "")).strip()
+    for node in nodes
+    if isinstance(node, dict)
+    and str(node.get("provider", "")).startswith("hostvds")
+    and str(node.get("ssh_key_ref", "")).strip() != ""
+})
+
+print(",".join(refs))
+PY
+          )"
           if [ -z "${key_refs}" ]; then
-            echo "::notice::No ssh_key_ref entries found in ${inventory_file}; skipping HostVDS keypair verification"
+            echo "::notice::No HostVDS ssh_key_ref entries found in ${inventory_file}; skipping HostVDS keypair verification"
             exit 0
           fi
 
