@@ -38,7 +38,7 @@ locals {
   })
 
   xray_config_dev_rendered = var.enable_vpn_dev_stack ? templatefile("${local.root_dir}/vpn/xray/config.json.j2", {
-    XRAY_LOG_LEVEL          = "debug"
+    XRAY_LOG_LEVEL          = "info"
     VPN_DOMAIN              = local.vpn_dev_domain
     VPN_WS_PATH             = local.vpn_dev_ws_path
     VPN_XHTTP_PATH          = local.vpn_dev_xhttp_path
