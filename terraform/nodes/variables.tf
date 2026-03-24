@@ -3,6 +3,7 @@ variable "vpn_nodes" {
   type = map(object({
     public_ip       = string
     channel         = optional(string, "prod")
+    traffic_role    = optional(string, "standard")
     ssh_user        = optional(string, "root")
     ssh_port        = optional(number, 22)
     ssh_key_ref     = optional(string, "default")
@@ -19,11 +20,12 @@ variable "vpn_nodes" {
         can(regex("^[a-zA-Z0-9._-]+$", peer_name))
         && length(trimspace(node.public_ip)) > 0
         && contains(["prod", "dev"], node.channel)
+        && contains(["standard", "whitelist_entry"], node.traffic_role)
         && node.ssh_port > 0
         && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
       )
     ])
-    error_message = "vpn_nodes must use valid peer names, non-empty public_ip, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
+    error_message = "vpn_nodes must use valid peer names, non-empty public_ip, channel in [prod,dev], traffic_role in [standard,whitelist_entry], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }
 
@@ -142,6 +144,7 @@ variable "hostvds_vpn_nodes" {
   type = map(object({
     server_id       = string
     channel         = optional(string, "prod")
+    traffic_role    = optional(string, "standard")
     ssh_user        = optional(string, "root")
     ssh_port        = optional(number, 22)
     ssh_key_ref     = optional(string, "default")
@@ -157,11 +160,12 @@ variable "hostvds_vpn_nodes" {
         can(regex("^[a-zA-Z0-9._-]+$", peer_name))
         && length(trimspace(node.server_id)) > 0
         && contains(["prod", "dev"], node.channel)
+        && contains(["standard", "whitelist_entry"], node.traffic_role)
         && node.ssh_port > 0
         && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
       )
     ])
-    error_message = "hostvds_vpn_nodes entries must include valid peer_name, non-empty server_id, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
+    error_message = "hostvds_vpn_nodes entries must include valid peer_name, non-empty server_id, channel in [prod,dev], traffic_role in [standard,whitelist_entry], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }
 
@@ -171,6 +175,7 @@ variable "provider_api_vpn_nodes" {
     provider        = string
     server_id       = string
     channel         = optional(string, "prod")
+    traffic_role    = optional(string, "standard")
     ssh_user        = optional(string, "root")
     ssh_port        = optional(number, 22)
     ssh_key_ref     = optional(string, "default")
@@ -187,11 +192,12 @@ variable "provider_api_vpn_nodes" {
         && contains(["hostvds"], lower(trimspace(node.provider)))
         && length(trimspace(node.server_id)) > 0
         && contains(["prod", "dev"], node.channel)
+        && contains(["standard", "whitelist_entry"], node.traffic_role)
         && node.ssh_port > 0
         && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
       )
     ])
-    error_message = "provider_api_vpn_nodes entries must include valid peer_name, provider=hostvds, non-empty server_id, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
+    error_message = "provider_api_vpn_nodes entries must include valid peer_name, provider=hostvds, non-empty server_id, channel in [prod,dev], traffic_role in [standard,whitelist_entry], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }
 
@@ -210,6 +216,7 @@ variable "hostvds_provisioned_vpn_nodes" {
     user_data         = optional(string, "")
     metadata          = optional(map(string), {})
     channel           = optional(string, "prod")
+    traffic_role      = optional(string, "standard")
     ssh_user          = optional(string, "root")
     ssh_port          = optional(number, 22)
     ssh_key_ref       = optional(string, "default")
@@ -227,11 +234,12 @@ variable "hostvds_provisioned_vpn_nodes" {
         && (length(trimspace(node.flavor_id)) > 0 || length(trimspace(node.flavor_name)) > 0)
         && length(node.network_ids) > 0
         && contains(["prod", "dev"], node.channel)
+        && contains(["standard", "whitelist_entry"], node.traffic_role)
         && node.ssh_port > 0
         && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
       )
     ])
-    error_message = "hostvds_provisioned_vpn_nodes entries must include valid peer_name, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
+    error_message = "hostvds_provisioned_vpn_nodes entries must include valid peer_name, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], traffic_role in [standard,whitelist_entry], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }
 
@@ -251,6 +259,7 @@ variable "provider_compute_vpn_nodes" {
     user_data         = optional(string, "")
     metadata          = optional(map(string), {})
     channel           = optional(string, "prod")
+    traffic_role      = optional(string, "standard")
     ssh_user          = optional(string, "root")
     ssh_port          = optional(number, 22)
     ssh_key_ref       = optional(string, "default")
@@ -269,11 +278,12 @@ variable "provider_compute_vpn_nodes" {
         && (length(trimspace(node.flavor_id)) > 0 || length(trimspace(node.flavor_name)) > 0)
         && length(node.network_ids) > 0
         && contains(["prod", "dev"], node.channel)
+        && contains(["standard", "whitelist_entry"], node.traffic_role)
         && node.ssh_port > 0
         && can(regex("^[a-zA-Z0-9._-]+$", node.ssh_key_ref))
       )
     ])
-    error_message = "provider_compute_vpn_nodes entries must include valid peer_name, provider=hostvds, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
+    error_message = "provider_compute_vpn_nodes entries must include valid peer_name, provider=hostvds, image_id/image_name, flavor_id/flavor_name, at least one network_id, channel in [prod,dev], traffic_role in [standard,whitelist_entry], ssh_port > 0, and ssh_key_ref matching [a-zA-Z0-9._-]+."
   }
 }
 
