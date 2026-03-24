@@ -7,7 +7,7 @@ region = "ru-central1"
 
 # Optional for S3-compatible endpoints (Yandex/MinIO/Ceph):
 # endpoints = { s3 = "https://storage.yandexcloud.net" }
-# force_path_style            = true
+# use_path_style              = true
 # skip_credentials_validation = true
 # skip_region_validation      = true
 # skip_requesting_account_id  = true

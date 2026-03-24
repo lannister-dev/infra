@@ -86,9 +86,8 @@ resource "docker_config" "xray_config" {
 }
 
 resource "docker_config" "xray_config_dev" {
-  count = var.enable_vpn_dev_stack ? 1 : 0
-  name  = local.xray_config_dev_name
-  data  = local.xray_config_dev_data
+  name = local.xray_config_dev_name
+  data = local.xray_config_dev_data
 }
 
 resource "docker_config" "vpn_fallback_index" {

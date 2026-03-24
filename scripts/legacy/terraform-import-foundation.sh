@@ -71,8 +71,6 @@ tf_import_if_present "docker_config.xray_config" "$(docker config inspect -f '{{
 tf_import_if_present "docker_config.vpn_fallback_index" "$(docker config inspect -f '{{ .ID }}' "${VPN_FALLBACK_INDEX_CONFIG_NAME}" 2>/dev/null || true)"
 tf_import_if_present "docker_config.vpn_fallback_nginx_conf" "$(docker config inspect -f '{{ .ID }}' "${VPN_FALLBACK_NGINX_CONFIG_NAME}" 2>/dev/null || true)"
 
-if [[ "${ENABLE_VPN_DEV_STACK}" == "true" ]]; then
-  tf_import_if_present "docker_config.xray_config_dev[0]" "$(docker config inspect -f '{{ .ID }}' "${XRAY_CONFIG_DEV_NAME}" 2>/dev/null || true)"
-fi
+tf_import_if_present "docker_config.xray_config_dev" "$(docker config inspect -f '{{ .ID }}' "${XRAY_CONFIG_DEV_NAME}" 2>/dev/null || true)"
 
 log "state sync done"

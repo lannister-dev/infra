@@ -13,7 +13,7 @@ TF_STATE_KEY_PREFIX=vpn-infra/prod
 # Backend (optional for S3-compatible/object-storage)
 # TF_STATE_DYNAMODB_TABLE=terraform-locks
 # TF_STATE_ENDPOINT=https://storage.yandexcloud.net
-# TF_STATE_FORCE_PATH_STYLE=true
+# TF_STATE_USE_PATH_STYLE=true
 # TF_STATE_ACCESS_KEY=...
 # TF_STATE_SECRET_KEY=...
 
