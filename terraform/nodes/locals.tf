@@ -8,6 +8,7 @@ locals {
     for name, node in var.provider_api_vpn_nodes : name => {
       server_id       = node.server_id
       channel         = node.channel
+      traffic_role    = node.traffic_role
       ssh_user        = node.ssh_user
       ssh_port        = node.ssh_port
       ssh_key_ref     = node.ssh_key_ref
@@ -31,6 +32,7 @@ locals {
       user_data         = node.user_data
       metadata          = node.metadata
       channel           = node.channel
+      traffic_role      = node.traffic_role
       ssh_user          = node.ssh_user
       ssh_port          = node.ssh_port
       ssh_key_ref       = node.ssh_key_ref

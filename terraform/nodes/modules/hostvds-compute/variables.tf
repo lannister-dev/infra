@@ -13,6 +13,7 @@ variable "nodes" {
     user_data         = optional(string, "")
     metadata          = optional(map(string), {})
     channel           = optional(string, "prod")
+    traffic_role      = optional(string, "standard")
     ssh_user          = optional(string, "root")
     ssh_port          = optional(number, 22)
     ssh_key_ref       = optional(string, "default")

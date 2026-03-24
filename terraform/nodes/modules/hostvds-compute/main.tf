@@ -41,6 +41,7 @@ locals {
     for name, instance in openstack_compute_instance_v2.vpn : name => {
       server_id       = instance.id
       channel         = try(var.nodes[name].channel, "prod")
+      traffic_role    = try(var.nodes[name].traffic_role, "standard")
       ssh_user        = try(var.nodes[name].ssh_user, "root")
       ssh_port        = try(var.nodes[name].ssh_port, 22)
       ssh_key_ref     = try(var.nodes[name].ssh_key_ref, "default")
