@@ -73,7 +73,7 @@ write_backend_config() {
 
     if [ -n "${TF_STATE_ENDPOINT:-}" ]; then
       echo "endpoints                 = { s3 = \"${TF_STATE_ENDPOINT}\" }"
-      echo "force_path_style          = ${TF_STATE_FORCE_PATH_STYLE:-true}"
+      echo "use_path_style            = ${TF_STATE_USE_PATH_STYLE:-${TF_STATE_FORCE_PATH_STYLE:-true}}"
       echo "skip_credentials_validation = true"
       echo "skip_region_validation      = true"
       echo "skip_requesting_account_id  = true"
@@ -320,6 +320,9 @@ plan_apply_root() {
     log_foundation_input_fingerprints
     if terraform -chdir="terraform/${root}" state list 2>/dev/null | grep -qx 'docker_config.vault_config'; then
       terraform -chdir="terraform/${root}" state rm docker_config.vault_config
+    fi
+    if terraform -chdir="terraform/${root}" state list 2>/dev/null | grep -qx 'docker_config.xray_config_dev\[0\]'; then
+      terraform -chdir="terraform/${root}" state mv 'docker_config.xray_config_dev[0]' docker_config.xray_config_dev >/dev/null
     fi
   fi
 
