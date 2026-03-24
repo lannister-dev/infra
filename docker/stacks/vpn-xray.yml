@@ -56,6 +56,11 @@ services:
         target: /etc/xray/config.json
         mode: 292
     command: ["run", "-config", "/etc/xray/config.json"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "32m"
+        max-file: "8"
     healthcheck:
       <<: *healthcheck-common
       test: ["CMD", "xray", "api", "statsquery", "--server=127.0.0.1:10085"]
