@@ -48,6 +48,18 @@ locals {
         predefined_target = null
         security_group_id = null
       },
+      {
+        description       = "Allow Swarm VXLAN for whitelist entry"
+        labels            = {}
+        protocol          = "UDP"
+        port              = 4789
+        from_port         = null
+        to_port           = null
+        v4_cidr_blocks    = ["0.0.0.0/0"]
+        v6_cidr_blocks    = []
+        predefined_target = null
+        security_group_id = null
+      },
     ]
   }
 
