@@ -39,6 +39,7 @@ services:
       - /bin/sh
       - -ec
       - |
+        rm -f /shared/admin.sock
         sed \
           -e "s#__UPSTREAM_HOST__#${VPN_WHITELIST_ENTRY_UPSTREAM_HOST}#g" \
           -e "s#__UPSTREAM_PORT__#${VPN_WHITELIST_ENTRY_UPSTREAM_PORT}#g" \
