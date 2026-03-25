@@ -56,4 +56,5 @@ volumes:
 
 configs:
   relay_config_template:
-    file: ../../vpn/haproxy/whitelist-entry.cfg.template
+    external: true
+    name: ${VPN_WHITELIST_ENTRY_RELAY_CONFIG_NAME}
