@@ -33,6 +33,8 @@ services:
       - source: relay_config_template
         target: /usr/local/etc/haproxy/haproxy.cfg.template
         mode: 292
+    volumes:
+      - shared:/shared
     command:
       - /bin/sh
       - -ec
@@ -47,6 +49,10 @@ services:
       test: ["CMD", "haproxy", "-c", "-f", "/tmp/haproxy.cfg"]
     deploy:
       <<: *deploy-common
+
+volumes:
+  shared:
+    name: entry-shared
 
 configs:
   relay_config_template:
