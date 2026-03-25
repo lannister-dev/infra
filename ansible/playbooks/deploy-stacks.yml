@@ -206,6 +206,47 @@
       when: (enabled_whitelist_entry_nodes | default([]) | length) > 0
       changed_when: "false"
 
+    - name: Compute whitelist entry relay config checksum
+      ansible.builtin.stat:
+        path: "{{ repo_root }}/vpn/haproxy/whitelist-entry.cfg.template"
+        checksum_algorithm: sha256
+      register: whitelist_entry_relay_template_stat
+      when: (enabled_whitelist_entry_nodes | default([]) | length) > 0
+      changed_when: false
+
+    - name: Resolve whitelist entry relay docker config name
+      ansible.builtin.set_fact:
+        whitelist_entry_relay_config_name: >-
+          vpn_whitelist_entry_relay_config__{{ whitelist_entry_relay_template_stat.stat.checksum[:12] }}
+      when: (enabled_whitelist_entry_nodes | default([]) | length) > 0
+
+    - name: Check whitelist entry relay docker config
+      ansible.builtin.command:
+        argv:
+          - docker
+          - config
+          - inspect
+          - "{{ whitelist_entry_relay_config_name }}"
+      register: whitelist_entry_relay_config_inspect
+      failed_when: false
+      when: (enabled_whitelist_entry_nodes | default([]) | length) > 0
+      changed_when: false
+
+    - name: Create whitelist entry relay docker config when missing
+      ansible.builtin.command:
+        argv:
+          - docker
+          - config
+          - create
+          - "{{ whitelist_entry_relay_config_name }}"
+          - vpn/haproxy/whitelist-entry.cfg.template
+      args:
+        chdir: "{{ repo_root }}"
+      when:
+        - (enabled_whitelist_entry_nodes | default([]) | length) > 0
+        - whitelist_entry_relay_config_inspect.rc != 0
+      changed_when: true
+
     - name: Check nats_auth_token secret when nats is enabled
       ansible.builtin.command:
         argv:
@@ -618,10 +659,37 @@
         chdir: "{{ repo_root }}"
       environment:
         HAPROXY_ALPINE_IMAGE_TAG: "{{ haproxy_alpine_image_tag }}"
+        VPN_WHITELIST_ENTRY_RELAY_CONFIG_NAME: "{{ whitelist_entry_relay_config_name }}"
         VPN_WHITELIST_ENTRY_UPSTREAM_HOST: "{{ vpn_whitelist_entry_upstream_host }}"
         VPN_WHITELIST_ENTRY_UPSTREAM_PORT: "{{ vpn_whitelist_entry_upstream_port | string }}"
       when: (enabled_whitelist_entry_nodes | default([]) | length) > 0
       changed_when: "false"
+
+    - name: Verify vpn-whitelist-entry_relay service references fresh docker config
+      ansible.builtin.command:
+        argv:
+          - docker
+          - service
+          - inspect
+          - vpn-whitelist-entry_relay
+          - --format
+          - "{{ '{{json .Spec.TaskTemplate.ContainerSpec.Configs}}' }}"
+      register: whitelist_entry_service_configs
+      when: (enabled_whitelist_entry_nodes | default([]) | length) > 0
+      changed_when: false
+      retries: 10
+      delay: 6
+      until: whitelist_entry_relay_config_name in whitelist_entry_service_configs.stdout
+
+    - name: Assert vpn-whitelist-entry_relay uses expected docker config name
+      ansible.builtin.assert:
+        that:
+          - whitelist_entry_relay_config_name in whitelist_entry_service_configs.stdout
+        fail_msg: >-
+          vpn-whitelist-entry_relay is not using expected docker config {{ whitelist_entry_relay_config_name }}.
+          Current service config payload: {{ whitelist_entry_service_configs.stdout }}
+      when: (enabled_whitelist_entry_nodes | default([]) | length) > 0
+      changed_when: false
 
     - name: Check whitelist entry stack presence when no whitelist nodes are enabled
       ansible.builtin.command:
