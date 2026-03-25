@@ -22,23 +22,6 @@ x-deploy-common: &deploy-common
   restart_policy:
     condition: any
 
-x-node-agent-deploy-common: &node-agent-deploy-common
-  mode: global
-  placement:
-    constraints:
-      - node.labels.role == vpn
-      - node.labels.channel != dev
-      - node.labels.traffic_role == standard
-  update_config:
-    order: stop-first
-    monitor: 2m
-    failure_action: rollback
-  rollback_config:
-    order: stop-first
-    monitor: 2m
-  restart_policy:
-    condition: any
-
 
 services:
   xray:
@@ -87,35 +70,6 @@ services:
         - traefik.http.routers.vpn-xhttp.service=vpn-xhttp
         - traefik.http.services.vpn-xhttp.loadbalancer.server.port=10001
 
-  node-agent:
-    image: ${NODE_AGENT_IMAGE_REF:-harbor.lannister-dev.ru/vpn-service/node-agent:prod}
-    command: ["python", "app.py"]
-    networks:
-      - vpn-net
-      - monitoring
-    secrets:
-      - bootstrap_token
-    volumes:
-      - agent-data:/data
-    environment:
-      AGENT_BOOTSTRAP_TOKEN_FILE: /run/secrets/bootstrap_token
-      AGENT_IDENTITY_PATH: /data/node_identity.json
-      AGENT_NODE_KEY: "{{.Node.Hostname}}"
-    env_file:
-      - ../../node-agent.env
-    healthcheck:
-      <<: *healthcheck-common
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/healthz', timeout=2).read(); print('ok')"]
-    deploy:
-      <<: *node-agent-deploy-common
-      labels:
-        - "prometheus-scrape=true"
-        - "prometheus-app=node-agent"
-        - "prometheus-env=prod"
-        - "prometheus-metrics-port=9000"
-        - "prometheus-metrics-path=/metrics"
-        - "prometheus-scrape-profile=important"
-
   vpn-fallback:
     image: nginx:${NGINX_ALPINE_IMAGE_TAG}
     networks:
@@ -155,16 +109,7 @@ configs:
     external: true
     name: ${VPN_FALLBACK_NGINX_CONFIG_NAME}
 
-volumes:
-  agent-data:
-
-secrets:
-  bootstrap_token:
-    external: true
-
 networks:
-  monitoring:
-    external: true
   traefik_swarm:
     external: true
   vpn-net:
