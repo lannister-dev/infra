@@ -1,5 +1,6 @@
 global
   log stdout format raw local0
+  stats socket /shared/admin.sock mode 660 level admin expose-fd listeners
 
 defaults
   log global
