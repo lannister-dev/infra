@@ -24,6 +24,7 @@ x-deploy-common: &deploy-common
 services:
   relay:
     image: haproxy:${HAPROXY_ALPINE_IMAGE_TAG}
+    user: "0:0"
     ports:
       - target: 443
         published: 443
