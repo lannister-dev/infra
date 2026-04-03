@@ -5,8 +5,8 @@ profiles:
     type: ws_tls
     client:
       path: /api/v1/stream
-      host: prod.lannister-dev.ru
-      sni: prod.lannister-dev.ru
+      host: prod.apirelay.org
+      sni: prod.apirelay.org
 
   vless-xhttp:
     enabled: false
