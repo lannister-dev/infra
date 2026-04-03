@@ -73,33 +73,21 @@ jobs:
         run: |
           set -Eeuo pipefail
           : "${VAULT_ADDR:?VAULT_ADDR must be set on the runner}"
-          echo "VAULT_ACTION_URL=${VAULT_ADDR}" >> "${GITHUB_ENV}"
-          if [ -n "${VAULT_NAMESPACE:-}" ]; then
-            echo "VAULT_ACTION_NAMESPACE=${VAULT_NAMESPACE}" >> "${GITHUB_ENV}"
-          fi
-          if [ -n "${VAULT_TOKEN:-}" ]; then
-            echo "::add-mask::${VAULT_TOKEN}"
-            echo "VAULT_ACTION_METHOD=token" >> "${GITHUB_ENV}"
-            echo "VAULT_ACTION_TOKEN=${VAULT_TOKEN}" >> "${GITHUB_ENV}"
-          else
-            : "${VAULT_ROLE_ID:?Set VAULT_TOKEN or VAULT_ROLE_ID on the runner}"
-            : "${VAULT_SECRET_ID:?Set VAULT_TOKEN or VAULT_SECRET_ID on the runner}"
-            echo "::add-mask::${VAULT_ROLE_ID}"
-            echo "::add-mask::${VAULT_SECRET_ID}"
-            echo "VAULT_ACTION_METHOD=approle" >> "${GITHUB_ENV}"
-            echo "VAULT_ACTION_ROLE_ID=${VAULT_ROLE_ID}" >> "${GITHUB_ENV}"
-            echo "VAULT_ACTION_SECRET_ID=${VAULT_SECRET_ID}" >> "${GITHUB_ENV}"
-          fi
+          : "${VAULT_ROLE_ID:?VAULT_ROLE_ID must be set on the runner}"
+          : "${VAULT_SECRET_ID:?VAULT_SECRET_ID must be set on the runner}"
+          echo "::add-mask::${VAULT_ROLE_ID}"
+          echo "::add-mask::${VAULT_SECRET_ID}"
+          echo "VAULT_ADDR=${VAULT_ADDR}" >> "${GITHUB_ENV}"
+          echo "VAULT_ROLE_ID=${VAULT_ROLE_ID}" >> "${GITHUB_ENV}"
+          echo "VAULT_SECRET_ID=${VAULT_SECRET_ID}" >> "${GITHUB_ENV}"
 
       - name: Load infra env from Vault
         uses: hashicorp/vault-action@v3
         with:
-          url: ${{ env.VAULT_ACTION_URL }}
-          namespace: ${{ env.VAULT_ACTION_NAMESPACE }}
-          method: ${{ env.VAULT_ACTION_METHOD }}
-          token: ${{ env.VAULT_ACTION_TOKEN }}
-          roleId: ${{ env.VAULT_ACTION_ROLE_ID }}
-          secretId: ${{ env.VAULT_ACTION_SECRET_ID }}
+          url: ${{ env.VAULT_ADDR }}
+          method: approle
+          roleId: ${{ env.VAULT_ROLE_ID }}
+          secretId: ${{ env.VAULT_SECRET_ID }}
           secrets: |
             ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_INFRA_SECRET_PATH }} config | INFRA_ENV_CONTENT ;
 
