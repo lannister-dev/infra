@@ -43,7 +43,6 @@ env:
   PYTHON_VERSION: "3.10"
   VAULT_KV_MOUNT: "kv"
   VAULT_INFRA_SECRET_PATH: "infra/prod"
-  VAULT_NODE_AGENT_SECRET_PATH: "node-agent/prod"
 
 jobs:
   checks:
@@ -80,16 +79,6 @@ jobs:
           secretId: ${{ env.VAULT_SECRET_ID }}
           secrets: |
             ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_INFRA_SECRET_PATH }} config | INFRA_ENV_CONTENT ;
-
-      - name: Load node-agent env from Vault
-        uses: hashicorp/vault-action@v3
-        with:
-          url: ${{ env.VAULT_ADDR }}
-          method: approle
-          roleId: ${{ env.VAULT_ROLE_ID }}
-          secretId: ${{ env.VAULT_SECRET_ID }}
-          secrets: |
-            ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_NODE_AGENT_SECRET_PATH }} config | NODE_AGENT_ENV_CONTENT ;
 
       - uses: actions/setup-python@v5
         with:
@@ -185,27 +174,6 @@ jobs:
               exit 1
             fi
           done
-
-      - name: Render node-agent env from Vault
-        run: |
-          set -Eeuo pipefail
-
-          NODE_AGENT_ENV_FILE="${GITHUB_WORKSPACE}/node-agent.env"
-          printf '%s\n' "${NODE_AGENT_ENV_CONTENT}" > "${NODE_AGENT_ENV_FILE}"
-          chmod 600 "${NODE_AGENT_ENV_FILE}"
-          if ! grep -q '^AGENT_CONTROL_API=' "${NODE_AGENT_ENV_FILE}"; then
-            echo "::error::node-agent env is invalid: AGENT_CONTROL_API is missing"
-            exit 1
-          fi
-          if ! grep -q '^NATS_SERVER=' "${NODE_AGENT_ENV_FILE}"; then
-            echo "::error::node-agent env is invalid: NATS_SERVER is missing"
-            exit 1
-          fi
-          nats_server_value="$(grep '^NATS_SERVER=' "${NODE_AGENT_ENV_FILE}" | tail -n1 | cut -d= -f2-)"
-          if ! printf '%s' "${nats_server_value}" | grep -Eq '^nats://[^@]+@[^[:space:]]+$'; then
-            echo "::error::node-agent env is invalid: NATS_SERVER must include credentials (expected nats://<token>@host:4222)"
-            exit 1
-          fi
 
       - name: Prepare SSH key for Ansible
         run: |
@@ -311,5 +279,4 @@ jobs:
         if: always()
         run: |
           rm -f "${INFRA_ENV_FILE:-}"
-          rm -f "${GITHUB_WORKSPACE}/node-agent.env"
           rm -rf "${RUNNER_TEMP}/ansible_ssh_keys"
