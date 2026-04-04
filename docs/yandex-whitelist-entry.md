@@ -15,12 +15,18 @@ Runtime class after reconcile/deploy:
 
 ## 1. Read current values from Yandex Cloud
 
-Export Yandex credentials first:
+Export Yandex credentials first. Prefer a service account authorized key JSON so Terraform does not depend on a short-lived IAM token:
+
+```bash
+export YC_SERVICE_ACCOUNT_KEY_FILE=./sa-key.json
+export YC_CLOUD_ID=...
+export YC_FOLDER_ID=...
+```
+
+Short-lived fallback for one-off manual runs:
 
 ```bash
 export YC_TOKEN=...
-export YC_CLOUD_ID=...
-export YC_FOLDER_ID=...
 ```
 
 Read the existing VM, address, and security group:

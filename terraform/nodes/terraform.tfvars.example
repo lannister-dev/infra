@@ -68,7 +68,9 @@
 #   }
 # }
 
-# Yandex Cloud credentials (optional when YC_TOKEN / YC_CLOUD_ID / YC_FOLDER_ID are already exported):
+# Yandex Cloud credentials.
+# Prefer service account key file for automation; IAM token is suitable only for short-lived manual runs.
+# yandex_service_account_key_file = "./sa-key.json"
 # yandex_token = "..."
 # yandex_cloud_id = "b1g..."
 # yandex_folder_id = "b1g..."

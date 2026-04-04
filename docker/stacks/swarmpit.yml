@@ -3,7 +3,7 @@ services:
   app:
     image: swarmpit/swarmpit:${SWARMPIT_IMAGE_TAG}
     environment:
-      - JAVA_TOOL_OPTIONS=-Xms256m -Xmx384m -XX:MaxDirectMemorySize=384m
+      - JAVA_TOOL_OPTIONS=-Xms256m -Xmx512m -XX:MaxDirectMemorySize=256m -XX:+UseG1GC
       - SWARMPIT_DB=http://db:5984
       - SWARMPIT_INFLUXDB=http://influxdb:8086
       - SWARMPIT_DOCKER_API=1.44

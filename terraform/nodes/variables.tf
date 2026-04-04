@@ -42,10 +42,16 @@ variable "allow_empty_vpn_nodes" {
 }
 
 variable "yandex_token" {
-  description = "Yandex Cloud IAM token. Optional when YC_TOKEN is already set in the environment."
+  description = "Yandex Cloud IAM token. Optional when YC_TOKEN is already set in the environment. Prefer service account key file for long-lived automation."
   type        = string
   default     = ""
   sensitive   = true
+}
+
+variable "yandex_service_account_key_file" {
+  description = "Path to Yandex Cloud service account authorized key JSON. Optional when YC_SERVICE_ACCOUNT_KEY_FILE is already set in the environment."
+  type        = string
+  default     = ""
 }
 
 variable "yandex_cloud_id" {
