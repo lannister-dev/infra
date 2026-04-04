@@ -105,7 +105,8 @@ For `provider=hostvds`:
 - `HOSTVDS_OS_INTERFACE`
 
 For `yandex_whitelist_entry_nodes`:
-- `YC_TOKEN` or `TF_VAR_yandex_token`
+- preferred: `YC_SERVICE_ACCOUNT_KEY_FILE` or `TF_VAR_yandex_service_account_key_file`
+- fallback for short-lived manual runs: `YC_TOKEN` or `TF_VAR_yandex_token`
 - `YC_CLOUD_ID` or `TF_VAR_yandex_cloud_id`
 - `YC_FOLDER_ID` or `TF_VAR_yandex_folder_id`
 
