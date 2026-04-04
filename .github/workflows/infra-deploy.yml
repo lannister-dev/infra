@@ -243,6 +243,29 @@ jobs:
         run: |
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          if [ -n "${YC_SERVICE_ACCOUNT_KEY_B64:-}" ]; then
+            YC_SA_KEY_FILE="${RUNNER_TEMP}/yc-sa-key.json"
+            printf '%s' "${YC_SERVICE_ACCOUNT_KEY_B64}" | base64 -d > "${YC_SA_KEY_FILE}"
+            chmod 600 "${YC_SA_KEY_FILE}"
+            export YC_SERVICE_ACCOUNT_KEY_FILE="${YC_SA_KEY_FILE}"
+            export TF_VAR_yandex_service_account_key_file="${YC_SA_KEY_FILE}"
+            unset YC_TOKEN || true
+            unset TF_VAR_yandex_token || true
+            echo "::notice::Yandex auth prepared from YC_SERVICE_ACCOUNT_KEY_B64"
+          elif [ -n "${YC_SERVICE_ACCOUNT_KEY_JSON:-}" ]; then
+            YC_SA_KEY_FILE="${RUNNER_TEMP}/yc-sa-key.json"
+            printf '%s' "${YC_SERVICE_ACCOUNT_KEY_JSON}" > "${YC_SA_KEY_FILE}"
+            chmod 600 "${YC_SA_KEY_FILE}"
+            export YC_SERVICE_ACCOUNT_KEY_FILE="${YC_SA_KEY_FILE}"
+            export TF_VAR_yandex_service_account_key_file="${YC_SA_KEY_FILE}"
+            unset YC_TOKEN || true
+            unset TF_VAR_yandex_token || true
+            echo "::notice::Yandex auth prepared from YC_SERVICE_ACCOUNT_KEY_JSON"
+          else
+            echo "::notice::Yandex auth fallback: service account key not present in workflow env"
+          fi
+
           bash ./scripts/ci/apply-terraform.sh
 
       - name: Install Ansible
@@ -279,4 +302,5 @@ jobs:
         if: always()
         run: |
           rm -f "${INFRA_ENV_FILE:-}"
+          rm -f "${RUNNER_TEMP}/yc-sa-key.json"
           rm -rf "${RUNNER_TEMP}/ansible_ssh_keys"
