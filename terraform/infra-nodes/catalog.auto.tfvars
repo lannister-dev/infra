@@ -10,22 +10,24 @@ infra_nodes = {}
 provider_api_enabled = true
 timeweb_infra_nodes = {
   "infra-manager-01" = {
-    server_id = "6183431"
-    role      = "manager"
-    kind      = "prod"
-    ssh_user  = "root"
-    ssh_port  = 22
-    enabled   = true
-    region    = "ru-1"
+    server_id   = "6183431"
+    role        = "manager"
+    kind        = "prod"
+    ssh_user    = "root"
+    ssh_port    = 22
+    ssh_key_ref = "default"
+    enabled     = true
+    region      = "ru-1"
   }
   "infra-worker-01" = {
-    server_id = "2669415"
-    role      = "worker"
-    kind      = "prod"
-    ssh_user  = "root"
-    ssh_port  = 22
-    enabled   = true
-    region    = "ru-1"
+    server_id   = "2669415"
+    role        = "worker"
+    kind        = "prod"
+    ssh_user    = "root"
+    ssh_port    = 22
+    ssh_key_ref = "default"
+    enabled     = true
+    region      = "ru-1"
   }
 }
 
@@ -45,6 +47,7 @@ timeweb_provisioned_infra_nodes = {
     kind              = "prod"
     ssh_user          = "root"
     ssh_port          = 22
+    ssh_key_ref       = "default"
     enabled           = true
     region            = "spb-3"
   }

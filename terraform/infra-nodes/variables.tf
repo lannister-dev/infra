@@ -1,14 +1,15 @@
 variable "infra_nodes" {
   description = "Manual infra nodes map keyed by node name."
   type = map(object({
-    public_ip = string
-    role      = optional(string, "worker")
-    kind      = optional(string, "prod")
-    ssh_user  = optional(string, "root")
-    ssh_port  = optional(number, 22)
-    enabled   = optional(bool, true)
-    provider  = optional(string, "manual")
-    region    = optional(string, "")
+    public_ip   = string
+    role        = optional(string, "worker")
+    kind        = optional(string, "prod")
+    ssh_user    = optional(string, "root")
+    ssh_port    = optional(number, 22)
+    ssh_key_ref = optional(string, "default")
+    enabled     = optional(bool, true)
+    provider    = optional(string, "manual")
+    region      = optional(string, "")
   }))
   default = {}
 
@@ -72,13 +73,14 @@ variable "timeweb_endpoint_template" {
 variable "timeweb_infra_nodes" {
   description = "Timeweb infra nodes keyed by node name."
   type = map(object({
-    server_id = string
-    role      = optional(string, "worker")
-    kind      = optional(string, "prod")
-    ssh_user  = optional(string, "root")
-    ssh_port  = optional(number, 22)
-    enabled   = optional(bool, true)
-    region    = optional(string, "")
+    server_id   = string
+    role        = optional(string, "worker")
+    kind        = optional(string, "prod")
+    ssh_user    = optional(string, "root")
+    ssh_port    = optional(number, 22)
+    ssh_key_ref = optional(string, "default")
+    enabled     = optional(bool, true)
+    region      = optional(string, "")
   }))
   default = {}
 
@@ -117,6 +119,7 @@ variable "timeweb_provisioned_infra_nodes" {
     kind              = optional(string, "prod")
     ssh_user          = optional(string, "root")
     ssh_port          = optional(number, 22)
+    ssh_key_ref       = optional(string, "default")
     enabled           = optional(bool, true)
     region            = optional(string, "")
   }))

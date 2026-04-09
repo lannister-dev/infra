@@ -338,6 +338,16 @@ jobs:
       - name: Install Ansible
         run: python -m pip install --upgrade pip ansible
 
+      - name: Reconcile infra nodes (Ansible)
+        if: ${{ inputs.apply_infra_nodes == true }}
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export REPO_ROOT="${GITHUB_WORKSPACE}"
+          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          ansible-playbook -i ansible/inventory/development.ini \
+            ansible/playbooks/reconcile-infra-nodes.yml
+
       - name: Reconcile VPN nodes (Ansible)
         if: ${{ inputs.reconcile_nodes == true }}
         run: |
