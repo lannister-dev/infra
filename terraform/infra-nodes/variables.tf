@@ -131,12 +131,12 @@ variable "timeweb_provisioned_infra_nodes" {
         && contains(["prod", "dev"], node.kind)
         && node.ssh_port > 0
         && (
-          try(node.preset_id, 0) > 0
+          coalesce(node.preset_id, 0) > 0
           || (
             length(trimspace(try(node.location, ""))) > 0
-            && try(node.cpu, 0) > 0
-            && try(node.ram, 0) > 0
-            && try(node.disk, 0) > 0
+            && coalesce(node.cpu, 0) > 0
+            && coalesce(node.ram, 0) > 0
+            && coalesce(node.disk, 0) > 0
           )
         )
       )
