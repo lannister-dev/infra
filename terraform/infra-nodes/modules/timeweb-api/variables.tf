@@ -36,14 +36,14 @@ variable "endpoint_template" {
 variable "nodes" {
   description = "Infra nodes keyed by node name."
   type = map(object({
-    server_id = string
-    role      = optional(string, "worker")
-    kind      = optional(string, "prod")
-    ssh_user  = optional(string, "root")
-    ssh_port  = optional(number, 22)
+    server_id   = string
+    role        = optional(string, "worker")
+    kind        = optional(string, "prod")
+    ssh_user    = optional(string, "root")
+    ssh_port    = optional(number, 22)
     ssh_key_ref = optional(string, "default")
-    enabled   = optional(bool, true)
-    region    = optional(string, "")
+    enabled     = optional(bool, true)
+    region      = optional(string, "")
   }))
   default = {}
 }
