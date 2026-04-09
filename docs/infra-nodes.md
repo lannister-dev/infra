@@ -31,6 +31,7 @@ timeweb_provisioned_infra_nodes = {
     role              = "manager"
     kind              = "prod"
     enabled           = true
+    ssh_key_ref       = "default"
     region            = "spb-3"
   }
 }
@@ -57,6 +58,7 @@ terraform -chdir=terraform/infra-nodes apply -input=false
 Use `.env`/CI secrets:
 - `TIMEWEB_API_TOKEN`
 - optional: `TIMEWEB_API_URL`, `TIMEWEB_AUTH_HEADER`, `TIMEWEB_AUTH_SCHEME`, `TIMEWEB_ENDPOINT_TEMPLATE`
+- `ANSIBLE_SSH_KEYS_DIR` or `ANSIBLE_SSH_PRIVATE_KEY_FILE` for infra node bootstrap
 
 ## Lifecycle semantics
 

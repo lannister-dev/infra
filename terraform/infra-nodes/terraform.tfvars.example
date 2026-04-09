@@ -6,6 +6,7 @@
 #     kind      = "prod"
 #     ssh_user  = "root"
 #     ssh_port  = 22
+#     ssh_key_ref = "default"
 #     enabled   = true
 #     provider  = "manual"
 #     region    = "ru-msk"
@@ -27,6 +28,7 @@
 #     kind      = "prod"
 #     ssh_user  = "root"
 #     ssh_port  = 22
+#     ssh_key_ref = "default"
 #     enabled   = true
 #     region    = "ru-msk"
 #   }
@@ -52,6 +54,7 @@
 #     kind              = "prod"
 #     ssh_user          = "root"
 #     ssh_port          = 22
+#     ssh_key_ref       = "default"
 #     enabled           = true
 #     region            = "spb-3"
 #   }

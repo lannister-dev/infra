@@ -281,6 +281,16 @@ jobs:
           ansible-playbook -i ansible/inventory/production.ini \
             ansible/playbooks/reconcile-vpn-nodes.yml
 
+      - name: Reconcile infra nodes (Ansible)
+        if: ${{ inputs.apply_infra_nodes == true }}
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export REPO_ROOT="${GITHUB_WORKSPACE}"
+          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          ansible-playbook -i ansible/inventory/production.ini \
+            ansible/playbooks/reconcile-infra-nodes.yml
+
       - name: Deploy stacks (Ansible)
         run: |
           set -Eeo pipefail

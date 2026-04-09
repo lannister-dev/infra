@@ -33,28 +33,30 @@ locals {
 
   merged_infra_nodes = {
     for name, node in local.merged_infra_nodes_raw : name => {
-      public_ip = tostring(try(node["public_ip"], ""))
-      role      = tostring(try(node["role"], "worker"))
-      kind      = tostring(try(node["kind"], "prod"))
-      ssh_user  = tostring(try(node["ssh_user"], "root"))
-      ssh_port  = tonumber(try(node["ssh_port"], 22))
-      enabled   = try(node["enabled"], true)
-      provider  = tostring(try(node["provider"], "manual"))
-      region    = tostring(try(node["region"], ""))
+      public_ip   = tostring(try(node["public_ip"], ""))
+      role        = tostring(try(node["role"], "worker"))
+      kind        = tostring(try(node["kind"], "prod"))
+      ssh_user    = tostring(try(node["ssh_user"], "root"))
+      ssh_port    = tonumber(try(node["ssh_port"], 22))
+      ssh_key_ref = tostring(try(node["ssh_key_ref"], "default"))
+      enabled     = try(node["enabled"], true)
+      provider    = tostring(try(node["provider"], "manual"))
+      region      = tostring(try(node["region"], ""))
     }
   }
 
   infra_nodes_list = [
     for name in sort(keys(local.merged_infra_nodes)) : {
-      name      = name
-      public_ip = local.merged_infra_nodes[name]["public_ip"]
-      role      = local.merged_infra_nodes[name]["role"]
-      kind      = local.merged_infra_nodes[name]["kind"]
-      ssh_user  = local.merged_infra_nodes[name]["ssh_user"]
-      ssh_port  = local.merged_infra_nodes[name]["ssh_port"]
-      enabled   = local.merged_infra_nodes[name]["enabled"]
-      provider  = local.merged_infra_nodes[name]["provider"]
-      region    = local.merged_infra_nodes[name]["region"]
+      name        = name
+      public_ip   = local.merged_infra_nodes[name]["public_ip"]
+      role        = local.merged_infra_nodes[name]["role"]
+      kind        = local.merged_infra_nodes[name]["kind"]
+      ssh_user    = local.merged_infra_nodes[name]["ssh_user"]
+      ssh_port    = local.merged_infra_nodes[name]["ssh_port"]
+      ssh_key_ref = local.merged_infra_nodes[name]["ssh_key_ref"]
+      enabled     = local.merged_infra_nodes[name]["enabled"]
+      provider    = local.merged_infra_nodes[name]["provider"]
+      region      = local.merged_infra_nodes[name]["region"]
     }
   ]
 }

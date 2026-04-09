@@ -13,6 +13,8 @@ This directory is split into:
   Post-deploy sanity checks (called by Ansible deploy playbook).
 - `scripts/core/swarm-label-node.sh`
   Idempotent Swarm node labeling helper (`role/channel/peer_name`), returns rc `10` on change.
+- `scripts/core/swarm-label-infra-node.sh`
+  Idempotent Swarm node labeling helper for infra nodes (`kind/infra_name/provider/region`), returns rc `10` on change.
 - `scripts/core/swarm-refresh-registry-auth.sh`
   Idempotent helper to refresh registry auth for a Swarm service, returns rc `10` on change.
 - `scripts/core/update-terraform-locks.sh`

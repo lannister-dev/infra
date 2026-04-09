@@ -38,6 +38,7 @@ terraform -chdir=terraform/nodes apply -input=false -auto-approve
 terraform -chdir=terraform/infra-nodes init -input=false -backend-config="$(pwd)/terraform/backends/infra-nodes.hcl"
 terraform -chdir=terraform/infra-nodes apply -input=false -auto-approve
 
+ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/reconcile-infra-nodes.yml
 ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/reconcile-vpn-nodes.yml
 ansible-playbook -i ansible/inventory/production.ini ansible/playbooks/deploy-stacks.yml
 ```
@@ -112,7 +113,7 @@ Source of truth: `terraform/infra-nodes/catalog.auto.tfvars`.
 Add/replace manager or worker:
 1. Update `infra_nodes`, `timeweb_infra_nodes`, or `timeweb_provisioned_infra_nodes`.
 2. Apply `terraform/infra-nodes`.
-3. Ensure bootstrap/join/labels for new node.
+3. Run `reconcile-infra-nodes.yml` so the new node installs Docker, joins Swarm and gets `kind` labels.
 4. Re-run `deploy-stacks.yml`.
 
 ## 5. Provider incident algorithm (ban/outage)
