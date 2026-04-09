@@ -1,0 +1,153 @@
+---
+name: Infra Data Migrate
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_node:
+        description: "Target infra manager hostname for data-prod migration"
+        required: true
+        type: string
+      confirm_apply:
+        description: "Type MIGRATE-PROD-DATA to confirm production data migration."
+        required: true
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-prod-data-migrate
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.10"
+  VAULT_KV_MOUNT: "kv"
+  VAULT_INFRA_SECRET_PATH: "infra/prod"
+
+jobs:
+  checks:
+    uses: ./.github/workflows/infra-checks-reusable.yml
+
+  migrate-prod-data:
+    if: ${{ inputs.confirm_apply == 'MIGRATE-PROD-DATA' }}
+    needs: checks
+    runs-on: [self-hosted, prod]
+    timeout-minutes: 120
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare Vault auth inputs
+        run: |
+          set -Eeuo pipefail
+          : "${VAULT_ADDR:?VAULT_ADDR must be set on the runner}"
+          : "${VAULT_ROLE_ID:?VAULT_ROLE_ID must be set on the runner}"
+          : "${VAULT_SECRET_ID:?VAULT_SECRET_ID must be set on the runner}"
+          echo "::add-mask::${VAULT_ROLE_ID}"
+          echo "::add-mask::${VAULT_SECRET_ID}"
+          echo "VAULT_ADDR=${VAULT_ADDR}" >> "${GITHUB_ENV}"
+          echo "VAULT_ROLE_ID=${VAULT_ROLE_ID}" >> "${GITHUB_ENV}"
+          echo "VAULT_SECRET_ID=${VAULT_SECRET_ID}" >> "${GITHUB_ENV}"
+
+      - name: Load infra env from Vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ env.VAULT_ADDR }}
+          method: approle
+          roleId: ${{ env.VAULT_ROLE_ID }}
+          secretId: ${{ env.VAULT_SECRET_ID }}
+          secrets: |
+            ${{ env.VAULT_KV_MOUNT }}/data/${{ env.VAULT_INFRA_SECRET_PATH }} config | INFRA_ENV_CONTENT ;
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements/dev.txt
+            requirements/base.txt
+
+      - name: Load runtime env from Vault
+        run: |
+          set -Eeuo pipefail
+          ENV_FILE="${RUNNER_TEMP}/infra.prod.env"
+          printf '%s\n' "${INFRA_ENV_CONTENT}" > "${ENV_FILE}"
+          chmod 600 "${ENV_FILE}"
+          echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
+
+      - name: Validate data migration guardrails
+        run: |
+          set -Eeuo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          if [ "${DEPLOY_DATA_PROD_STACK:-false}" != "true" ]; then
+            echo "::error::DEPLOY_DATA_PROD_STACK=true is required for Infra Data Migrate"
+            exit 1
+          fi
+          if [ -z "${{ inputs.target_node }}" ]; then
+            echo "::error::target_node is required"
+            exit 1
+          fi
+
+      - name: Prepare SSH key for Ansible
+        run: |
+          set -Eeuo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          KEYS_DIR="${RUNNER_TEMP}/ansible_ssh_keys"
+          mkdir -p "${KEYS_DIR}"
+          chmod 700 "${KEYS_DIR}"
+          keys_written=0
+
+          if [ -n "${ANSIBLE_SSH_KEYS_B64_JSON:-}" ]; then
+            export KEYS_DIR
+            json_count="$(python3 ./scripts/core/render-ansible-ssh-keys.py --keys-dir "${KEYS_DIR}")"
+            keys_written=$((keys_written + json_count))
+          fi
+
+          if [ -n "${ANSIBLE_SSH_PRIVATE_KEY_B64:-}" ]; then
+            printf '%s' "${ANSIBLE_SSH_PRIVATE_KEY_B64}" | base64 -d > "${KEYS_DIR}/default"
+            chmod 600 "${KEYS_DIR}/default"
+            keys_written=$((keys_written + 1))
+          elif [ -n "${ANSIBLE_SSH_PRIVATE_KEY:-}" ]; then
+            printf '%s\n' "${ANSIBLE_SSH_PRIVATE_KEY}" > "${KEYS_DIR}/default"
+            chmod 600 "${KEYS_DIR}/default"
+            keys_written=$((keys_written + 1))
+          elif [ -n "${ANSIBLE_SSH_PRIVATE_KEY_FILE:-}" ]; then
+            cp "${ANSIBLE_SSH_PRIVATE_KEY_FILE}" "${KEYS_DIR}/default"
+            chmod 600 "${KEYS_DIR}/default"
+            keys_written=$((keys_written + 1))
+          fi
+
+          if [ "${keys_written}" -eq 0 ]; then
+            echo "::error::Set ANSIBLE_SSH_KEYS_B64_JSON or fallback SSH key variables in INFRA_ENV_PROD"
+            exit 1
+          fi
+
+          echo "ANSIBLE_SSH_KEYS_DIR=${KEYS_DIR}" >> "${GITHUB_ENV}"
+          if [ -f "${KEYS_DIR}/default" ]; then
+            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEYS_DIR}/default" >> "${GITHUB_ENV}"
+          fi
+
+      - name: Install Ansible
+        run: python -m pip install --upgrade pip ansible
+
+      - name: Migrate production data stack
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export REPO_ROOT="${GITHUB_WORKSPACE}"
+          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          export DATA_PROD_TARGET_NODE="${{ inputs.target_node }}"
+          ansible-playbook -i ansible/inventory/production.ini \
+            ansible/playbooks/migrate-data-prod.yml
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "${INFRA_ENV_FILE:-}"
+          rm -rf "${RUNNER_TEMP}/ansible_ssh_keys"

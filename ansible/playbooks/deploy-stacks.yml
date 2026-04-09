@@ -173,6 +173,32 @@
           GRAFANA_HOST, GF_SECURITY_ADMIN_PASSWORD.
       changed_when: "false"
 
+    - name: Validate Harbor upstream settings
+      ansible.builtin.assert:
+        that:
+          - (harbor_host | trim | length) > 0
+          - (harbor_upstream_host | trim | length) > 0
+          - (harbor_upstream_port | int) > 0
+        fail_msg: >-
+          Harbor routing requires:
+          HARBOR_HOST, HARBOR_UPSTREAM_HOST, HARBOR_UPSTREAM_PORT.
+      changed_when: false
+
+    - name: Check Harbor upstream reachability
+      ansible.builtin.wait_for:
+        host: "{{ harbor_upstream_host }}"
+        port: "{{ harbor_upstream_port | int }}"
+        state: started
+        timeout: 10
+      changed_when: false
+
+    - name: Render Harbor Traefik dynamic config
+      ansible.builtin.template:
+        src: "{{ repo_root }}/docker/traefik/dynamic/harbor.yml.j2"
+        dest: "{{ repo_root }}/docker/traefik/dynamic/harbor.yml"
+        mode: "0644"
+      changed_when: false
+
     - name: Validate data-dev secrets when data-dev stack is enabled
       ansible.builtin.assert:
         that:

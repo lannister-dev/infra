@@ -45,6 +45,9 @@ traefik_websecure_forwarded_headers_insecure: "{{ lookup('env', 'TRAEFIK_WEBSECU
 prometheus_host: "{{ lookup('env', 'PROMETHEUS_HOST') | default('', true) }}"
 prometheus_auth_users: "{{ lookup('env', 'PROMETHEUS_AUTH_USERS') | default('', true) }}"
 grafana_host: "{{ lookup('env', 'GRAFANA_HOST') | default('', true) }}"
+harbor_host: "{{ lookup('env', 'HARBOR_HOST') | default('harbor.lannister-dev.ru', true) }}"
+harbor_upstream_host: "{{ lookup('env', 'HARBOR_UPSTREAM_HOST') | default('77.95.206.47', true) }}"
+harbor_upstream_port: "{{ (lookup('env', 'HARBOR_UPSTREAM_PORT') | default('8081', true)) | int }}"
 nats_monitor_host: "{{ lookup('env', 'NATS_MONITOR_HOST') | default('', true) }}"
 nats_monitor_auth_users: "{{ lookup('env', 'NATS_MONITOR_AUTH_USERS') | default('', true) }}"
 
