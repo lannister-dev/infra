@@ -30,26 +30,22 @@ timeweb_infra_nodes = {
 }
 
 # 3) Timeweb compute mode (create/destroy VPS via Terraform)
-timeweb_compute_enabled = false
+timeweb_compute_enabled = true
 timeweb_provisioned_infra_nodes = {
-  # Ready template for replacing current Harbor/manager node 77.95.206.47
-  # (server_id=6183431, location=ru-3, availability_zone=msk-1)
-  # with a like-for-like VM in another RF zone.
-  #
-  # "infra-manager-02" = {
-  #   os_id             = 79
-  #   location          = "ru-1"
-  #   availability_zone = "spb-3"
-  #   preset_type       = "premium"
-  #   cpu               = 2
-  #   ram               = 4096
-  #   disk              = 40960
-  #   ssh_keys_ids      = [12345]
-  #   role              = "manager"
-  #   kind              = "prod"
-  #   ssh_user          = "root"
-  #   ssh_port          = 22
-  #   enabled           = true
-  #   region            = "spb-3"
-  # }
+  "infra-manager-02" = {
+    os_id             = 79
+    location          = "ru-1"
+    availability_zone = "spb-3"
+    preset_type       = "premium"
+    cpu               = 2
+    ram               = 4096
+    disk              = 40960
+    ssh_keys_ids      = [314183]
+    role              = "manager"
+    kind              = "prod"
+    ssh_user          = "root"
+    ssh_port          = 22
+    enabled           = true
+    region            = "spb-3"
+  }
 }
