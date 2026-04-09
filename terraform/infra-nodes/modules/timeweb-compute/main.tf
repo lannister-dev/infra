@@ -9,7 +9,7 @@ terraform {
 data "twc_configurator" "custom" {
   for_each = {
     for name, node in var.nodes : name => node
-    if try(node.preset_id, 0) == 0
+    if coalesce(node.preset_id, 0) == 0
   }
 
   location    = each.value.location
@@ -22,7 +22,7 @@ resource "twc_server" "infra" {
 
   name              = trimspace(each.value.name) != "" ? each.value.name : each.key
   os_id             = each.value.os_id
-  preset_id         = try(each.value.preset_id, 0) > 0 ? each.value.preset_id : null
+  preset_id         = coalesce(each.value.preset_id, 0) > 0 ? each.value.preset_id : null
   availability_zone = trimspace(each.value.availability_zone) != "" ? each.value.availability_zone : (trimspace(each.value.location) != "" ? each.value.location : null)
   project_id        = try(each.value.project_id, null)
   software_id       = try(each.value.software_id, null)
@@ -30,7 +30,7 @@ resource "twc_server" "infra" {
   cloud_init        = trimspace(each.value.cloud_init) != "" ? each.value.cloud_init : null
 
   dynamic "configuration" {
-    for_each = try(each.value.preset_id, 0) > 0 ? [] : [1]
+    for_each = coalesce(each.value.preset_id, 0) > 0 ? [] : [1]
 
     content {
       configurator_id = data.twc_configurator.custom[each.key].id
