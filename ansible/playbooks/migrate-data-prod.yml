@@ -1,0 +1,321 @@
+---
+- name: Migrate data-prod to another manager node
+  hosts: "swarm_managers[0]"
+  gather_facts: false
+  become: false
+  any_errors_fatal: true
+
+  vars_files:
+    - ../inventory/generated/infra_nodes.yml
+
+  vars:
+    repo_root: "{{ lookup('env', 'REPO_ROOT') | default(playbook_dir + '/../..', true) }}"
+    ssh_private_key_file_effective: "{{ lookup('env', 'ANSIBLE_SSH_PRIVATE_KEY_FILE') | default('', true) | trim }}"
+    ssh_keys_dir_effective: "{{ lookup('env', 'ANSIBLE_SSH_KEYS_DIR') | default('', true) | trim }}"
+    data_prod_target_node: "{{ lookup('env', 'DATA_PROD_TARGET_NODE') | default('', true) | trim }}"
+
+  tasks:
+    - name: Validate data-prod target node
+      ansible.builtin.assert:
+        that:
+          - data_prod_target_node | length > 0
+        fail_msg: "Set DATA_PROD_TARGET_NODE to the target infra manager hostname."
+
+    - name: Ensure infra_nodes variable exists
+      ansible.builtin.assert:
+        that:
+          - infra_nodes is defined
+          - infra_nodes is iterable
+        fail_msg: "Generated inventory file ansible/inventory/generated/infra_nodes.yml is missing or invalid."
+
+    - name: Build enabled infra node list
+      ansible.builtin.set_fact:
+        enabled_infra_nodes: "{{ infra_nodes | selectattr('enabled', 'equalto', true) | list }}"
+
+    - name: Resolve target infra node entry
+      ansible.builtin.set_fact:
+        target_infra_node: "{{ (enabled_infra_nodes | selectattr('name', 'equalto', data_prod_target_node) | list | first) | default({}) }}"
+
+    - name: Ensure target infra node exists and is a prod manager
+      ansible.builtin.assert:
+        that:
+          - target_infra_node | length > 0
+          - target_infra_node.role == 'manager'
+          - target_infra_node.kind == 'prod'
+        fail_msg: >-
+          DATA_PROD_TARGET_NODE={{ data_prod_target_node }} must resolve to an enabled prod manager in infra inventory.
+
+    - name: Ensure SSH auth material is configured
+      ansible.builtin.assert:
+        that:
+          - ssh_keys_dir_effective != '' or ssh_private_key_file_effective != ''
+        fail_msg: >-
+          SSH key is not configured. Set ANSIBLE_SSH_KEYS_DIR (recommended, per-node keys)
+          or ANSIBLE_SSH_PRIVATE_KEY_FILE (single key fallback).
+
+    - name: Resolve running node for data-prod_postgres
+      ansible.builtin.command:
+        argv:
+          - docker
+          - service
+          - ps
+          - --filter
+          - desired-state=running
+          - --format
+          - "{{ '{{.Node}}' }}"
+          - data-prod_postgres
+      register: data_prod_postgres_nodes_cmd
+      changed_when: false
+
+    - name: Resolve running node for data-prod_redis
+      ansible.builtin.command:
+        argv:
+          - docker
+          - service
+          - ps
+          - --filter
+          - desired-state=running
+          - --format
+          - "{{ '{{.Node}}' }}"
+          - data-prod_redis
+      register: data_prod_redis_nodes_cmd
+      changed_when: false
+
+    - name: Build source node hostnames
+      ansible.builtin.set_fact:
+        data_prod_postgres_source_node: "{{ (data_prod_postgres_nodes_cmd.stdout_lines | map('trim') | reject('equalto', '') | list | unique | first) | default('') }}"
+        data_prod_redis_source_node: "{{ (data_prod_redis_nodes_cmd.stdout_lines | map('trim') | reject('equalto', '') | list | unique | first) | default('') }}"
+
+    - name: Ensure current data-prod services are running
+      ansible.builtin.assert:
+        that:
+          - data_prod_postgres_source_node | length > 0
+          - data_prod_redis_source_node | length > 0
+        fail_msg: >-
+          Could not resolve current running nodes for data-prod_postgres/data-prod_redis.
+          Ensure the stack is healthy before migration.
+
+    - name: Resolve postgres source infra entry
+      ansible.builtin.set_fact:
+        postgres_source_infra_node: "{{ (enabled_infra_nodes | selectattr('name', 'equalto', data_prod_postgres_source_node) | list | first) | default({}) }}"
+        redis_source_infra_node: "{{ (enabled_infra_nodes | selectattr('name', 'equalto', data_prod_redis_source_node) | list | first) | default({}) }}"
+
+    - name: Ensure source infra entries exist
+      ansible.builtin.assert:
+        that:
+          - postgres_source_infra_node | length > 0
+          - redis_source_infra_node | length > 0
+        fail_msg: >-
+          Current data-prod service nodes are not present in infra inventory.
+          postgres={{ data_prod_postgres_source_node }}, redis={{ data_prod_redis_source_node }}.
+
+    - name: Check per-node SSH key file exists on controller
+      ansible.builtin.stat:
+        path: "{{ ssh_keys_dir_effective }}/{{ item.ssh_key_ref | default('default', true) | trim }}"
+      delegate_to: localhost
+      become: false
+      loop:
+        - "{{ target_infra_node }}"
+        - "{{ postgres_source_infra_node }}"
+        - "{{ redis_source_infra_node }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.ssh_key_ref | default('default', true) }}"
+      when: ssh_keys_dir_effective != ''
+      register: data_prod_migration_ssh_key_file_stat_result
+      changed_when: false
+
+    - name: Ensure per-node SSH key file exists on controller
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+        fail_msg: >-
+          Missing SSH key for infra node {{ item.item.name }} (ref={{ item.item.ssh_key_ref | default('default', true) }}):
+          expected file {{ ssh_keys_dir_effective }}/{{ item.item.ssh_key_ref | default('default', true) | trim }}.
+      loop: "{{ data_prod_migration_ssh_key_file_stat_result.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.name }} -> {{ item.item.ssh_key_ref | default('default', true) }}"
+      when: ssh_keys_dir_effective != ''
+
+    - name: Ensure local SSH known_hosts directory exists
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') + '/.ssh' }}"
+        state: directory
+        mode: "0700"
+      become: false
+
+    - name: Ensure migration nodes are present in known_hosts
+      ansible.builtin.known_hosts:
+        path: "{{ lookup('env', 'HOME') + '/.ssh/known_hosts' }}"
+        name: "{{ '[%s]:%s' | format(item.public_ip, item.ssh_port) if (item.ssh_port | int) != 22 else item.public_ip }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -T 10 -p ' ~ (item.ssh_port | string) ~ ' ' ~ item.public_ip) }}"
+        state: present
+      loop:
+        - "{{ target_infra_node }}"
+        - "{{ postgres_source_infra_node }}"
+        - "{{ redis_source_infra_node }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.public_ip }}"
+      become: false
+
+    - name: Scale down data-prod services before volume copy
+      ansible.builtin.command:
+        argv:
+          - docker
+          - service
+          - scale
+          - data-prod_postgres=0
+          - data-prod_redis=0
+      changed_when: true
+
+    - name: Wait until data-prod services are stopped
+      ansible.builtin.command:
+        argv:
+          - docker
+          - service
+          - ps
+          - --filter
+          - desired-state=running
+          - --format
+          - "{{ '{{.ID}}' }}"
+          - "{{ item }}"
+      loop:
+        - data-prod_postgres
+        - data-prod_redis
+      loop_control:
+        label: "{{ item }}"
+      register: data_prod_service_stopped_check
+      changed_when: false
+      retries: 30
+      delay: 2
+      until: (data_prod_service_stopped_check.stdout_lines | default([]) | length) == 0
+
+    - name: Copy postgres volume to target node
+      ansible.builtin.command:
+        argv:
+          - bash
+          - "{{ repo_root }}/scripts/core/copy-docker-volume-ssh.sh"
+          - --source-host
+          - "{{ postgres_source_infra_node.public_ip }}"
+          - --source-user
+          - "{{ postgres_source_infra_node.ssh_user }}"
+          - --source-port
+          - "{{ postgres_source_infra_node.ssh_port | string }}"
+          - --source-key-file
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (postgres_source_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - --target-host
+          - "{{ target_infra_node.public_ip }}"
+          - --target-user
+          - "{{ target_infra_node.ssh_user }}"
+          - --target-port
+          - "{{ target_infra_node.ssh_port | string }}"
+          - --target-key-file
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (target_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - --volume
+          - data_prod_postgres_data
+      changed_when: true
+
+    - name: Copy redis volume to target node
+      ansible.builtin.command:
+        argv:
+          - bash
+          - "{{ repo_root }}/scripts/core/copy-docker-volume-ssh.sh"
+          - --source-host
+          - "{{ redis_source_infra_node.public_ip }}"
+          - --source-user
+          - "{{ redis_source_infra_node.ssh_user }}"
+          - --source-port
+          - "{{ redis_source_infra_node.ssh_port | string }}"
+          - --source-key-file
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (redis_source_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - --target-host
+          - "{{ target_infra_node.public_ip }}"
+          - --target-user
+          - "{{ target_infra_node.ssh_user }}"
+          - --target-port
+          - "{{ target_infra_node.ssh_port | string }}"
+          - --target-key-file
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (target_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - --volume
+          - data_prod_redis_data
+      changed_when: true
+
+    - name: Deploy data-prod stack pinned to target node
+      ansible.builtin.command:
+        argv:
+          - docker
+          - stack
+          - deploy
+          - --with-registry-auth
+          - --prune
+          - -c
+          - docker/stacks/data-prod.yml
+          - data-prod
+      args:
+        chdir: "{{ repo_root }}"
+      environment:
+        POSTGRES_IMAGE_TAG: "{{ postgres_image_tag }}"
+        REDIS_IMAGE_TAG: "{{ redis_image_tag }}"
+        POSTGRES_DB_NAME: "{{ data_prod_postgres_db }}"
+        POSTGRES_DB_USER: "{{ data_prod_postgres_user }}"
+        DATA_PROD_NETWORK_NAME: "{{ data_prod_network_name }}"
+        DATA_PROD_PLACEMENT_CONSTRAINT: "node.hostname == {{ data_prod_target_node }}"
+      changed_when: true
+
+    - name: Wait until data-prod_postgres runs on target node
+      ansible.builtin.command:
+        argv:
+          - docker
+          - service
+          - ps
+          - --filter
+          - desired-state=running
+          - --format
+          - "{{ '{{.Node}} {{.CurrentState}}' }}"
+          - data-prod_postgres
+      register: data_prod_postgres_target_check
+      changed_when: false
+      retries: 30
+      delay: 5
+      until: >-
+        data_prod_target_node in data_prod_postgres_target_check.stdout and
+        'Running' in data_prod_postgres_target_check.stdout
+
+    - name: Wait until data-prod_redis runs on target node
+      ansible.builtin.command:
+        argv:
+          - docker
+          - service
+          - ps
+          - --filter
+          - desired-state=running
+          - --format
+          - "{{ '{{.Node}} {{.CurrentState}}' }}"
+          - data-prod_redis
+      register: data_prod_redis_target_check
+      changed_when: false
+      retries: 30
+      delay: 5
+      until: >-
+        data_prod_target_node in data_prod_redis_target_check.stdout and
+        'Running' in data_prod_redis_target_check.stdout
