@@ -42,7 +42,7 @@ services:
       placement:
         constraints:
           - node.role == manager
-          - node.labels.kind == prod
+          - ${DATA_PROD_PLACEMENT_CONSTRAINT:-node.labels.kind == prod}
     networks:
       data-prod-net:
         aliases:
@@ -69,7 +69,7 @@ services:
       placement:
         constraints:
           - node.role == manager
-          - node.labels.kind == prod
+          - ${DATA_PROD_PLACEMENT_CONSTRAINT:-node.labels.kind == prod}
     networks:
       data-prod-net:
         aliases:

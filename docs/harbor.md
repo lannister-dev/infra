@@ -62,3 +62,12 @@ This separation keeps the infrastructure clean and predictable.
 Harbor is exposed through Traefik using a **file provider**, not Swarm labels.
 
 This is intentional.
+
+## Replacement Note
+
+Changing the Harbor host IP in this repository only repoints Traefik.
+It does **not** provision, install, or migrate Harbor itself.
+
+A Harbor node replacement therefore requires two separate steps:
+- provision the replacement VM;
+- migrate Harbor Compose/data/secrets to that VM before switching Traefik to the new IP.
