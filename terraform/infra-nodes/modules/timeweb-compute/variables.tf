@@ -3,9 +3,14 @@ variable "nodes" {
   type = map(object({
     name              = optional(string, "")
     os_id             = number
-    preset_id         = number
+    preset_id         = optional(number)
     location          = optional(string, "")
     availability_zone = optional(string, "")
+    preset_type       = optional(string, "premium")
+    disk_type         = optional(string, "")
+    cpu               = optional(number)
+    ram               = optional(number)
+    disk              = optional(number)
     project_id        = optional(number)
     software_id       = optional(number)
     ssh_keys_ids      = optional(list(number), [])

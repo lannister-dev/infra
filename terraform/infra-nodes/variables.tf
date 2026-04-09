@@ -101,9 +101,14 @@ variable "timeweb_provisioned_infra_nodes" {
   type = map(object({
     name              = optional(string, "")
     os_id             = number
-    preset_id         = number
+    preset_id         = optional(number)
     location          = optional(string, "")
     availability_zone = optional(string, "")
+    preset_type       = optional(string, "premium")
+    disk_type         = optional(string, "")
+    cpu               = optional(number)
+    ram               = optional(number)
+    disk              = optional(number)
     project_id        = optional(number)
     software_id       = optional(number)
     ssh_keys_ids      = optional(list(number), [])
@@ -122,13 +127,21 @@ variable "timeweb_provisioned_infra_nodes" {
       for name, node in var.timeweb_provisioned_infra_nodes : (
         can(regex("^[a-zA-Z0-9._-]+$", name))
         && node.os_id > 0
-        && node.preset_id > 0
         && contains(["manager", "worker"], node.role)
         && contains(["prod", "dev"], node.kind)
         && node.ssh_port > 0
+        && (
+          try(node.preset_id, 0) > 0
+          || (
+            length(trimspace(try(node.location, ""))) > 0
+            && try(node.cpu, 0) > 0
+            && try(node.ram, 0) > 0
+            && try(node.disk, 0) > 0
+          )
+        )
       )
     ])
-    error_message = "timeweb_provisioned_infra_nodes entries must use valid node names, os_id>0, preset_id>0, role in [manager,worker], kind in [prod,dev], and ssh_port > 0."
+    error_message = "timeweb_provisioned_infra_nodes entries must use valid node names, os_id>0, and either preset_id>0 or location+cpu+ram+disk for custom config; role in [manager,worker], kind in [prod,dev], and ssh_port > 0."
   }
 }
 

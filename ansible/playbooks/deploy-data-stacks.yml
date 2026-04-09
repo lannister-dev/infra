@@ -251,5 +251,6 @@
         POSTGRES_DB_NAME: "{{ data_prod_postgres_db }}"
         POSTGRES_DB_USER: "{{ data_prod_postgres_user }}"
         DATA_PROD_NETWORK_NAME: "{{ data_prod_network_name }}"
+        DATA_PROD_PLACEMENT_CONSTRAINT: "{{ data_prod_placement_constraint }}"
       when: deploy_data_prod_stack
       changed_when: "false"

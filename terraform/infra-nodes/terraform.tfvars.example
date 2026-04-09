@@ -40,18 +40,20 @@
 # Timeweb compute provisioning:
 # timeweb_provisioned_infra_nodes = {
 #   "mgr-a" = {
-#     os_id             = 42
-#     preset_id         = 7
-#     availability_zone = "ru-1a"
-#     # location can be kept only as metadata fallback for region:
+#     os_id             = 79
 #     location          = "ru-1"
+#     availability_zone = "spb-3"
+#     preset_type       = "premium"
+#     cpu               = 2
+#     ram               = 4096
+#     disk              = 40960
 #     ssh_keys_ids      = [12345]
 #     role              = "manager"
 #     kind              = "prod"
 #     ssh_user          = "root"
 #     ssh_port          = 22
 #     enabled           = true
-#     region            = "ru-1"
+#     region            = "spb-3"
 #   }
 # }
 

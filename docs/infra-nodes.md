@@ -20,17 +20,25 @@ timeweb_compute_enabled = true
 
 timeweb_provisioned_infra_nodes = {
   "mgr-a" = {
-    os_id             = 42
-    preset_id         = 7
-    availability_zone = "ru-1a"
+    os_id             = 79
+    location          = "ru-1"
+    availability_zone = "spb-3"
+    preset_type       = "premium"
+    cpu               = 2
+    ram               = 4096
+    disk              = 40960
     ssh_keys_ids      = [12345]
     role              = "manager"
     kind              = "prod"
     enabled           = true
-    region            = "ru-1"
+    region            = "spb-3"
   }
 }
 ```
+
+Use `preset_id` when you already know the fixed preset to deploy.
+Use `location + cpu + ram + disk` when you need a like-for-like replacement of
+an existing custom-configured Timeweb VM in another availability zone.
 
 ## Run
 
@@ -54,4 +62,3 @@ Use `.env`/CI secrets:
 
 - `enabled = false`: node excluded from desired cluster; VPS still exists.
 - Remove key from `timeweb_provisioned_infra_nodes`: VPS is destroyed.
-

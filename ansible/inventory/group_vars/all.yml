@@ -82,5 +82,6 @@ data_prod_postgres_password: "{{ lookup('env', 'PROD_POSTGRES_PASSWORD') | defau
 data_prod_redis_password: "{{ lookup('env', 'PROD_REDIS_PASSWORD') | default('', true) }}"
 data_dev_network_name: "{{ lookup('env', 'DATA_DEV_NETWORK_NAME') | default('data-dev-net', true) }}"
 data_prod_network_name: "{{ lookup('env', 'DATA_PROD_NETWORK_NAME') | default('data-prod-net', true) }}"
+data_prod_placement_constraint: "{{ lookup('env', 'DATA_PROD_PLACEMENT_CONSTRAINT') | default('node.labels.kind == prod', true) }}"
 node_agent_image_ref: "{{ lookup('env', 'NODE_AGENT_IMAGE_REF') | default('harbor.lannister-dev.ru/vpn-service/node-agent:prod', true) }}"
 node_agent_image_ref_dev: "{{ lookup('env', 'NODE_AGENT_IMAGE_REF_DEV') | default(node_agent_image_ref, true) }}"
