@@ -44,15 +44,15 @@ resource "twc_server" "infra" {
 locals {
   infra_nodes = {
     for name, server in twc_server.infra : name => {
-      public_ip = server.main_ipv4
-      role      = try(var.nodes[name].role, "worker")
-      kind      = try(var.nodes[name].kind, "prod")
-      ssh_user  = try(var.nodes[name].ssh_user, "root")
-      ssh_port  = try(var.nodes[name].ssh_port, 22)
+      public_ip   = server.main_ipv4
+      role        = try(var.nodes[name].role, "worker")
+      kind        = try(var.nodes[name].kind, "prod")
+      ssh_user    = try(var.nodes[name].ssh_user, "root")
+      ssh_port    = try(var.nodes[name].ssh_port, 22)
       ssh_key_ref = try(var.nodes[name].ssh_key_ref, "default")
-      enabled   = try(var.nodes[name].enabled, true)
-      provider  = "timeweb-compute"
-      region    = trimspace(try(var.nodes[name].region, "")) != "" ? try(var.nodes[name].region, "") : trimspace(try(var.nodes[name].location, ""))
+      enabled     = try(var.nodes[name].enabled, true)
+      provider    = "timeweb-compute"
+      region      = trimspace(try(var.nodes[name].region, "")) != "" ? try(var.nodes[name].region, "") : trimspace(try(var.nodes[name].location, ""))
     }
   }
 }

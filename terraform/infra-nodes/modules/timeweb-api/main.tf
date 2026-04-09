@@ -22,15 +22,15 @@ data "external" "node_lookup" {
 locals {
   infra_nodes = {
     for name, node in var.nodes : name => {
-      public_ip = data.external.node_lookup[name].result.public_ip
-      role      = try(node.role, "worker")
-      kind      = try(node.kind, "prod")
-      ssh_user  = try(node.ssh_user, "root")
-      ssh_port  = try(node.ssh_port, 22)
+      public_ip   = data.external.node_lookup[name].result.public_ip
+      role        = try(node.role, "worker")
+      kind        = try(node.kind, "prod")
+      ssh_user    = try(node.ssh_user, "root")
+      ssh_port    = try(node.ssh_port, 22)
       ssh_key_ref = try(node.ssh_key_ref, "default")
-      enabled   = try(node.enabled, true)
-      provider  = "timeweb-api"
-      region    = trimspace(try(node.region, "")) != "" ? try(node.region, "") : try(data.external.node_lookup[name].result.region, "")
+      enabled     = try(node.enabled, true)
+      provider    = "timeweb-api"
+      region      = trimspace(try(node.region, "")) != "" ? try(node.region, "") : try(data.external.node_lookup[name].result.region, "")
     }
     if var.enabled
   }
