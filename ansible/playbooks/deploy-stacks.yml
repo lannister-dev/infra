@@ -191,6 +191,7 @@
         state: started
         timeout: 10
       changed_when: false
+      when: harbor_upstream_healthcheck_enabled
 
     - name: Render Harbor Traefik dynamic config
       ansible.builtin.template:
