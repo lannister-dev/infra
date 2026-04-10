@@ -106,7 +106,6 @@ check_manager() {
 
   need_cmd docker
   need_cmd curl
-  need_cmd jq
 
   docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active \
     || die "Docker Swarm is not active on this node"
@@ -183,8 +182,6 @@ check_manager() {
 # -------------------------
 check_vpn() {
   log "Role=vpn checks (Xray Swarm service / WireGuard presence)"
-
-  need_cmd jq
 
   # Xray runs as a Swarm service — verify container is running on this node
   if docker ps --filter "name=vpn_xray" --format '{{.Status}}' 2>/dev/null | grep -qi "up"; then
