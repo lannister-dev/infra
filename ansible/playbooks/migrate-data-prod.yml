@@ -174,10 +174,84 @@
       register: data_prod_redis_nodes_cmd
       changed_when: false
 
+    - name: Resolve recent node history for data-prod_postgres
+      ansible.builtin.command:
+        argv:
+          - docker
+          - service
+          - ps
+          - --no-trunc
+          - --format
+          - "{{ '{{.Node}}' }}"
+          - data-prod_postgres
+      register: data_prod_postgres_history_nodes_cmd
+      changed_when: false
+
+    - name: Resolve recent node history for data-prod_redis
+      ansible.builtin.command:
+        argv:
+          - docker
+          - service
+          - ps
+          - --no-trunc
+          - --format
+          - "{{ '{{.Node}}' }}"
+          - data-prod_redis
+      register: data_prod_redis_history_nodes_cmd
+      changed_when: false
+
     - name: Build source node hostnames
       ansible.builtin.set_fact:
-        data_prod_postgres_source_node: "{{ (data_prod_postgres_nodes_cmd.stdout_lines | map('trim') | reject('equalto', '') | list | unique | first) | default('') }}"
-        data_prod_redis_source_node: "{{ (data_prod_redis_nodes_cmd.stdout_lines | map('trim') | reject('equalto', '') | list | unique | first) | default('') }}"
+        data_prod_postgres_source_node: >-
+          {{
+            (
+              data_prod_postgres_nodes_cmd.stdout_lines
+              | default([])
+              | map('trim')
+              | reject('equalto', '')
+              | list
+              | unique
+              | first
+            )
+            | default(
+                (
+                  data_prod_postgres_history_nodes_cmd.stdout_lines
+                  | default([])
+                  | map('trim')
+                  | reject('equalto', '')
+                  | list
+                  | unique
+                  | first
+                ),
+                true
+              )
+            | default('')
+          }}
+        data_prod_redis_source_node: >-
+          {{
+            (
+              data_prod_redis_nodes_cmd.stdout_lines
+              | default([])
+              | map('trim')
+              | reject('equalto', '')
+              | list
+              | unique
+              | first
+            )
+            | default(
+                (
+                  data_prod_redis_history_nodes_cmd.stdout_lines
+                  | default([])
+                  | map('trim')
+                  | reject('equalto', '')
+                  | list
+                  | unique
+                  | first
+                ),
+                true
+              )
+            | default('')
+          }}
 
     - name: Normalize source infra node names
       ansible.builtin.set_fact:
@@ -191,7 +265,7 @@
           - data_prod_redis_source_node | length > 0
         fail_msg: >-
           Could not resolve current running nodes for data-prod_postgres/data-prod_redis.
-          Ensure the stack is healthy before migration.
+          Ensure the stack is healthy before migration or that task history still exists after a partial previous run.
 
     - name: Resolve postgres source infra entry
       ansible.builtin.set_fact:
