@@ -192,10 +192,52 @@ jobs:
         run: |
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          export APPLY_FOUNDATION=false
-          export APPLY_NODES=false
-          export APPLY_INFRA_NODES=true
-          bash ./scripts/ci/apply-terraform.sh
+          source ./scripts/core/prepare-terraform-env.sh
+
+          backend_file="${RUNNER_TEMP}/infra-nodes.backend.hcl"
+          {
+            echo "bucket = \"${TF_STATE_BUCKET}\""
+            echo "key    = \"${TF_STATE_KEY_PREFIX}/infra-nodes.tfstate\""
+            echo "region = \"${TF_STATE_REGION}\""
+
+            [ -z "${TF_STATE_DYNAMODB_TABLE:-}" ] || echo "dynamodb_table = \"${TF_STATE_DYNAMODB_TABLE}\""
+
+            if [ -n "${TF_STATE_ENDPOINT:-}" ]; then
+              echo "endpoints                 = { s3 = \"${TF_STATE_ENDPOINT}\" }"
+              echo "use_path_style            = ${TF_STATE_USE_PATH_STYLE:-${TF_STATE_FORCE_PATH_STYLE:-true}}"
+              echo "skip_credentials_validation = true"
+              echo "skip_region_validation      = true"
+              echo "skip_requesting_account_id  = true"
+              echo "skip_metadata_api_check     = true"
+              echo "skip_s3_checksum            = true"
+            fi
+
+            [ -z "${TF_STATE_ACCESS_KEY:-}" ] || echo "access_key = \"${TF_STATE_ACCESS_KEY}\""
+            [ -z "${TF_STATE_SECRET_KEY:-}" ] || echo "secret_key = \"${TF_STATE_SECRET_KEY}\""
+          } > "${backend_file}"
+          chmod 600 "${backend_file}"
+
+          tf_cli_config_file=""
+          if [ -n "${TF_CLI_CONFIG_CONTENT_B64:-}" ]; then
+            tf_cli_config_file="${RUNNER_TEMP}/terraform.rc"
+            printf '%s' "${TF_CLI_CONFIG_CONTENT_B64}" | base64 -d > "${tf_cli_config_file}"
+          elif [ -n "${TF_CLI_CONFIG_CONTENT:-}" ]; then
+            tf_cli_config_file="${RUNNER_TEMP}/terraform.rc"
+            printf '%s\n' "${TF_CLI_CONFIG_CONTENT}" > "${tf_cli_config_file}"
+          elif [ -n "${TF_PROVIDER_MIRROR_URL:-}" ]; then
+            tf_cli_config_file="${RUNNER_TEMP}/terraform.rc"
+            printf 'provider_installation {\n  network_mirror {\n    url = "%s"\n    include = ["registry.terraform.io/*/*"]\n  }\n  direct {\n    exclude = ["registry.terraform.io/*/*"]\n  }\n}\n' \
+              "${TF_PROVIDER_MIRROR_URL}" > "${tf_cli_config_file}"
+          fi
+
+          if [ -n "${tf_cli_config_file}" ]; then
+            chmod 600 "${tf_cli_config_file}"
+            export TF_CLI_CONFIG_FILE="${tf_cli_config_file}"
+            export TOFU_CONFIG_FILE="${tf_cli_config_file}"
+          fi
+
+          terraform -chdir=terraform/infra-nodes init -input=false -backend-config="${backend_file}"
+          terraform -chdir=terraform/infra-nodes apply -input=false -auto-approve
 
           test -f ansible/inventory/generated/infra_nodes.yml || {
             echo "::error::Expected ansible/inventory/generated/infra_nodes.yml after terraform/infra-nodes apply"
