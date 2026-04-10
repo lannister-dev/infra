@@ -138,9 +138,11 @@ TRAEFIK_WEBSECURE_FORWARDED_HEADERS_INSECURE=false
 PROMETHEUS_HOST=prometheus.example.com
 PROMETHEUS_AUTH_USERS=admin:<htpasswd_hash>
 GRAFANA_HOST=grafana.example.com
-# ALERTMANAGER_IMAGE_TAG=v0.27.0
-# ALERTMANAGER_HOST=alertmanager.example.com
-# ALERTMANAGER_AUTH_USERS=admin:<htpasswd_hash>
+ALERTMANAGER_IMAGE_TAG=v0.27.0
+ALERTMANAGER_HOST=alertmanager.example.com
+# Generate with: htpasswd -nbB admin <password>
+# Escape $ as $$ for Docker Compose interpolation:
+ALERTMANAGER_AUTH_USERS=admin:$$2y$$05$$REPLACE_WITH_REAL_BCRYPT_HASH
 # ALERTMANAGER_WEBHOOK_URL=http://placeholder:5001/alert
 
 # Managed data-prod stack

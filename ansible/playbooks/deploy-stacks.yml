@@ -134,13 +134,21 @@
             mode: "0644"
           changed_when: false
 
+        - name: Check whether live host path exists for Harbor config mirror
+          ansible.builtin.stat:
+            path: /opt/vpn-infra/docker/traefik/dynamic
+          register: harbor_live_dir_stat
+          when: repo_root != '/opt/vpn-infra'
+
         - name: Mirror Harbor Traefik dynamic config into active host path
           ansible.builtin.copy:
             remote_src: true
             src: "{{ repo_root }}/docker/traefik/dynamic/harbor.yml"
             dest: "/opt/vpn-infra/docker/traefik/dynamic/harbor.yml"
             mode: "0644"
-          when: repo_root != '/opt/vpn-infra'
+          when:
+            - repo_root != '/opt/vpn-infra'
+            - harbor_live_dir_stat.stat.exists | default(false)
           changed_when: false
 
         - name: Validate data-dev secrets when data-dev stack is enabled
