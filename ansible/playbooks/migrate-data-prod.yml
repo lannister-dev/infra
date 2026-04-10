@@ -386,17 +386,9 @@
           - "{{ postgres_source_infra_node.ssh_port | string }}"
           - "{{ postgres_source_infra_node.ssh_user }}@{{ postgres_source_infra_node.public_ip }}"
           - >-
-            sh -lc
-            'for v in
-            "{{ data_prod_stack_name }}_{{ data_prod_postgres_volume_logical_name }}"
-            "{{ data_prod_postgres_volume_logical_name }}";
-            do
-              if docker volume inspect "$v" >/dev/null 2>&1; then
-                printf "%s\n" "$v"
-                exit 0
-              fi
-            done
-            exit 1'
+            sh -lc 'for v in "{{ data_prod_stack_name }}_{{ data_prod_postgres_volume_logical_name }}" "{{ data_prod_postgres_volume_logical_name }}"; do
+            if docker volume inspect "$v" >/dev/null 2>&1; then printf "%s\n" "$v"; exit 0; fi;
+            done; exit 1'
       register: postgres_source_volume_name_cmd
       changed_when: false
 
@@ -421,17 +413,9 @@
           - "{{ redis_source_infra_node.ssh_port | string }}"
           - "{{ redis_source_infra_node.ssh_user }}@{{ redis_source_infra_node.public_ip }}"
           - >-
-            sh -lc
-            'for v in
-            "{{ data_prod_stack_name }}_{{ data_prod_redis_volume_logical_name }}"
-            "{{ data_prod_redis_volume_logical_name }}";
-            do
-              if docker volume inspect "$v" >/dev/null 2>&1; then
-                printf "%s\n" "$v"
-                exit 0
-              fi
-            done
-            exit 0'
+            sh -lc 'for v in "{{ data_prod_stack_name }}_{{ data_prod_redis_volume_logical_name }}" "{{ data_prod_redis_volume_logical_name }}"; do
+            if docker volume inspect "$v" >/dev/null 2>&1; then printf "%s\n" "$v"; exit 0; fi;
+            done; exit 1'
       register: redis_source_volume_name_cmd
       changed_when: false
 
