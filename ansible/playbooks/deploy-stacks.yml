@@ -146,6 +146,7 @@
             src: "{{ repo_root }}/docker/traefik/dynamic/harbor.yml"
             dest: "/opt/vpn-infra/docker/traefik/dynamic/harbor.yml"
             mode: "0644"
+          become: true
           when:
             - repo_root != '/opt/vpn-infra'
             - harbor_live_dir_stat.stat.exists | default(false)
