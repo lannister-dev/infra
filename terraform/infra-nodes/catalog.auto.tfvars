@@ -1,7 +1,3 @@
-# Declarative non-VPN infrastructure topology (manager/workers).
-# This file is the source of truth for infra nodes.
-# Secrets are NOT stored here.
-
 # 1) Manual nodes by public IP (optional fallback mode)
 infra_nodes = {}
 

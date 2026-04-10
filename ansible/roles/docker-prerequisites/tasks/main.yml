@@ -1,0 +1,30 @@
+---
+- name: Check required networks
+  ansible.builtin.command:
+    argv:
+      - docker
+      - network
+      - inspect
+      - "{{ item }}"
+  loop: "{{ required_networks }}"
+  changed_when: false
+
+- name: Check required volumes
+  ansible.builtin.command:
+    argv:
+      - docker
+      - volume
+      - inspect
+      - "{{ item }}"
+  loop: "{{ required_volumes }}"
+  changed_when: false
+
+- name: Check required docker configs
+  ansible.builtin.command:
+    argv:
+      - docker
+      - config
+      - inspect
+      - "{{ item }}"
+  loop: "{{ required_configs }}"
+  changed_when: false

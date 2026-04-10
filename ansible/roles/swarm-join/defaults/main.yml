@@ -1,0 +1,4 @@
+---
+# join_token: (required, passed by caller)
+# manager_address: (required, passed by caller)
+expected_role: worker

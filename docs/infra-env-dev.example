@@ -2,6 +2,7 @@
 TF_STATE_BUCKET=your-state-bucket
 TF_STATE_REGION=ru-central1
 TF_STATE_KEY_PREFIX=vpn-infra/dev
+# TF_STATE_DYNAMODB_TABLE=terraform-locks
 
 # Do not put workflow_dispatch control vars here.
 # Reserved for workflow inputs only: APPLY_FOUNDATION, APPLY_NODES,
@@ -36,6 +37,13 @@ IAC_TFVAR_VPN_DEV_REALITY_DEST_HOST=www.cloudflare.com
 # IAC_TFVAR_HOSTVDS_OS_PROJECT_NAME=...
 # IAC_TFVAR_HOSTVDS_OS_PROJECT_DOMAIN_ID=default
 # IAC_TFVAR_HOSTVDS_OS_INTERFACE=public
+# YC_SERVICE_ACCOUNT_KEY_B64=<base64_of_authorized_key.json>
+# Optional raw JSON variant:
+# YC_SERVICE_ACCOUNT_KEY_JSON={"id":"...","service_account_id":"..."}
+# Legacy short-lived fallback only:
+# YC_TOKEN=...
+# IAC_TFVAR_YANDEX_CLOUD_ID=b1g...
+# IAC_TFVAR_YANDEX_FOLDER_ID=b1g...
 # IAC_TFVAR_TIMEWEB_API_TOKEN=...
 
 # Runtime HostVDS credentials may still be required by other HostVDS/OpenStack operations:
@@ -106,3 +114,7 @@ DEV_REDIS_PASSWORD=<strong_password>
 # PROMETHEUS_HOST=prometheus.example.com
 # PROMETHEUS_AUTH_USERS=admin:<htpasswd_hash>
 # GRAFANA_HOST=grafana.example.com
+# ALERTMANAGER_IMAGE_TAG=v0.27.0
+# ALERTMANAGER_HOST=alertmanager.dev.example.com
+# ALERTMANAGER_AUTH_USERS=admin:<htpasswd_hash>
+# ALERTMANAGER_WEBHOOK_URL=http://placeholder:5001/alert

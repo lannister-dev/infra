@@ -384,49 +384,16 @@
         state: restarted
 
   tasks:
-    - name: Ensure python3 exists for Ansible modules
-      ansible.builtin.raw: |
-        set -e
-        test -x /usr/bin/python3 || (apt-get update -y && apt-get install -y python3)
-      changed_when: "false"
-
-    - name: Install Docker and WireGuard packages
-      ansible.builtin.apt:
-        update_cache: true
-        update_cache_retries: 5
-        update_cache_retry_max_delay: 12
-        lock_timeout: 600
-        name:
-          - docker.io
-          - wireguard
-          - wireguard-tools
-        state: present
-
-    - name: Ensure Docker service is enabled and running
-      ansible.builtin.systemd:
-        name: docker
-        state: started
-        enabled: true
-
-    - name: Set system hostname to peer_name
-      ansible.builtin.hostname:
-        name: "{{ peer_name }}"
-
-    - name: Verify effective hostname
-      ansible.builtin.command:
-        argv:
-          - hostnamectl
-          - --static
-      register: effective_hostname_cmd
-      changed_when: false
-
-    - name: Ensure effective hostname matches peer_name
-      ansible.builtin.assert:
-        that:
-          - (effective_hostname_cmd.stdout | trim) == peer_name
-        fail_msg: >-
-          Effective hostname must match peer_name/node_key.
-          Expected {{ peer_name }}, got {{ effective_hostname_cmd.stdout | trim }}.
+    - name: Bootstrap node (python3, Docker, WireGuard, hostname, UFW)
+      ansible.builtin.include_role:
+        name: node-bootstrap
+      vars:
+        desired_hostname: "{{ peer_name }}"
+        install_wireguard: true
+        ufw_ports:
+          - 7946/tcp
+          - 7946/udp
+          - 4789/udp
 
     - name: Read WireGuard client config from manager
       ansible.builtin.slurp:
@@ -449,79 +416,12 @@
         state: started
         enabled: true
 
-    - name: Check whether UFW is installed
-      ansible.builtin.command:
-        argv:
-          - bash
-          - -lc
-          - command -v ufw >/dev/null 2>&1
-      register: ufw_present_cmd
-      changed_when: false
-      failed_when: false
-
-    - name: Read UFW status
-      ansible.builtin.command:
-        argv:
-          - ufw
-          - status
-      register: ufw_status_cmd
-      changed_when: false
-      failed_when: false
-      when: ufw_present_cmd.rc == 0
-
-    - name: Allow Swarm overlay ports in UFW when active
-      ansible.builtin.command:
-        argv:
-          - ufw
-          - allow
-          - "{{ item }}"
-      loop:
-        - 7946/tcp
-        - 7946/udp
-        - 4789/udp
-      when:
-        - ufw_present_cmd.rc == 0
-        - ufw_status_cmd.rc == 0
-        - "'Status: active' in ufw_status_cmd.stdout"
-      changed_when: false
-      register: ufw_allow_result
-
-    - name: Check local swarm state
-      ansible.builtin.command:
-        argv:
-          - docker
-          - info
-          - --format
-          - "{{ '{{.Swarm.LocalNodeState}}' }}"
-      register: swarm_local_state
-      changed_when: "false"
-
-    - name: Join swarm as worker if not active
-      ansible.builtin.command:
-        argv:
-          - docker
-          - swarm
-          - join
-          - --token
-          - "{{ hostvars[primary_manager].swarm_worker_join_token.stdout | trim }}"
-          - "{{ hostvars[primary_manager].swarm_manager_addr.stdout | trim }}"
-      when: swarm_local_state.stdout | trim != "active"
-      changed_when: "true"
-      no_log: true
-
-    - name: Read swarm node id
-      ansible.builtin.command:
-        argv:
-          - docker
-          - info
-          - --format
-          - "{{ '{{.Swarm.NodeID}}' }}"
-      register: swarm_node_id_cmd
-      changed_when: "false"
-
-    - name: Store swarm node id
-      ansible.builtin.set_fact:
-        swarm_node_id: "{{ swarm_node_id_cmd.stdout | trim }}"
+    - name: Join swarm as worker
+      ansible.builtin.include_role:
+        name: swarm-join
+      vars:
+        join_token: "{{ hostvars[primary_manager].swarm_worker_join_token.stdout | trim }}"
+        manager_address: "{{ hostvars[primary_manager].swarm_manager_addr.stdout | trim }}"
 
     - name: Flush handlers after WireGuard config install
       ansible.builtin.meta: flush_handlers

@@ -32,6 +32,7 @@ NODES_REPLACE_ARGS=()
 FOUNDATION_TFVARS_FILE="${FOUNDATION_TFVARS_FILE:-}"
 NODES_TFVARS_FILE="${NODES_TFVARS_FILE:-}"
 INFRA_NODES_TFVARS_FILE="${INFRA_NODES_TFVARS_FILE:-}"
+_YC_SA_KEY_TMP=""
 
 # ----- provider mirror --------------------------------------------------
 # Sets _TF_MIRROR_CFG_TMP (path to temp file) for cleanup by caller.
@@ -57,6 +58,53 @@ setup_provider_mirror() {
     export TF_CLI_CONFIG_FILE="${cfg}"
     export TOFU_CONFIG_FILE="${cfg}"
     _TF_MIRROR_CFG_TMP="${cfg}"
+  fi
+}
+
+# ----- Yandex Cloud auth materialization --------------------------------
+prepare_yandex_auth() {
+  local key_file=""
+
+  if [ -n "${YC_SERVICE_ACCOUNT_KEY_FILE:-}" ]; then
+    key_file="${YC_SERVICE_ACCOUNT_KEY_FILE}"
+    if [ ! -f "${key_file}" ]; then
+      echo "::error::YC_SERVICE_ACCOUNT_KEY_FILE points to a missing file: ${key_file}"
+      exit 1
+    fi
+  elif [ -n "${TF_VAR_yandex_service_account_key_file:-}" ]; then
+    key_file="${TF_VAR_yandex_service_account_key_file}"
+    if [ ! -f "${key_file}" ]; then
+      echo "::error::TF_VAR_yandex_service_account_key_file points to a missing file: ${key_file}"
+      exit 1
+    fi
+  elif [ -n "${YC_SERVICE_ACCOUNT_KEY_B64:-}" ]; then
+    _YC_SA_KEY_TMP="$(mktemp)"
+    printf '%s' "${YC_SERVICE_ACCOUNT_KEY_B64}" | base64 -d > "${_YC_SA_KEY_TMP}" || {
+      echo "::error::Failed to decode YC_SERVICE_ACCOUNT_KEY_B64"
+      exit 1
+    }
+    chmod 600 "${_YC_SA_KEY_TMP}"
+    key_file="${_YC_SA_KEY_TMP}"
+  elif [ -n "${YC_SERVICE_ACCOUNT_KEY_JSON:-}" ]; then
+    _YC_SA_KEY_TMP="$(mktemp)"
+    printf '%s' "${YC_SERVICE_ACCOUNT_KEY_JSON}" > "${_YC_SA_KEY_TMP}"
+    chmod 600 "${_YC_SA_KEY_TMP}"
+    key_file="${_YC_SA_KEY_TMP}"
+  fi
+
+  if [ -n "${key_file}" ]; then
+    export YC_SERVICE_ACCOUNT_KEY_FILE="${key_file}"
+    export TF_VAR_yandex_service_account_key_file="${key_file}"
+
+    # Prefer service account auth over stale short-lived IAM tokens.
+    unset YC_TOKEN || true
+    unset TF_VAR_yandex_token || true
+    echo "::notice::Yandex auth: using service account key file"
+    return 0
+  fi
+
+  if [ -n "${YC_TOKEN:-}" ] || [ -n "${TF_VAR_yandex_token:-}" ]; then
+    echo "::notice::Yandex auth: using IAM token"
   fi
 }
 
@@ -124,7 +172,9 @@ for env_name, key in {
     "XRAY_CONFIG_DEV_NAME":            "xray_dev",
     "VPN_FALLBACK_INDEX_CONFIG_NAME":  "vpn_fallback_index",
     "VPN_FALLBACK_NGINX_CONFIG_NAME":  "vpn_fallback_nginx",
-    "VAULT_CONFIG_NAME":               "vault",
+    "VAULT_CONFIG_NAME":                       "vault",
+    "ALERTMANAGER_CONFIG_NAME":                "alertmanager",
+    "PROMETHEUS_ALERT_RULES_CONFIG_NAME":      "prometheus_alert_rules",
 }.items():
     print("{}={}".format(env_name, m.get(key, "")))
 ' > "${exported_env_file}"
@@ -371,6 +421,7 @@ main() {
   source "${script_dir}/core/prepare-terraform-env.sh"
 
   setup_provider_mirror
+  prepare_yandex_auth
   prepare_nodes_replace_args
 
   validate_tfvars_file "${FOUNDATION_TFVARS_FILE}" "foundation"
@@ -417,6 +468,7 @@ main() {
   done
 
   [ -z "${_TF_MIRROR_CFG_TMP}" ] || rm -f "${_TF_MIRROR_CFG_TMP}"
+  [ -z "${_YC_SA_KEY_TMP}" ] || rm -f "${_YC_SA_KEY_TMP}"
 }
 
 main "$@"

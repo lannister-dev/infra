@@ -13,6 +13,18 @@ Each root has its own remote state key:
 - `nodes.tfstate`
 - `infra-nodes.tfstate`
 
+## State locking
+
+State locking prevents concurrent `terraform apply` runs from corrupting state.
+Set `TF_STATE_DYNAMODB_TABLE` (e.g. `terraform-locks`) in your environment or
+backend `.hcl` file. The CI script (`scripts/ci/apply-terraform.sh`) writes
+`dynamodb_table` into the generated backend config automatically when the
+variable is present.
+
+For AWS S3 backends, create a DynamoDB table with a `LockID` string partition
+key. For S3-compatible stores (Yandex Object Storage, MinIO), check provider
+docs for lock table support.
+
 ## Topology source of truth
 
 Topology is declared in versioned tfvars files:
@@ -75,6 +87,7 @@ HostVDS (OpenStack) for `terraform/nodes` entries with `provider=hostvds`:
 
 Yandex Cloud for `terraform/nodes` entries in `yandex_whitelist_entry_nodes`:
 - preferred: `YC_SERVICE_ACCOUNT_KEY_FILE` or `TF_VAR_yandex_service_account_key_file`
+- CI/Vault-friendly option: `YC_SERVICE_ACCOUNT_KEY_B64` (workflow decodes it into a temp file and exports `TF_VAR_yandex_service_account_key_file`)
 - fallback for short-lived manual runs: `YC_TOKEN` or `TF_VAR_yandex_token`
 - `YC_CLOUD_ID` or `TF_VAR_yandex_cloud_id`
 - `YC_FOLDER_ID` or `TF_VAR_yandex_folder_id`

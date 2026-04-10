@@ -1,0 +1,33 @@
+---
+- name: Check docker secret existence
+  ansible.builtin.command:
+    argv:
+      - docker
+      - secret
+      - inspect
+      - "{{ item.name }}"
+  loop: "{{ docker_secrets }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.condition | default(true) | bool
+  register: secret_inspect_results
+  failed_when: false
+  changed_when: false
+
+- name: Create missing docker secrets
+  ansible.builtin.shell: |
+    set -Eeuo pipefail
+    printf '%s' "$SECRET_VALUE" | docker secret create {{ item.item.name }} -
+  args:
+    executable: /bin/bash
+  environment:
+    SECRET_VALUE: "{{ item.item.value }}"
+  loop: "{{ secret_inspect_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when:
+    - item.item.condition | default(true) | bool
+    - item.rc is defined
+    - item.rc != 0
+  no_log: true
+  changed_when: true

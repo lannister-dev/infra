@@ -1,0 +1,3 @@
+---
+docker_secrets: []
+# Each item: {name: "secret_name", env_var: "ENV_VAR_NAME", value: "{{ some_var }}", condition: true}

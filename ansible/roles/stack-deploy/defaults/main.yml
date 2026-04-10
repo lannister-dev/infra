@@ -1,0 +1,6 @@
+---
+stack_name: ""
+compose_file: ""
+stack_environment: {}
+with_registry_auth: true
+extra_deploy_args: []

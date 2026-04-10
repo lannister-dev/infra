@@ -52,8 +52,8 @@ resource "docker_volume" "grafana_data" {
   }
 }
 
-resource "docker_volume" "agent_data" {
-  name = "agent-data"
+resource "docker_volume" "alertmanager_data" {
+  name = "alertmanager_data"
 
   lifecycle {
     prevent_destroy = true
@@ -88,6 +88,16 @@ resource "docker_config" "xray_config" {
 resource "docker_config" "xray_config_dev" {
   name = local.xray_config_dev_name
   data = local.xray_config_dev_data
+}
+
+resource "docker_config" "alertmanager_config" {
+  name = local.alertmanager_config_name
+  data = local.alertmanager_config_data
+}
+
+resource "docker_config" "prometheus_alert_rules" {
+  name = local.prometheus_alert_rules_config_name
+  data = local.prometheus_alert_rules_data
 }
 
 resource "docker_config" "vpn_fallback_index" {
