@@ -178,6 +178,38 @@
       register: harbor_source_compose_cmd_result
       changed_when: false
 
+    - name: Ensure Harbor compose runtime exists on target node
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (target_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ target_infra_node.ssh_port | string }}"
+          - "{{ target_infra_node.ssh_user }}@{{ target_infra_node.public_ip }}"
+          - >-
+            sh -lc 'if docker compose version >/dev/null 2>&1 || command -v docker-compose >/dev/null 2>&1; then
+              exit 0;
+            fi;
+            export DEBIAN_FRONTEND=noninteractive;
+            apt-get update >/dev/null 2>&1;
+            if apt-get install -y docker-compose-plugin >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+              exit 0;
+            fi;
+            apt-get install -y docker-compose >/dev/null 2>&1'
+      changed_when: true
+
     - name: Resolve Harbor compose command on target node
       ansible.builtin.command:
         argv:
