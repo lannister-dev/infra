@@ -101,46 +101,89 @@
       register: current_swarm_node_ids
       changed_when: false
 
-    - name: Read current swarm node hostnames
+    - name: Read current swarm node metadata
       ansible.builtin.command:
         argv:
           - docker
           - node
           - inspect
           - --format
-          - "{{ '{{.ID}}|{{.Description.Hostname}}' }}"
+          - "{{ '{{.ID}}|{{.Description.Hostname}}|{{.Status.Addr}}|{{ index .Spec.Labels \"infra_name\" }}' }}"
           - "{{ item }}"
       loop: "{{ current_swarm_node_ids.stdout_lines }}"
       loop_control:
         label: "{{ item }}"
-      register: current_swarm_node_hostname_results
+      register: current_swarm_node_metadata_results
       changed_when: false
 
-    - name: Build current swarm hostname map
+    - name: Build current swarm node alias pairs
       ansible.builtin.set_fact:
-        current_swarm_node_id_by_hostname: >-
+        current_swarm_node_alias_pairs: >-
+          {{
+            current_swarm_node_metadata_results.results
+            | map(attribute='stdout')
+            | map('trim')
+            | reject('equalto', '')
+            | map('split', '|')
+            | map('list')
+            | list
+          }}
+
+    - name: Build current swarm node lookup map
+      ansible.builtin.set_fact:
+        current_swarm_node_id_by_alias: "{{ current_swarm_node_id_by_alias | default({}) | combine(alias_chunk, recursive=false) }}"
+      vars:
+        alias_chunk: >-
           {{
             dict(
-              current_swarm_node_hostname_results.results
-              | map(attribute='stdout')
-              | map('trim')
-              | reject('equalto', '')
-              | map('split', '|', 1)
+              (
+                [
+                  item[1] | default(''),
+                  item[2] | default(''),
+                  item[3] | default('')
+                ]
+                | map('trim')
+                | reject('in', ['', '<no value>'])
+                | unique
+                | list
+              )
+              | zip(
+                (
+                  [
+                    item[0] | default('')
+                  ]
+                  * (
+                    [
+                      item[1] | default(''),
+                      item[2] | default(''),
+                      item[3] | default('')
+                    ]
+                    | map('trim')
+                    | reject('in', ['', '<no value>'])
+                    | unique
+                    | list
+                    | length
+                  )
+                )
+              )
             )
           }}
+      loop: "{{ current_swarm_node_alias_pairs }}"
+      loop_control:
+        label: "{{ item[0] | default('') }}"
 
     - name: Build infra bootstrap and existing node lists
       ansible.builtin.set_fact:
         bootstrap_infra_nodes: >-
           {{
             desired_enabled_infra_nodes
-            | rejectattr('name', 'in', current_swarm_node_id_by_hostname.keys() | list)
+            | rejectattr('name', 'in', current_swarm_node_id_by_alias.keys() | list)
             | list
           }}
         existing_infra_nodes: >-
           {{
             desired_enabled_infra_nodes
-            | selectattr('name', 'in', current_swarm_node_id_by_hostname.keys() | list)
+            | selectattr('name', 'in', current_swarm_node_id_by_alias.keys() | list)
             | list
           }}
 
@@ -294,7 +337,7 @@
             dict(
               existing_infra_nodes
               | map(attribute='name')
-              | zip(existing_infra_nodes | map(attribute='name') | map('extract', current_swarm_node_id_by_hostname))
+              | zip(existing_infra_nodes | map(attribute='name') | map('extract', current_swarm_node_id_by_alias))
             )
           }}
 
