@@ -13,6 +13,9 @@
     ssh_private_key_file_effective: "{{ lookup('env', 'ANSIBLE_SSH_PRIVATE_KEY_FILE') | default('', true) | trim }}"
     ssh_keys_dir_effective: "{{ lookup('env', 'ANSIBLE_SSH_KEYS_DIR') | default('', true) | trim }}"
     data_prod_target_node: "{{ lookup('env', 'DATA_PROD_TARGET_NODE') | default('', true) | trim }}"
+    data_prod_stack_name: "data-prod"
+    data_prod_postgres_volume_logical_name: "data_prod_postgres_data"
+    data_prod_redis_volume_logical_name: "data_prod_redis_data"
 
   tasks:
     - name: Validate data-prod target node
@@ -288,6 +291,93 @@
       delay: 2
       until: (data_prod_service_stopped_check.stdout_lines | default([]) | length) == 0
 
+    - name: Resolve source postgres volume name
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (postgres_source_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ postgres_source_infra_node.ssh_port | string }}"
+          - "{{ postgres_source_infra_node.ssh_user }}@{{ postgres_source_infra_node.public_ip }}"
+          - >-
+            sh -lc
+            'for v in
+            "{{ data_prod_stack_name }}_{{ data_prod_postgres_volume_logical_name }}"
+            "{{ data_prod_postgres_volume_logical_name }}";
+            do
+              if docker volume inspect "$v" >/dev/null 2>&1; then
+                printf "%s\n" "$v"
+                exit 0
+              fi
+            done
+            exit 1'
+      register: postgres_source_volume_name_cmd
+      changed_when: false
+
+    - name: Resolve source redis volume name
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (redis_source_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ redis_source_infra_node.ssh_port | string }}"
+          - "{{ redis_source_infra_node.ssh_user }}@{{ redis_source_infra_node.public_ip }}"
+          - >-
+            sh -lc
+            'for v in
+            "{{ data_prod_stack_name }}_{{ data_prod_redis_volume_logical_name }}"
+            "{{ data_prod_redis_volume_logical_name }}";
+            do
+              if docker volume inspect "$v" >/dev/null 2>&1; then
+                printf "%s\n" "$v"
+                exit 0
+              fi
+            done
+            exit 0'
+      register: redis_source_volume_name_cmd
+      changed_when: false
+
+    - name: Build effective data-prod volume names
+      ansible.builtin.set_fact:
+        data_prod_postgres_source_volume_name: "{{ postgres_source_volume_name_cmd.stdout | trim }}"
+        data_prod_redis_source_volume_name: "{{ redis_source_volume_name_cmd.stdout | trim }}"
+        data_prod_postgres_target_volume_name: "{{ data_prod_stack_name }}_{{ data_prod_postgres_volume_logical_name }}"
+        data_prod_redis_target_volume_name: "{{ data_prod_stack_name }}_{{ data_prod_redis_volume_logical_name }}"
+
+    - name: Ensure effective data-prod volume names were resolved
+      ansible.builtin.assert:
+        that:
+          - data_prod_postgres_source_volume_name | length > 0
+          - data_prod_redis_source_volume_name | length > 0
+        fail_msg: >-
+          Could not resolve source data-prod volumes on current node.
+          postgres={{ data_prod_postgres_source_volume_name | default('') }},
+          redis={{ data_prod_redis_source_volume_name | default('') }}.
+
     - name: Copy postgres volume to target node
       ansible.builtin.command:
         argv:
@@ -320,7 +410,9 @@
               else ssh_private_key_file_effective
             }}
           - --volume
-          - data_prod_postgres_data
+          - "{{ data_prod_postgres_source_volume_name }}"
+          - --target-volume
+          - "{{ data_prod_postgres_target_volume_name }}"
       changed_when: true
 
     - name: Copy redis volume to target node
@@ -355,7 +447,9 @@
               else ssh_private_key_file_effective
             }}
           - --volume
-          - data_prod_redis_data
+          - "{{ data_prod_redis_source_volume_name }}"
+          - --target-volume
+          - "{{ data_prod_redis_target_volume_name }}"
       changed_when: true
 
     - name: Deploy data-prod stack pinned to target node
