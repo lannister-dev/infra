@@ -178,12 +178,22 @@
           {{
             desired_enabled_infra_nodes
             | rejectattr('name', 'in', current_swarm_node_id_by_alias.keys() | list)
+            | rejectattr('public_ip', 'in', current_swarm_node_id_by_alias.keys() | list)
             | list
           }}
         existing_infra_nodes: >-
           {{
             desired_enabled_infra_nodes
             | selectattr('name', 'in', current_swarm_node_id_by_alias.keys() | list)
+            | list
+            +
+            (
+              desired_enabled_infra_nodes
+              | rejectattr('name', 'in', current_swarm_node_id_by_alias.keys() | list)
+              | selectattr('public_ip', 'in', current_swarm_node_id_by_alias.keys() | list)
+              | list
+            )
+            | unique(attribute='name')
             | list
           }}
 
@@ -330,16 +340,26 @@
         infra_region: "{{ item.region | default('', true) }}"
       loop: "{{ bootstrap_infra_nodes }}"
 
+    - name: Initialize desired infra node id map for label phase
+      ansible.builtin.set_fact:
+        desired_infra_node_id_by_name: {}
+
     - name: Build desired infra node id map for label phase
       ansible.builtin.set_fact:
         desired_infra_node_id_by_name: >-
           {{
-            dict(
-              existing_infra_nodes
-              | map(attribute='name')
-              | zip(existing_infra_nodes | map(attribute='name') | map('extract', current_swarm_node_id_by_alias))
-            )
+            desired_infra_node_id_by_name
+            | combine({
+                item.name: (
+                  current_swarm_node_id_by_alias[item.name]
+                  if (item.name in current_swarm_node_id_by_alias)
+                  else current_swarm_node_id_by_alias[item.public_ip]
+                )
+              })
           }}
+      loop: "{{ existing_infra_nodes }}"
+      loop_control:
+        label: "{{ item.name }}"
 
     - name: Get swarm worker join token
       ansible.builtin.command:
@@ -383,6 +403,16 @@
         test -x /usr/bin/python3 || (apt-get update -y && apt-get install -y python3)
       changed_when: false
 
+    - name: Check whether Docker is already installed
+      ansible.builtin.command:
+        argv:
+          - bash
+          - -lc
+          - command -v docker >/dev/null 2>&1
+      register: infra_docker_present_cmd
+      changed_when: false
+      failed_when: false
+
     - name: Install Docker packages
       ansible.builtin.apt:
         update_cache: true
@@ -392,6 +422,7 @@
         name:
           - docker.io
         state: present
+      when: infra_docker_present_cmd.rc != 0
 
     - name: Ensure Docker service is enabled and running
       ansible.builtin.systemd:
