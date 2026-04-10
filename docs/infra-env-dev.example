@@ -116,5 +116,7 @@ DEV_REDIS_PASSWORD=<strong_password>
 # GRAFANA_HOST=grafana.example.com
 # ALERTMANAGER_IMAGE_TAG=v0.27.0
 # ALERTMANAGER_HOST=alertmanager.dev.example.com
-# ALERTMANAGER_AUTH_USERS=admin:<htpasswd_hash>
+# Generate with: htpasswd -nbB admin <password>
+# Escape $ as $$ for Docker Compose interpolation:
+# ALERTMANAGER_AUTH_USERS=admin:$$2y$$05$$REPLACE_WITH_REAL_BCRYPT_HASH
 # ALERTMANAGER_WEBHOOK_URL=http://placeholder:5001/alert
