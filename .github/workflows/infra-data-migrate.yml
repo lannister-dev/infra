@@ -79,6 +79,46 @@ jobs:
           chmod 600 "${ENV_FILE}"
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
 
+      - name: Install Terraform CLI
+        run: |
+          set -Eeuo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+
+          case "$(uname -s)" in
+            Linux) tf_os="linux" ;;
+            Darwin) tf_os="darwin" ;;
+            *)
+              echo "::error::Unsupported runner OS: $(uname -s)"
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64|amd64) tf_arch="amd64" ;;
+            arm64|aarch64) tf_arch="arm64" ;;
+            *)
+              echo "::error::Unsupported runner architecture: $(uname -m)"
+              exit 1
+              ;;
+          esac
+
+          : "${TF_PROVIDER_MIRROR_URL:?Set TF_PROVIDER_MIRROR_URL in INFRA_ENV_PROD}"
+          tf_zip="terraform_${TERRAFORM_VERSION}_${tf_os}_${tf_arch}.zip"
+          tf_base_url="${TF_PROVIDER_MIRROR_URL}"
+          tf_base_url="${tf_base_url%/}"
+          if [ "${tf_base_url}" = "https://terraform-mirror.yandexcloud.net" ]; then
+            tf_base_url="https://hashicorp-releases.yandexcloud.net/terraform"
+          fi
+          tf_url="${tf_base_url}/${TERRAFORM_VERSION}/${tf_zip}"
+          tf_bin_dir="${RUNNER_TEMP}/bin"
+
+          mkdir -p "${tf_bin_dir}"
+          curl -fsSL "${tf_url}" -o "${RUNNER_TEMP}/${tf_zip}"
+          unzip -oq "${RUNNER_TEMP}/${tf_zip}" -d "${tf_bin_dir}"
+          chmod +x "${tf_bin_dir}/terraform"
+          echo "${tf_bin_dir}" >> "${GITHUB_PATH}"
+          "${tf_bin_dir}/terraform" version
+
       - name: Validate data migration guardrails
         run: |
           set -Eeuo pipefail
@@ -146,6 +186,20 @@ jobs:
 
       - name: Install Ansible
         run: python -m pip install --upgrade pip ansible
+
+      - name: Generate infra inventory
+        run: |
+          set -Eeo pipefail
+          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
+          export APPLY_FOUNDATION=false
+          export APPLY_NODES=false
+          export APPLY_INFRA_NODES=true
+          bash ./scripts/ci/apply-terraform.sh
+
+          test -f ansible/inventory/generated/infra_nodes.yml || {
+            echo "::error::Expected ansible/inventory/generated/infra_nodes.yml after terraform/infra-nodes apply"
+            exit 1
+          }
 
       - name: Migrate production data stack
         run: |
