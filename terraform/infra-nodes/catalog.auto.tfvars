@@ -19,16 +19,6 @@ timeweb_infra_nodes = {
     enabled     = true
     region      = "ru-1"
   }
-  "infra-worker-01" = {
-    server_id   = "2669415"
-    role        = "worker"
-    kind        = "dev"
-    ssh_user    = "root"
-    ssh_port    = 22
-    ssh_key_ref = "prod_infra"
-    enabled     = true
-    region      = "ru-1"
-  }
 }
 
 # 3) Timeweb compute mode (create/destroy VPS via Terraform)
