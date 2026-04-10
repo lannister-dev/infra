@@ -51,7 +51,7 @@ jobs:
   deploy-prod:
     if: ${{ inputs.deploy == true && inputs.confirm_apply == 'APPLY' }}
     needs: checks
-    runs-on: [self-hosted, prod]
+    runs-on: [self-hosted, dev]
     timeout-minutes: 90
     environment:
       name: production
