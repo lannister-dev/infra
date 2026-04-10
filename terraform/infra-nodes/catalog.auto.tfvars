@@ -15,7 +15,7 @@ timeweb_infra_nodes = {
     kind        = "prod"
     ssh_user    = "root"
     ssh_port    = 22
-    ssh_key_ref = "default"
+    ssh_key_ref = "prod_infra"
     enabled     = true
     region      = "ru-1"
   }
@@ -25,7 +25,7 @@ timeweb_infra_nodes = {
     kind        = "prod"
     ssh_user    = "root"
     ssh_port    = 22
-    ssh_key_ref = "default"
+    ssh_key_ref = "prod_infra"
     enabled     = true
     region      = "ru-1"
   }
@@ -47,7 +47,7 @@ timeweb_provisioned_infra_nodes = {
     kind              = "prod"
     ssh_user          = "root"
     ssh_port          = 22
-    ssh_key_ref       = "default"
+    ssh_key_ref       = "prod_infra"
     enabled           = true
     region            = "spb-3"
   }

@@ -40,6 +40,7 @@
       ansible.builtin.assert:
         that:
           - target_infra_node | length > 0
+          - (target_infra_node.public_ip | default('', true) | string | trim | length) > 0
           - target_infra_node.role == 'manager'
           - target_infra_node.kind == 'prod'
         fail_msg: >-
@@ -105,6 +106,8 @@
         that:
           - postgres_source_infra_node | length > 0
           - redis_source_infra_node | length > 0
+          - (postgres_source_infra_node.public_ip | default('', true) | string | trim | length) > 0
+          - (redis_source_infra_node.public_ip | default('', true) | string | trim | length) > 0
         fail_msg: >-
           Current data-prod service nodes are not present in infra inventory.
           postgres={{ data_prod_postgres_source_node }}, redis={{ data_prod_redis_source_node }}.

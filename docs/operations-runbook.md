@@ -112,9 +112,11 @@ Source of truth: `terraform/infra-nodes/catalog.auto.tfvars`.
 
 Add/replace manager or worker:
 1. Update `infra_nodes`, `timeweb_infra_nodes`, or `timeweb_provisioned_infra_nodes`.
-2. Apply `terraform/infra-nodes`.
-3. Run `reconcile-infra-nodes.yml` so the new node installs Docker, joins Swarm and gets `kind` labels.
-4. Re-run `deploy-stacks.yml`.
+2. Set a dedicated infra `ssh_key_ref` such as `prod_infra`.
+3. Ensure matching private key exists in `INFRA_ENV_PROD` via `ANSIBLE_SSH_KEYS_B64_JSON`.
+4. Apply `terraform/infra-nodes`.
+5. Run `reconcile-infra-nodes.yml` so the new node installs Docker, joins Swarm and gets `kind` labels.
+6. Re-run `deploy-stacks.yml`.
 
 ## 5. Provider incident algorithm (ban/outage)
 
