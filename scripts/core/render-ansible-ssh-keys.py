@@ -44,6 +44,12 @@ def main() -> int:
         if not isinstance(encoded_key, str) or encoded_key.strip() == "":
             return _fail(f"SSH key value for ref '{ref}' must be non-empty base64 string")
 
+        encoded_key = "".join(encoded_key.split())
+        if encoded_key.endswith("%"):
+            return _fail(
+                f"SSH key ref '{ref}' ends with '%'. Remove shell prompt artifacts and keep only raw base64 text."
+            )
+
         try:
             key_bytes = base64.b64decode(encoded_key, validate=True)
         except Exception as exc:  # noqa: BLE001 - preserve actionable error text
@@ -61,4 +67,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
