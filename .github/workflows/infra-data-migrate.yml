@@ -22,6 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  TERRAFORM_VERSION: "1.8.5"
   PYTHON_VERSION: "3.10"
   VAULT_KV_MOUNT: "kv"
   VAULT_INFRA_SECRET_PATH: "infra/prod"
