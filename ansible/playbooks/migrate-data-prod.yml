@@ -146,6 +146,41 @@
           SSH key is not configured. Set ANSIBLE_SSH_KEYS_DIR (recommended, per-node keys)
           or ANSIBLE_SSH_PRIVATE_KEY_FILE (single key fallback).
 
+    - name: Build candidate source infra node list
+      ansible.builtin.set_fact:
+        candidate_source_infra_nodes: >-
+          {{
+            enabled_infra_nodes
+            | selectattr('role', 'equalto', 'manager')
+            | selectattr('kind', 'equalto', 'prod')
+            | list
+          }}
+
+    - name: Check candidate source SSH key files exist on controller
+      ansible.builtin.stat:
+        path: "{{ ssh_keys_dir_effective }}/{{ item.ssh_key_ref | default('default', true) | trim }}"
+      delegate_to: localhost
+      become: false
+      loop: "{{ candidate_source_infra_nodes + [target_infra_node] }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.ssh_key_ref | default('default', true) }}"
+      when: ssh_keys_dir_effective != ''
+      register: data_prod_candidate_ssh_key_file_stat_result
+      changed_when: false
+
+    - name: Ensure candidate source SSH key files exist on controller
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+        fail_msg: >-
+          Missing SSH key for infra node {{ item.item.name }} (ref={{ item.item.ssh_key_ref | default('default', true) }}):
+          expected file {{ ssh_keys_dir_effective }}/{{ item.item.ssh_key_ref | default('default', true) | trim }}.
+      loop: "{{ data_prod_candidate_ssh_key_file_stat_result.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.name }} -> {{ item.item.ssh_key_ref | default('default', true) }}"
+      when: ssh_keys_dir_effective != ''
+
     - name: Resolve running node for data-prod_postgres
       ansible.builtin.command:
         argv:
@@ -200,6 +235,66 @@
       register: data_prod_redis_history_nodes_cmd
       changed_when: false
 
+    - name: Probe postgres volume presence on candidate source nodes
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (item.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ item.ssh_port | string }}"
+          - "{{ item.ssh_user }}@{{ item.public_ip }}"
+          - >-
+            sh -lc 'for v in "{{ data_prod_stack_name }}_{{ data_prod_postgres_volume_logical_name }}" "{{ data_prod_postgres_volume_logical_name }}"; do
+            if docker volume inspect "$v" >/dev/null 2>&1; then printf "%s\n" "$v"; exit 0; fi;
+            done; exit 0'
+      loop: "{{ candidate_source_infra_nodes }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.public_ip }}"
+      register: postgres_volume_probe_results
+      changed_when: false
+
+    - name: Probe redis volume presence on candidate source nodes
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (item.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ item.ssh_port | string }}"
+          - "{{ item.ssh_user }}@{{ item.public_ip }}"
+          - >-
+            sh -lc 'for v in "{{ data_prod_stack_name }}_{{ data_prod_redis_volume_logical_name }}" "{{ data_prod_redis_volume_logical_name }}"; do
+            if docker volume inspect "$v" >/dev/null 2>&1; then printf "%s\n" "$v"; exit 0; fi;
+            done; exit 0'
+      loop: "{{ candidate_source_infra_nodes }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.public_ip }}"
+      register: redis_volume_probe_results
+      changed_when: false
+
     - name: Build source node hostnames
       ansible.builtin.set_fact:
         data_prod_postgres_source_node: >-
@@ -221,6 +316,18 @@
                   | reject('equalto', '')
                   | list
                   | unique
+                  | first
+                ),
+                true
+              )
+            | default(
+                (
+                  postgres_volume_probe_results.results
+                  | default([])
+                  | selectattr('stdout', 'defined')
+                  | selectattr('stdout', 'truthy')
+                  | map(attribute='item.name')
+                  | list
                   | first
                 ),
                 true
@@ -250,6 +357,18 @@
                 ),
                 true
               )
+            | default(
+                (
+                  redis_volume_probe_results.results
+                  | default([])
+                  | selectattr('stdout', 'defined')
+                  | selectattr('stdout', 'truthy')
+                  | map(attribute='item.name')
+                  | list
+                  | first
+                ),
+                true
+              )
             | default('')
           }}
 
@@ -265,7 +384,7 @@
           - data_prod_redis_source_node | length > 0
         fail_msg: >-
           Could not resolve current running nodes for data-prod_postgres/data-prod_redis.
-          Ensure the stack is healthy before migration or that task history still exists after a partial previous run.
+          Also probed prod manager nodes for source volumes and found nothing.
 
     - name: Resolve postgres source infra entry
       ansible.builtin.set_fact:
