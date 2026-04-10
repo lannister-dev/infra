@@ -11,6 +11,7 @@ __pycache__/
 infra.dev.env
 node-agent.env
 node-agent.dev.env
+sa-key.json
 openrc.sh
 openrc*.sh
 env.nodes

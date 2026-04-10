@@ -61,7 +61,6 @@ tf_import_if_present "docker_network.vpn_net" "$(docker network inspect -f '{{ .
 tf_import_if_present "docker_volume.traefik_acme" "$(docker volume inspect -f '{{ .Name }}' traefik_acme 2>/dev/null || true)"
 tf_import_if_present "docker_volume.prometheus_data" "$(docker volume inspect -f '{{ .Name }}' prometheus_data 2>/dev/null || true)"
 tf_import_if_present "docker_volume.grafana_data" "$(docker volume inspect -f '{{ .Name }}' grafana_data 2>/dev/null || true)"
-tf_import_if_present "docker_volume.agent_data" "$(docker volume inspect -f '{{ .Name }}' agent-data 2>/dev/null || true)"
 
 tf_import_if_present "docker_config.prometheus_config" "$(docker config inspect -f '{{ .ID }}' "${PROMETHEUS_CONFIG_NAME}" 2>/dev/null || true)"
 tf_import_if_present "docker_config.grafana_ini_config" "$(docker config inspect -f '{{ .ID }}' "${GRAFANA_INI_CONFIG_NAME}" 2>/dev/null || true)"

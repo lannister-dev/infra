@@ -24,6 +24,44 @@ x-deploy-common: &deploy-common
     max_attempts: 3
 
 services:
+  alertmanager:
+    image: prom/alertmanager:${ALERTMANAGER_IMAGE_TAG}
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    deploy:
+      replicas: 1
+      update_config:
+        order: stop-first
+        monitor: 60s
+        failure_action: rollback
+      rollback_config:
+        order: stop-first
+        monitor: 60s
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=${ALERTMANAGER_TRAEFIK_ENABLE:-false}"
+        - "traefik.http.routers.alertmanager.rule=Host(`${ALERTMANAGER_HOST}`)"
+        - "traefik.http.routers.alertmanager.entrypoints=websecure"
+        - "traefik.http.routers.alertmanager.service=alertmanager"
+        - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
+        - "traefik.http.middlewares.alertmanager-auth.basicauth.users=${ALERTMANAGER_AUTH_USERS}"
+        - "traefik.http.routers.alertmanager.middlewares=alertmanager-auth@swarm"
+    volumes:
+      - alertmanager_data:/alertmanager
+    configs:
+      - source: alertmanager_config
+        target: /etc/alertmanager/alertmanager.yml
+    healthcheck:
+      <<: *healthcheck-common
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/healthy"]
+    networks:
+      - monitoring
+
   prometheus:
     image: prom/prometheus:${PROMETHEUS_IMAGE_TAG}
     command:
@@ -62,6 +100,8 @@ services:
     configs:
       - source: prometheus_config
         target: /etc/prometheus/prometheus.yml
+      - source: prometheus_alert_rules
+        target: /etc/prometheus/rules/alerts.yml
     healthcheck:
       <<: *healthcheck-common
       test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
@@ -157,11 +197,18 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  alertmanager_data:
 
 configs:
   prometheus_config:
     external: true
     name: ${PROMETHEUS_CONFIG_NAME}
+  prometheus_alert_rules:
+    external: true
+    name: ${PROMETHEUS_ALERT_RULES_CONFIG_NAME}
+  alertmanager_config:
+    external: true
+    name: ${ALERTMANAGER_CONFIG_NAME}
   grafana_ini:
     external: true
     name: ${GRAFANA_INI_CONFIG_NAME}

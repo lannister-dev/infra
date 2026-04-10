@@ -69,6 +69,17 @@ IAC_TFVAR_ENABLE_VPN_DEV_STACK=false
 # HOSTVDS_OS_REGION_NAME=eu-north1b
 # HOSTVDS_OS_INTERFACE=public
 
+# Yandex Cloud whitelist entry auth (terraform/nodes)
+# Preferred for CI: base64-encoded authorized key JSON for a service account.
+# CI materializes it into a temp file and exports TF_VAR_yandex_service_account_key_file automatically.
+# YC_SERVICE_ACCOUNT_KEY_B64=<base64_of_authorized_key.json>
+# Optional raw JSON variant:
+# YC_SERVICE_ACCOUNT_KEY_JSON={"id":"...","service_account_id":"..."}
+# Legacy short-lived fallback only:
+# YC_TOKEN=...
+# IAC_TFVAR_YANDEX_CLOUD_ID=b1g...
+# IAC_TFVAR_YANDEX_FOLDER_ID=b1g...
+
 # Timeweb (terraform/infra-nodes)
 # IAC_TFVAR_TIMEWEB_API_URL=https://api.timeweb.cloud/api/v1
 # IAC_TFVAR_TIMEWEB_API_TOKEN=...
@@ -127,6 +138,10 @@ TRAEFIK_WEBSECURE_FORWARDED_HEADERS_INSECURE=false
 PROMETHEUS_HOST=prometheus.example.com
 PROMETHEUS_AUTH_USERS=admin:<htpasswd_hash>
 GRAFANA_HOST=grafana.example.com
+# ALERTMANAGER_IMAGE_TAG=v0.27.0
+# ALERTMANAGER_HOST=alertmanager.example.com
+# ALERTMANAGER_AUTH_USERS=admin:<htpasswd_hash>
+# ALERTMANAGER_WEBHOOK_URL=http://placeholder:5001/alert
 
 # Managed data-prod stack
 DEPLOY_DATA_PROD_STACK=true
@@ -135,6 +150,8 @@ PROD_POSTGRES_USER=vpn_prod_user
 PROD_POSTGRES_PUBLISHED_PORT=15433
 PROD_POSTGRES_PASSWORD=<strong_password>
 PROD_REDIS_PASSWORD=<strong_password>
+# Optional: pin data-prod to a specific prod manager during migration
+# DATA_PROD_PLACEMENT_CONSTRAINT=node.hostname == infra-manager-02
 
 # ---- Generic alias style (alternative to TF_VAR_*) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity

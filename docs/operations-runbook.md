@@ -72,7 +72,7 @@ Development-specific notes:
   - `EXTERNAL_REDIS_HOST` / `EXTERNAL_REDIS_PORT`
 - If you want managed dev data services in swarm:
   - `DEPLOY_DATA_DEV_STACK=true`
-  - set `DEV_POSTGRES_PASSWORD` and `DEV_REDIS_PASSWORD` (legacy aliases `DATA_DEV_*` are supported)
+  - set `DEV_POSTGRES_PASSWORD` and `DEV_REDIS_PASSWORD`
 - If you want managed prod data services in swarm:
   - `DEPLOY_DATA_PROD_STACK=true`
   - set `PROD_POSTGRES_PASSWORD` and `PROD_REDIS_PASSWORD`
@@ -127,3 +127,40 @@ Add/replace manager or worker:
 5. After full cutover, remove old compute entries to destroy old VPS.
 
 For 10+ nodes, keep multi-provider topology and rotate in batches (blue/green), not all at once.
+
+## 6. Backup & Restore
+
+### Backup PostgreSQL
+
+Use `scripts/core/backup-data.sh` to dump a Swarm PostgreSQL service:
+
+```bash
+# Backup data-prod PostgreSQL (keep last 7 dumps)
+./scripts/core/backup-data.sh --service data-prod_postgres --target-dir /opt/backups --retention 7
+
+# Backup data-dev PostgreSQL
+./scripts/core/backup-data.sh --service data-dev_postgres --target-dir /opt/backups --retention 5
+```
+
+The script finds the running container for the Swarm service, runs `pg_dump`,
+compresses the output, and prunes old backups beyond the retention count.
+
+### Restore PostgreSQL
+
+```bash
+# Find the container
+CONTAINER_ID=$(docker ps --filter "label=com.docker.swarm.service.name=data-prod_postgres" --format '{{.ID}}' | head -n1)
+
+# Restore from backup
+gunzip -c /opt/backups/data-prod_postgres/vpn_control_20260411T120000Z.sql.gz \
+  | docker exec -i "$CONTAINER_ID" psql -U vpn_prod_user -d vpn_control
+```
+
+### Scheduled backups
+
+Add a cron job on the manager node:
+
+```bash
+# Every day at 03:00 UTC
+0 3 * * * /opt/vpn-infra/scripts/core/backup-data.sh --service data-prod_postgres --target-dir /opt/backups --retention 14 >> /var/log/backup-data.log 2>&1
+```
