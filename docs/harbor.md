@@ -66,8 +66,18 @@ This is intentional.
 ## Replacement Note
 
 Changing the Harbor host IP in this repository only repoints Traefik.
-It does **not** provision, install, or migrate Harbor itself.
+It does **not** by itself provision or install Harbor inside Swarm.
 
 A Harbor node replacement therefore requires two separate steps:
 - provision the replacement VM;
 - migrate Harbor Compose/data/secrets to that VM before switching Traefik to the new IP.
+
+This repository now treats Harbor as a **node-managed Docker Compose service**:
+- Harbor remains **outside Swarm**
+- migration is executed from repo automation
+- Traefik continues to route to Harbor as an external upstream
+
+Operationally, the Harbor move is:
+1. run the Harbor migration workflow/playbook to copy `/root/harbor` and `/data` to the target infra manager;
+2. start `docker compose` on the target node;
+3. switch `HARBOR_UPSTREAM_HOST` in runtime env and redeploy Traefik config.
