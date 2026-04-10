@@ -15,6 +15,7 @@ TARGET_USER=""
 TARGET_PORT="22"
 TARGET_KEY_FILE=""
 VOLUME_NAME=""
+TARGET_VOLUME_NAME=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -27,6 +28,7 @@ while [[ $# -gt 0 ]]; do
     --target-port) TARGET_PORT="${2:-}"; shift 2 ;;
     --target-key-file) TARGET_KEY_FILE="${2:-}"; shift 2 ;;
     --volume) VOLUME_NAME="${2:-}"; shift 2 ;;
+    --target-volume) TARGET_VOLUME_NAME="${2:-}"; shift 2 ;;
     *) fail "Unknown argument: $1" ;;
   esac
 done
@@ -38,6 +40,7 @@ done
 [[ -n "${TARGET_USER}" ]] || fail "--target-user is required"
 [[ -n "${TARGET_KEY_FILE}" ]] || fail "--target-key-file is required"
 [[ -n "${VOLUME_NAME}" ]] || fail "--volume is required"
+[[ -n "${TARGET_VOLUME_NAME}" ]] || TARGET_VOLUME_NAME="${VOLUME_NAME}"
 
 ssh_common=(
   -o BatchMode=yes
@@ -62,12 +65,12 @@ target_ssh=(
 src_mount="$("${source_ssh[@]}" "docker volume inspect -f '{{ .Mountpoint }}' '${VOLUME_NAME}'")"
 [[ -n "${src_mount}" ]] || fail "Could not resolve source mountpoint for volume ${VOLUME_NAME}"
 
-"${target_ssh[@]}" "docker volume create '${VOLUME_NAME}' >/dev/null"
-dst_mount="$("${target_ssh[@]}" "docker volume inspect -f '{{ .Mountpoint }}' '${VOLUME_NAME}'")"
-[[ -n "${dst_mount}" ]] || fail "Could not resolve target mountpoint for volume ${VOLUME_NAME}"
+"${target_ssh[@]}" "docker volume create '${TARGET_VOLUME_NAME}' >/dev/null"
+dst_mount="$("${target_ssh[@]}" "docker volume inspect -f '{{ .Mountpoint }}' '${TARGET_VOLUME_NAME}'")"
+[[ -n "${dst_mount}" ]] || fail "Could not resolve target mountpoint for volume ${TARGET_VOLUME_NAME}"
 
 if [[ "${SOURCE_HOST}" == "${TARGET_HOST}" && "${src_mount}" == "${dst_mount}" ]]; then
-  fail "Source and target volume mountpoints are identical for ${VOLUME_NAME}"
+  fail "Source and target volume mountpoints are identical for ${VOLUME_NAME} -> ${TARGET_VOLUME_NAME}"
 fi
 
 "${source_ssh[@]}" "tar -C '${src_mount}' -cpf - ." \
