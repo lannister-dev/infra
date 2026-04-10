@@ -6,6 +6,8 @@ default variable coverage and playbook syntax without requiring Docker.
 
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -197,7 +199,14 @@ _SYNTAX_CHECK_PLAYBOOKS = [
 ]
 
 
+_has_ansible_playbook = shutil.which("ansible-playbook") is not None
+
+
 class TestPlaybookSyntax:
+    @pytest.mark.skipif(
+        not _has_ansible_playbook,
+        reason="ansible-playbook not installed",
+    )
     @pytest.mark.parametrize("playbook", _SYNTAX_CHECK_PLAYBOOKS)
     def test_syntax_check(self, playbook):
         """ansible-playbook --syntax-check must pass for playbooks using roles."""
@@ -214,7 +223,7 @@ class TestPlaybookSyntax:
             text=True,
             cwd=str(REPO_ROOT),
             env={
-                "PATH": "/usr/local/bin:/usr/bin:/bin:/Library/Frameworks/Python.framework/Versions/3.10/bin",
+                "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
                 "HOME": str(Path.home()),
                 "ANSIBLE_CONFIG": str(REPO_ROOT / "ansible" / "ansible.cfg"),
                 "ANSIBLE_ROLES_PATH": str(ROLES_DIR),
