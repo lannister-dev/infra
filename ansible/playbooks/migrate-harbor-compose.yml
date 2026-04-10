@@ -154,6 +154,59 @@
           - "test -f {{ harbor_workdir }}/docker-compose.yml && test -f {{ harbor_workdir }}/harbor.yml && test -d /data/registry && test -d /data/database && test -d /data/secret"
       changed_when: false
 
+    - name: Resolve Harbor compose command on source node
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (source_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ source_infra_node.ssh_port | string }}"
+          - "{{ source_infra_node.ssh_user }}@{{ source_infra_node.public_ip }}"
+          - "sh -lc 'if docker compose version >/dev/null 2>&1; then printf \"%s\\n\" \"docker compose\"; elif command -v docker-compose >/dev/null 2>&1; then printf \"%s\\n\" \"docker-compose\"; else exit 1; fi'"
+      register: harbor_source_compose_cmd_result
+      changed_when: false
+
+    - name: Resolve Harbor compose command on target node
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (target_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ target_infra_node.ssh_port | string }}"
+          - "{{ target_infra_node.ssh_user }}@{{ target_infra_node.public_ip }}"
+          - "sh -lc 'if docker compose version >/dev/null 2>&1; then printf \"%s\\n\" \"docker compose\"; elif command -v docker-compose >/dev/null 2>&1; then printf \"%s\\n\" \"docker-compose\"; else exit 1; fi'"
+      register: harbor_target_compose_cmd_result
+      changed_when: false
+
+    - name: Save Harbor compose commands
+      ansible.builtin.set_fact:
+        harbor_source_compose_cmd: "{{ harbor_source_compose_cmd_result.stdout | trim }}"
+        harbor_target_compose_cmd: "{{ harbor_target_compose_cmd_result.stdout | trim }}"
+
     - name: Stop Harbor compose on source node
       ansible.builtin.command:
         argv:
@@ -174,7 +227,7 @@
           - -p
           - "{{ source_infra_node.ssh_port | string }}"
           - "{{ source_infra_node.ssh_user }}@{{ source_infra_node.public_ip }}"
-          - "sh -lc 'cd {{ harbor_workdir }} && docker compose down || true'"
+          - "sh -lc 'cd {{ harbor_workdir }} && {{ harbor_source_compose_cmd }} down || true'"
       changed_when: true
 
     - name: Copy Harbor workdir to target node
@@ -274,7 +327,7 @@
           - -p
           - "{{ target_infra_node.ssh_port | string }}"
           - "{{ target_infra_node.ssh_user }}@{{ target_infra_node.public_ip }}"
-          - "sh -lc 'cd {{ harbor_workdir }} && docker compose up -d'"
+          - "sh -lc 'cd {{ harbor_workdir }} && {{ harbor_target_compose_cmd }} up -d'"
       changed_when: true
 
     - name: Wait for Harbor proxy port on target node
@@ -307,7 +360,7 @@
           - -p
           - "{{ target_infra_node.ssh_port | string }}"
           - "{{ target_infra_node.ssh_user }}@{{ target_infra_node.public_ip }}"
-          - "sh -lc 'cd {{ harbor_workdir }} && docker compose ps'"
+          - "sh -lc 'cd {{ harbor_workdir }} && {{ harbor_target_compose_cmd }} ps'"
       register: harbor_target_compose_ps
       changed_when: false
 
