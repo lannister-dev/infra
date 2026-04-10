@@ -33,7 +33,7 @@ jobs:
   migrate-prod-data:
     if: ${{ inputs.confirm_apply == 'MIGRATE-PROD-DATA' }}
     needs: checks
-    runs-on: [self-hosted, prod]
+    runs-on: [self-hosted, dev]
     timeout-minutes: 120
     environment:
       name: production
