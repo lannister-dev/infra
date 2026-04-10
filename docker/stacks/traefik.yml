@@ -72,7 +72,7 @@ services:
       placement:
         constraints:
           - node.role == manager
-          - node.labels.kind == prod
+          - node.labels.kind == dev
       labels:
         - "traefik.enable=true"
 
