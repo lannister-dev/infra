@@ -12,6 +12,10 @@
     repo_root: "{{ lookup('env', 'REPO_ROOT') | default(playbook_dir + '/../..', true) }}"
     ssh_private_key_file_effective: "{{ lookup('env', 'ANSIBLE_SSH_PRIVATE_KEY_FILE') | default('', true) | trim }}"
     ssh_keys_dir_effective: "{{ lookup('env', 'ANSIBLE_SSH_KEYS_DIR') | default('', true) | trim }}"
+    ssh_auth_retries_effective: "{{ lookup('env', 'ANSIBLE_SSH_AUTH_RETRIES') | default('18', true) | int }}"
+    ssh_auth_delay_effective: "{{ lookup('env', 'ANSIBLE_SSH_AUTH_DELAY') | default('5', true) | int }}"
+    ssh_auth_fallback_users_csv_effective: "{{ lookup('env', 'ANSIBLE_SSH_AUTH_FALLBACK_USERS') | default('ubuntu,debian,ec2-user,cloud-user,admin', true) }}"
+    ssh_auth_fallback_users_effective: "{{ ssh_auth_fallback_users_csv_effective.split(',') | map('trim') | reject('equalto', '') | list }}"
 
   tasks:
     - name: Ensure swarm_managers group has at least one host
@@ -42,6 +46,15 @@
     - name: Skip infra reconciliation when no enabled infra nodes are declared
       ansible.builtin.meta: end_play
       when: desired_enabled_infra_nodes | length == 0
+
+    - name: Validate SSH auth retry settings
+      ansible.builtin.assert:
+        that:
+          - (ssh_auth_retries_effective | int) > 0
+          - (ssh_auth_delay_effective | int) > 0
+        fail_msg: >-
+          Invalid SSH auth retry settings. ANSIBLE_SSH_AUTH_RETRIES and ANSIBLE_SSH_AUTH_DELAY
+          must be positive integers.
 
     - name: Validate desired infra node schema
       ansible.builtin.assert:
@@ -82,6 +95,55 @@
         label: "{{ item.item.name }} -> {{ item.item.ssh_key_ref | default('default', true) }}"
       when: ssh_keys_dir_effective != ''
 
+    - name: List current swarm node ids
+      ansible.builtin.command:
+        argv: [docker, node, ls, -q]
+      register: current_swarm_node_ids
+      changed_when: false
+
+    - name: Read current swarm node hostnames
+      ansible.builtin.command:
+        argv:
+          - docker
+          - node
+          - inspect
+          - --format
+          - "{{ '{{.ID}}|{{.Description.Hostname}}' }}"
+          - "{{ item }}"
+      loop: "{{ current_swarm_node_ids.stdout_lines }}"
+      loop_control:
+        label: "{{ item }}"
+      register: current_swarm_node_hostname_results
+      changed_when: false
+
+    - name: Build current swarm hostname map
+      ansible.builtin.set_fact:
+        current_swarm_node_id_by_hostname: >-
+          {{
+            dict(
+              current_swarm_node_hostname_results.results
+              | map(attribute='stdout')
+              | map('trim')
+              | reject('equalto', '')
+              | map('split', '|', 1)
+            )
+          }}
+
+    - name: Build infra bootstrap and existing node lists
+      ansible.builtin.set_fact:
+        bootstrap_infra_nodes: >-
+          {{
+            desired_enabled_infra_nodes
+            | rejectattr('name', 'in', current_swarm_node_id_by_hostname.keys() | list)
+            | list
+          }}
+        existing_infra_nodes: >-
+          {{
+            desired_enabled_infra_nodes
+            | selectattr('name', 'in', current_swarm_node_id_by_hostname.keys() | list)
+            | list
+          }}
+
     - name: Ensure local SSH known_hosts directory exists
       ansible.builtin.file:
         path: "{{ lookup('env', 'HOME') + '/.ssh' }}"
@@ -95,7 +157,7 @@
           - ssh-keygen
           - -R
           - "{{ item.public_ip }}"
-      loop: "{{ desired_enabled_infra_nodes }}"
+      loop: "{{ bootstrap_infra_nodes }}"
       loop_control:
         label: "{{ item.name }} -> {{ item.public_ip }}"
       changed_when: false
@@ -108,7 +170,7 @@
           - ssh-keygen
           - -R
           - "[{{ item.public_ip }}]:{{ item.ssh_port }}"
-      loop: "{{ desired_enabled_infra_nodes }}"
+      loop: "{{ bootstrap_infra_nodes }}"
       loop_control:
         label: "{{ item.name }} -> [{{ item.public_ip }}]:{{ item.ssh_port }}"
       changed_when: false
@@ -123,7 +185,7 @@
         timeout: 300
         delay: 3
         sleep: 5
-      loop: "{{ desired_enabled_infra_nodes }}"
+      loop: "{{ bootstrap_infra_nodes }}"
       loop_control:
         label: "{{ item.name }} -> {{ item.public_ip }}:{{ item.ssh_port }}"
       changed_when: false
@@ -138,11 +200,15 @@
           - -p
           - "{{ item.ssh_port | string }}"
           - "{{ item.public_ip }}"
-      loop: "{{ desired_enabled_infra_nodes }}"
+      loop: "{{ bootstrap_infra_nodes }}"
       loop_control:
         label: "{{ item.name }} -> {{ item.public_ip }}:{{ item.ssh_port }}"
       register: infra_scan_known_host_result
+      retries: 12
+      delay: 5
+      until: infra_scan_known_host_result.rc == 0 and (infra_scan_known_host_result.stdout | trim) != ""
       changed_when: false
+      failed_when: infra_scan_known_host_result.rc != 0 or (infra_scan_known_host_result.stdout | trim) == ""
       become: false
 
     - name: Ensure known_hosts contains desired infra nodes
@@ -158,12 +224,55 @@
       changed_when: false
       become: false
 
+    - name: Verify SSH authentication works for infra bootstrap nodes
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        ssh_error_log="$(mktemp)"
+        trap 'rm -f "${ssh_error_log}"' EXIT
+        for ssh_user_candidate in {{ (([item.ssh_user] + ssh_auth_fallback_users_effective) | unique | map('quote') | join(' ')) }}; do
+          if ssh \
+            -o BatchMode=yes \
+            -o ConnectTimeout=10 \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -i {{ ((ssh_keys_dir_effective ~ '/' ~ (item.ssh_key_ref | default('default', true) | trim)) if ssh_keys_dir_effective != '' else ssh_private_key_file_effective) | quote }} \
+            -p {{ (item.ssh_port | string) | quote }} \
+            "${ssh_user_candidate}@{{ item.public_ip }}" \
+            true >/dev/null 2>"${ssh_error_log}"; then
+            printf '%s\n' "${ssh_user_candidate}"
+            exit 0
+          fi
+          printf '[%s] ' "${ssh_user_candidate}" >&2
+          tail -n 1 "${ssh_error_log}" >&2 || true
+        done
+        echo "SSH auth failed for infra node {{ item.name }}@{{ item.public_ip }} with users: {{ (([item.ssh_user] + ssh_auth_fallback_users_effective) | unique | join(', ')) }}." \
+          "Ensure authorized_keys matches ssh_key_ref={{ item.ssh_key_ref | default('default', true) }}." >&2
+        exit 1
+      args:
+        executable: /bin/bash
+      loop: "{{ bootstrap_infra_nodes }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.public_ip }}"
+      register: infra_ssh_auth_check_result
+      retries: "{{ ssh_auth_retries_effective | int }}"
+      delay: "{{ ssh_auth_delay_effective | int }}"
+      until: infra_ssh_auth_check_result.rc == 0
+      changed_when: false
+      become: false
+
+    - name: Build effective SSH user map for infra bootstrap nodes
+      ansible.builtin.set_fact:
+        effective_infra_ssh_users: "{{ (effective_infra_ssh_users | default({})) | combine({item.item.name: (item.stdout | trim)}) }}"
+      loop: "{{ infra_ssh_auth_check_result.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.name }} -> {{ item.stdout | trim }}"
+
     - name: Register desired enabled infra nodes as dynamic inventory targets
       ansible.builtin.add_host:
         name: "{{ item.name }}"
         groups: infra_targets
         ansible_host: "{{ item.public_ip }}"
-        ansible_user: "{{ item.ssh_user }}"
+        ansible_user: "{{ (effective_infra_ssh_users[item.name] if (effective_infra_ssh_users is defined and effective_infra_ssh_users[item.name] is defined) else item.ssh_user) }}"
         ansible_port: "{{ item.ssh_port | int }}"
         ansible_ssh_private_key_file: >-
           {{
@@ -176,7 +285,18 @@
         infra_kind: "{{ item.kind }}"
         infra_provider: "{{ item.provider | default('manual', true) }}"
         infra_region: "{{ item.region | default('', true) }}"
-      loop: "{{ desired_enabled_infra_nodes }}"
+      loop: "{{ bootstrap_infra_nodes }}"
+
+    - name: Build desired infra node id map for label phase
+      ansible.builtin.set_fact:
+        desired_infra_node_id_by_name: >-
+          {{
+            dict(
+              existing_infra_nodes
+              | map(attribute='name')
+              | zip(existing_infra_nodes | map(attribute='name') | map('extract', current_swarm_node_id_by_hostname))
+            )
+          }}
 
     - name: Get swarm worker join token
       ansible.builtin.command:
@@ -363,6 +483,15 @@
       ansible.builtin.set_fact:
         joined_infra_targets: []
         missing_infra_targets: []
+        labelable_infra_targets: "{{ hostvars[inventory_hostname].desired_infra_node_id_by_name | default({}) }}"
+        desired_infra_node_metadata_by_name: >-
+          {{
+            dict(
+              hostvars[inventory_hostname].desired_enabled_infra_nodes
+              | map(attribute='name')
+              | zip(hostvars[inventory_hostname].desired_enabled_infra_nodes)
+            )
+          }}
 
     - name: Classify infra targets by swarm_node_id presence
       ansible.builtin.set_fact:
@@ -380,15 +509,22 @@
       loop_control:
         label: "{{ item }}"
 
-    - name: Ensure all desired infra targets joined swarm and reported swarm_node_id
+    - name: Merge joined infra targets into label map
+      ansible.builtin.set_fact:
+        labelable_infra_targets: "{{ labelable_infra_targets | combine({item: hostvars[item].swarm_node_id}) }}"
+      loop: "{{ joined_infra_targets }}"
+      loop_control:
+        label: "{{ item }} -> {{ hostvars[item].swarm_node_id }}"
+
+    - name: Ensure all bootstrap infra targets joined swarm and reported swarm_node_id
       ansible.builtin.assert:
         that:
           - missing_infra_targets | length == 0
         fail_msg: >-
-          Infra targets missing swarm_node_id (likely SSH/bootstrap failure): {{ missing_infra_targets | join(', ') }}.
-          Check SSH host key validation and connectivity from runner.
+          Infra bootstrap targets missing swarm_node_id (likely SSH/bootstrap failure): {{ missing_infra_targets | join(', ') }}.
+          Check SSH authentication, authorized_keys and connectivity from runner.
 
-    - name: Wait until desired infra nodes are visible in swarm
+    - name: Wait until bootstrap infra nodes are visible in swarm
       ansible.builtin.command:
         argv:
           - docker
@@ -404,24 +540,24 @@
       delay: 1
       changed_when: false
 
-    - name: Label desired infra nodes
+    - name: Apply infra labels to all desired swarm infra nodes
       ansible.builtin.command:
         argv:
           - bash
           - "{{ repo_root }}/scripts/core/swarm-label-infra-node.sh"
           - --node-id
-          - "{{ hostvars[item].swarm_node_id }}"
+          - "{{ labelable_infra_targets[item] }}"
           - --kind
-          - "{{ hostvars[item].infra_kind }}"
+          - "{{ desired_infra_node_metadata_by_name[item].kind }}"
           - --infra-name
-          - "{{ hostvars[item].infra_name }}"
+          - "{{ item }}"
           - --provider
-          - "{{ hostvars[item].infra_provider | default('', true) }}"
+          - "{{ desired_infra_node_metadata_by_name[item].provider | default('', true) }}"
           - --region
-          - "{{ hostvars[item].infra_region | default('', true) }}"
-      loop: "{{ joined_infra_targets }}"
+          - "{{ desired_infra_node_metadata_by_name[item].region | default('', true) }}"
+      loop: "{{ labelable_infra_targets.keys() | list | sort }}"
       loop_control:
-        label: "{{ item }} -> {{ hostvars[item].swarm_node_id }}"
+        label: "{{ item }} -> {{ labelable_infra_targets[item] }}"
       register: infra_label_result
       changed_when: infra_label_result.rc == 10
       failed_when: infra_label_result.rc not in [0, 10]

@@ -287,6 +287,8 @@ jobs:
               echo "::error::SSH key ref '${key_ref}' is invalid or passphrase-protected; CI requires unencrypted private keys"
               exit 1
             fi
+            key_fp_sha256="$(ssh-keygen -lf "${key_file}" -E sha256 | awk '{print $2}')"
+            echo "::notice::Loaded SSH key ref '${key_ref}' fingerprint sha256=${key_fp_sha256}"
           done
 
           echo "ANSIBLE_SSH_KEYS_DIR=${KEYS_DIR}" >> "${GITHUB_ENV}"
