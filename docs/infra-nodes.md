@@ -31,7 +31,7 @@ timeweb_provisioned_infra_nodes = {
     role              = "manager"
     kind              = "prod"
     enabled           = true
-    ssh_key_ref       = "default"
+    ssh_key_ref       = "prod_infra"
     region            = "spb-3"
   }
 }
@@ -40,6 +40,7 @@ timeweb_provisioned_infra_nodes = {
 Use `preset_id` when you already know the fixed preset to deploy.
 Use `location + cpu + ram + disk` when you need a like-for-like replacement of
 an existing custom-configured Timeweb VM in another availability zone.
+Use a dedicated infra SSH key ref such as `prod_infra`; do not reuse VPN/dev refs.
 
 ## Run
 

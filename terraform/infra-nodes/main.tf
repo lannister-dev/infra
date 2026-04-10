@@ -33,7 +33,7 @@ locals {
 
   merged_infra_nodes = {
     for name, node in local.merged_infra_nodes_raw : name => {
-      public_ip   = tostring(try(node["public_ip"], ""))
+      public_ip   = tostring(coalesce(try(node["public_ip"], null), ""))
       role        = tostring(try(node["role"], "worker"))
       kind        = tostring(try(node["kind"], "prod"))
       ssh_user    = tostring(try(node["ssh_user"], "root"))
@@ -77,6 +77,15 @@ resource "local_file" "infra_nodes_inventory" {
     precondition {
       condition     = !var.timeweb_compute_enabled || length(var.timeweb_provisioned_infra_nodes) == 0 || trimspace(var.timeweb_api_token) != ""
       error_message = "timeweb_api_token is required when timeweb_compute_enabled=true and timeweb_provisioned_infra_nodes is not empty."
+    }
+
+    precondition {
+      condition = alltrue([
+        for name, node in local.merged_infra_nodes : (
+          !try(node.enabled, true) || length(trimspace(node.public_ip)) > 0
+        )
+      ])
+      error_message = "Every enabled infra node must have a non-empty public_ip in generated inventory."
     }
   }
 }
