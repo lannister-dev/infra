@@ -304,6 +304,7 @@ jobs:
             ansible/playbooks/deploy-stacks.yml
 
       - name: Reconcile node configs with control plane
+        if: ${{ inputs.reconcile_nodes == true }}
         run: |
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
