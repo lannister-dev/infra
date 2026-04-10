@@ -1,0 +1,323 @@
+---
+- name: Migrate Harbor compose to another manager node
+  hosts: "swarm_managers[0]"
+  gather_facts: false
+  become: false
+  any_errors_fatal: true
+
+  vars_files:
+    - ../inventory/generated/infra_nodes.yml
+
+  vars:
+    repo_root: "{{ lookup('env', 'REPO_ROOT') | default(playbook_dir + '/../..', true) }}"
+    ssh_private_key_file_effective: "{{ lookup('env', 'ANSIBLE_SSH_PRIVATE_KEY_FILE') | default('', true) | trim }}"
+    ssh_keys_dir_effective: "{{ lookup('env', 'ANSIBLE_SSH_KEYS_DIR') | default('', true) | trim }}"
+    harbor_target_node: "{{ lookup('env', 'HARBOR_TARGET_NODE') | default('', true) | trim }}"
+    harbor_source_node: "{{ lookup('env', 'HARBOR_SOURCE_NODE') | default('', true) | trim }}"
+    harbor_source_host_effective: "{{ harbor_source_node if (harbor_source_node | length) > 0 else (harbor_upstream_host | string | trim) }}"
+    harbor_workdir: "/root/harbor"
+    harbor_data_dirs:
+      - /data/ca_download
+      - /data/database
+      - /data/job_logs
+      - /data/redis
+      - /data/registry
+      - /data/scandata_exports
+      - /data/secret
+      - /data/trivy-adapter
+
+  tasks:
+    - name: Validate Harbor target node
+      ansible.builtin.assert:
+        that:
+          - harbor_target_node | length > 0
+        fail_msg: "Set HARBOR_TARGET_NODE to the target infra manager hostname."
+
+    - name: Ensure infra_nodes variable exists
+      ansible.builtin.assert:
+        that:
+          - infra_nodes is defined
+          - infra_nodes is iterable
+        fail_msg: "Generated inventory file ansible/inventory/generated/infra_nodes.yml is missing or invalid."
+
+    - name: Ensure SSH auth material is configured
+      ansible.builtin.assert:
+        that:
+          - ssh_keys_dir_effective != '' or ssh_private_key_file_effective != ''
+        fail_msg: >-
+          SSH key is not configured. Set ANSIBLE_SSH_KEYS_DIR (recommended, per-node keys)
+          or ANSIBLE_SSH_PRIVATE_KEY_FILE (single key fallback).
+
+    - name: Build enabled infra node list
+      ansible.builtin.set_fact:
+        enabled_infra_nodes: "{{ infra_nodes | selectattr('enabled', 'equalto', true) | list }}"
+
+    - name: Resolve Harbor target infra node entry
+      ansible.builtin.set_fact:
+        target_infra_node: "{{ (enabled_infra_nodes | selectattr('name', 'equalto', harbor_target_node) | list | first) | default({}) }}"
+
+    - name: Resolve Harbor source infra node entry
+      ansible.builtin.set_fact:
+        source_infra_node: >-
+          {{
+            (
+              enabled_infra_nodes | selectattr('name', 'equalto', harbor_source_host_effective) | list | first
+            )
+            | default(
+                enabled_infra_nodes | selectattr('public_ip', 'equalto', harbor_source_host_effective) | list | first,
+                true
+              )
+            | default({})
+          }}
+
+    - name: Ensure source and target Harbor infra nodes exist and are prod managers
+      ansible.builtin.assert:
+        that:
+          - target_infra_node | length > 0
+          - source_infra_node | length > 0
+          - target_infra_node.role == 'manager'
+          - source_infra_node.role == 'manager'
+          - target_infra_node.kind == 'prod'
+          - source_infra_node.kind == 'prod'
+          - target_infra_node.name != source_infra_node.name
+        fail_msg: >-
+          Harbor migration requires distinct source/target enabled prod managers.
+          source={{ harbor_source_host_effective }}, target={{ harbor_target_node }}.
+
+    - name: Check per-node SSH key file exists on controller
+      ansible.builtin.stat:
+        path: "{{ ssh_keys_dir_effective }}/{{ item.ssh_key_ref | default('default', true) | trim }}"
+      delegate_to: localhost
+      become: false
+      loop:
+        - "{{ source_infra_node }}"
+        - "{{ target_infra_node }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.ssh_key_ref | default('default', true) }}"
+      when: ssh_keys_dir_effective != ''
+      register: harbor_migration_ssh_key_file_stat_result
+      changed_when: false
+
+    - name: Ensure per-node SSH key file exists on controller
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+        fail_msg: >-
+          Missing SSH key for infra node {{ item.item.name }} (ref={{ item.item.ssh_key_ref | default('default', true) }}):
+          expected file {{ ssh_keys_dir_effective }}/{{ item.item.ssh_key_ref | default('default', true) | trim }}.
+      loop: "{{ harbor_migration_ssh_key_file_stat_result.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.name }} -> {{ item.item.ssh_key_ref | default('default', true) }}"
+      when: ssh_keys_dir_effective != ''
+
+    - name: Ensure local SSH known_hosts directory exists
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') + '/.ssh' }}"
+        state: directory
+        mode: "0700"
+      become: false
+
+    - name: Ensure Harbor nodes are present in known_hosts
+      ansible.builtin.known_hosts:
+        path: "{{ lookup('env', 'HOME') + '/.ssh/known_hosts' }}"
+        name: "{{ '[%s]:%s' | format(item.public_ip, item.ssh_port) if (item.ssh_port | int) != 22 else item.public_ip }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -T 10 -p ' ~ (item.ssh_port | string) ~ ' ' ~ item.public_ip) }}"
+        state: present
+      loop:
+        - "{{ source_infra_node }}"
+        - "{{ target_infra_node }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.public_ip }}"
+      become: false
+
+    - name: Ensure Harbor source directories exist
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (source_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ source_infra_node.ssh_port | string }}"
+          - "{{ source_infra_node.ssh_user }}@{{ source_infra_node.public_ip }}"
+          - "test -f {{ harbor_workdir }}/docker-compose.yml && test -f {{ harbor_workdir }}/harbor.yml && test -d /data/registry && test -d /data/database && test -d /data/secret"
+      changed_when: false
+
+    - name: Stop Harbor compose on source node
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (source_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ source_infra_node.ssh_port | string }}"
+          - "{{ source_infra_node.ssh_user }}@{{ source_infra_node.public_ip }}"
+          - "sh -lc 'cd {{ harbor_workdir }} && docker compose down || true'"
+      changed_when: true
+
+    - name: Copy Harbor workdir to target node
+      ansible.builtin.command:
+        argv:
+          - bash
+          - "{{ repo_root }}/scripts/core/copy-directory-ssh.sh"
+          - --source-host
+          - "{{ source_infra_node.public_ip }}"
+          - --source-user
+          - "{{ source_infra_node.ssh_user }}"
+          - --source-port
+          - "{{ source_infra_node.ssh_port | string }}"
+          - --source-key-file
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (source_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - --source-path
+          - "{{ harbor_workdir }}"
+          - --target-host
+          - "{{ target_infra_node.public_ip }}"
+          - --target-user
+          - "{{ target_infra_node.ssh_user }}"
+          - --target-port
+          - "{{ target_infra_node.ssh_port | string }}"
+          - --target-key-file
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (target_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - --target-path
+          - "{{ harbor_workdir }}"
+      changed_when: true
+
+    - name: Copy Harbor data directories to target node
+      ansible.builtin.command:
+        argv:
+          - bash
+          - "{{ repo_root }}/scripts/core/copy-directory-ssh.sh"
+          - --source-host
+          - "{{ source_infra_node.public_ip }}"
+          - --source-user
+          - "{{ source_infra_node.ssh_user }}"
+          - --source-port
+          - "{{ source_infra_node.ssh_port | string }}"
+          - --source-key-file
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (source_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - --source-path
+          - "{{ item }}"
+          - --target-host
+          - "{{ target_infra_node.public_ip }}"
+          - --target-user
+          - "{{ target_infra_node.ssh_user }}"
+          - --target-port
+          - "{{ target_infra_node.ssh_port | string }}"
+          - --target-key-file
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (target_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - --target-path
+          - "{{ item }}"
+      loop: "{{ harbor_data_dirs }}"
+      loop_control:
+        label: "{{ item }}"
+      changed_when: true
+
+    - name: Start Harbor compose on target node
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (target_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ target_infra_node.ssh_port | string }}"
+          - "{{ target_infra_node.ssh_user }}@{{ target_infra_node.public_ip }}"
+          - "sh -lc 'cd {{ harbor_workdir }} && docker compose up -d'"
+      changed_when: true
+
+    - name: Wait for Harbor proxy port on target node
+      ansible.builtin.wait_for:
+        host: "{{ target_infra_node.public_ip }}"
+        port: "{{ harbor_upstream_port | int }}"
+        state: started
+        timeout: 300
+        delay: 3
+        sleep: 5
+      changed_when: false
+
+    - name: Show Harbor compose status on target node
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=15
+          - -i
+          - >-
+            {{
+              (ssh_keys_dir_effective ~ '/' ~ (target_infra_node.ssh_key_ref | default('default', true) | trim))
+              if ssh_keys_dir_effective != ''
+              else ssh_private_key_file_effective
+            }}
+          - -p
+          - "{{ target_infra_node.ssh_port | string }}"
+          - "{{ target_infra_node.ssh_user }}@{{ target_infra_node.public_ip }}"
+          - "sh -lc 'cd {{ harbor_workdir }} && docker compose ps'"
+      register: harbor_target_compose_ps
+      changed_when: false
+
+    - name: Assert Harbor compose started on target node
+      ansible.builtin.assert:
+        that:
+          - "'harbor-core' in harbor_target_compose_ps.stdout"
+          - "'registry' in harbor_target_compose_ps.stdout"
+          - "'nginx' in harbor_target_compose_ps.stdout"
+        fail_msg: >-
+          Harbor compose did not start correctly on {{ target_infra_node.name }}.
+          docker compose ps output:
+          {{ harbor_target_compose_ps.stdout }}
