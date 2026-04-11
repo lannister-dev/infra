@@ -12,8 +12,8 @@
 postgres:
   image:
     tag: "16-alpine"
-  database: app
-  user: app
+  database: vpn_control_dev
+  user: vpn_dev_user
   existingSecret: data-dev-postgres
   storage:
     size: 5Gi
