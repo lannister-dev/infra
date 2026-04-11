@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-nats
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: nats
+    chart: {{ .Chart.Name }}
+spec:
+  serviceName: {{ .Release.Name }}-nats
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nats
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: nats
+        release: {{ .Release.Name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.exporter.port }}"
+    spec:
+      containers:
+        - name: nats
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command:
+            - nats-server
+            - --port={{ .Values.ports.client }}
+            - --http_port={{ .Values.ports.monitoring }}
+            {{- if .Values.jetstream.enabled }}
+            - --jetstream
+            - --store_dir=/data
+            - --js_max_store={{ .Values.jetstream.maxStore }}
+            - --js_max_mem={{ .Values.jetstream.maxMem }}
+            {{- end }}
+            - --auth=$(NATS_AUTH_TOKEN)
+          ports:
+            - name: client
+              containerPort: {{ .Values.ports.client }}
+            - name: monitoring
+              containerPort: {{ .Values.ports.monitoring }}
+          env:
+            - name: NATS_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret | default (printf "%s-nats-auth" .Release.Name) }}
+                  key: token
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: monitoring
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: monitoring
+            initialDelaySeconds: 3
+            periodSeconds: 5
+        {{- if .Values.exporter.enabled }}
+        - name: exporter
+          image: "{{ .Values.exporter.image.repository }}:{{ .Values.exporter.image.tag }}"
+          args:
+            - -varz
+            - -connz
+            - -routez
+            - -subz
+            - -jsz=all
+            - http://localhost:{{ .Values.ports.monitoring }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.exporter.port }}
+        {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.storage.storageClass }}
+        resources:
+          requests:
+            storage: {{ .Values.storage.size }}

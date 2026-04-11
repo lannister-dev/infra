@@ -1,0 +1,5 @@
+apiVersion: v2
+name: vpn-xray
+description: Xray-core VPN proxy — DaemonSet on VPN nodes
+version: 0.1.0
+appVersion: "latest"
