@@ -20,10 +20,10 @@ postgres:
     storageClassName: local-path
   resources:
     limits:
-      memory: 512Mi
-    requests:
-      cpu: 250m
       memory: 256Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
 
 redis:
   image:
@@ -34,7 +34,7 @@ redis:
     storageClassName: local-path
   resources:
     limits:
-      memory: 256Mi
-    requests:
-      cpu: 100m
       memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 32Mi
