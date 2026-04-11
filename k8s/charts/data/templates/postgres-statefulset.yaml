@@ -19,6 +19,8 @@ spec:
         app: postgres
         release: {{ .Release.Name }}
     spec:
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
       containers:
         - name: postgres
           image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
