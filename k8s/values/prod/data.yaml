@@ -9,6 +9,9 @@
 #   kubectl create secret generic data-prod-postgres -n data-prod --from-literal=password=<password>
 #   kubectl create secret generic data-prod-redis -n data-prod --from-literal=password=<password>
 
+nodeSelector:
+  kind: prod
+
 postgres:
   image:
     tag: "16-alpine"

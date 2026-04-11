@@ -1,6 +1,9 @@
 # data: PostgreSQL + Redis
 # Deployed per-environment (data-dev, data-prod namespaces)
 
+# Node selector applied to both postgres and redis
+nodeSelector: {}
+
 postgres:
   image:
     repository: postgres
