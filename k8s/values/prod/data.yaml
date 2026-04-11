@@ -15,8 +15,8 @@ nodeSelector:
 postgres:
   image:
     tag: "16-alpine"
-  database: app
-  user: app
+  database: vpn_control
+  user: vpn_prod_user
   existingSecret: data-prod-postgres
   storage:
     size: 20Gi
