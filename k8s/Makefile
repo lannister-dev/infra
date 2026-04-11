@@ -24,23 +24,34 @@ ns: ## Apply namespaces
 install-data-dev: ## Deploy data chart to data-dev namespace
 	helm upgrade --install data-dev $(CHARTS_DIR)/data \
 		-n data-dev --create-namespace \
-		$(if $(wildcard $(VALUES_DIR)/data-dev.yaml),-f $(VALUES_DIR)/data-dev.yaml)
+		-f $(VALUES_DIR)/dev/data.yaml
 
 .PHONY: install-data-prod
 install-data-prod: ## Deploy data chart to data-prod namespace
 	helm upgrade --install data-prod $(CHARTS_DIR)/data \
 		-n data-prod --create-namespace \
-		$(if $(wildcard $(VALUES_DIR)/data-prod.yaml),-f $(VALUES_DIR)/data-prod.yaml)
+		-f $(VALUES_DIR)/prod/data.yaml
 
 .PHONY: install-data
 install-data: install-data-dev install-data-prod ## Deploy data to both envs
 
-# ── NATS ───────────────────────────────────────────────────
+# ── NATS (official chart) ─────────────────────────────────
 .PHONY: install-nats
-install-nats: ## Deploy NATS
-	helm upgrade --install nats $(CHARTS_DIR)/nats-custom \
+install-nats: ## Deploy NATS (official Helm chart)
+	helm repo add nats https://nats-io.github.io/k8s/helm/charts/ 2>/dev/null || true
+	helm repo update nats
+	helm upgrade --install nats nats/nats \
 		-n nats --create-namespace \
-		$(if $(wildcard $(VALUES_DIR)/nats.yaml),-f $(VALUES_DIR)/nats.yaml)
+		-f $(VALUES_DIR)/prod/nats.yaml
+
+# ── Vault (official chart) ───────────────────────────────
+.PHONY: install-vault
+install-vault: ## Deploy Vault (official Helm chart)
+	helm repo add hashicorp https://helm.releases.hashicorp.com 2>/dev/null || true
+	helm repo update hashicorp
+	helm upgrade --install vault hashicorp/vault \
+		-n vault --create-namespace \
+		-f $(VALUES_DIR)/prod/vault.yaml
 
 # ── Monitoring (kube-prometheus-stack) ────────────────────
 .PHONY: install-monitoring
@@ -60,17 +71,17 @@ uninstall-monitoring: ## Remove monitoring stack
 install-xray: ## Deploy xray to vpn-prod
 	helm upgrade --install vpn-xray $(CHARTS_DIR)/vpn-xray \
 		-n vpn-prod --create-namespace \
-		$(if $(wildcard $(VALUES_DIR)/vpn-xray.yaml),-f $(VALUES_DIR)/vpn-xray.yaml)
+		-f $(VALUES_DIR)/prod/vpn-xray.yaml
 
 .PHONY: install-xray-dev
 install-xray-dev: ## Deploy xray to vpn-dev
 	helm upgrade --install vpn-xray-dev $(CHARTS_DIR)/vpn-xray \
 		-n vpn-dev --create-namespace \
-		-f $(VALUES_DIR)/vpn-xray-dev.yaml
+		-f $(VALUES_DIR)/dev/vpn-xray.yaml
 
 # ── All ───────────────────────────────────────────────────
 .PHONY: install-all
-install-all: ns install-monitoring install-data install-nats install-xray ## Deploy everything
+install-all: ns install-monitoring install-data install-nats install-vault install-xray ## Deploy everything
 
 # ── Status ────────────────────────────────────────────────
 .PHONY: status
@@ -104,6 +115,10 @@ uninstall-data-prod: ## Remove data-prod
 .PHONY: uninstall-nats
 uninstall-nats: ## Remove NATS
 	helm uninstall nats -n nats 2>/dev/null || true
+
+.PHONY: uninstall-vault
+uninstall-vault: ## Remove Vault
+	helm uninstall vault -n vault 2>/dev/null || true
 
 .PHONY: uninstall-xray
 uninstall-xray: ## Remove xray
