@@ -1,0 +1,55 @@
+# HashiCorp Vault Helm chart values — production
+#
+# Install:
+#   helm repo add hashicorp https://helm.releases.hashicorp.com
+#   helm upgrade --install vault hashicorp/vault \
+#     -n vault --create-namespace \
+#     -f values/prod/vault.yaml
+#
+# After install:
+#   kubectl exec -n vault vault-0 -- vault operator init
+#   kubectl exec -n vault vault-0 -- vault operator unseal <key>
+
+server:
+  enabled: true
+  image:
+    tag: "1.13.3"
+
+  dataStorage:
+    enabled: true
+    size: 5Gi
+    storageClass: local-path
+
+  standalone:
+    enabled: true
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      storage "file" {
+        path = "/vault/data"
+      }
+
+  resources:
+    limits:
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts:
+      - host: vault.example.com  # ← заменить на VAULT_HOST
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      traefik.ingress.kubernetes.io/router.tls: "true"
+
+ui:
+  enabled: true

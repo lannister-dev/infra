@@ -1,0 +1,23 @@
+---
+# K3s version — should match the server version
+k3s_version: ""
+
+# K3s server URL (required, e.g. https://10.0.0.1:6443)
+# k3s_url: ""
+
+# K3s node token from server (required)
+# k3s_token: ""
+
+# Extra arguments for k3s agent
+k3s_agent_extra_args: []
+
+# Node labels to apply after joining (list of key=value strings)
+# Example: ["role=vpn", "channel=prod"]
+k3s_node_labels: []
+
+# Node taints (list of key=value:effect strings)
+# Example: ["dedicated=vpn:NoSchedule"]
+k3s_node_taints: []
+
+# Data directory
+k3s_data_dir: /var/lib/rancher/k3s

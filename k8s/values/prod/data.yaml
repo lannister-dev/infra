@@ -1,0 +1,40 @@
+# data chart values — production (namespace: data-prod)
+#
+# Install:
+#   helm upgrade --install data-prod charts/data \
+#     -n data-prod --create-namespace \
+#     -f values/prod/data.yaml
+#
+# Secrets (create before install):
+#   kubectl create secret generic data-prod-postgres -n data-prod --from-literal=password=<password>
+#   kubectl create secret generic data-prod-redis -n data-prod --from-literal=password=<password>
+
+postgres:
+  image:
+    tag: "16-alpine"
+  database: app
+  user: app
+  existingSecret: data-prod-postgres
+  storage:
+    size: 20Gi
+    storageClassName: local-path
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+redis:
+  image:
+    tag: "7-alpine"
+  existingSecret: data-prod-redis
+  storage:
+    size: 5Gi
+    storageClassName: local-path
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
