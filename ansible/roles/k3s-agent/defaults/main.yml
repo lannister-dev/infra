@@ -21,3 +21,9 @@ k3s_node_taints: []
 
 # Data directory
 k3s_data_dir: /var/lib/rancher/k3s
+
+# Skip binary download (use when binary is pre-installed or GitHub is blocked)
+k3s_skip_download: false
+
+# Mirror URL for K3s binary download
+k3s_install_mirror: ""
