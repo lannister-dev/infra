@@ -1,5 +1,6 @@
 ---
 # K3s version (stable channel tag or exact version like v1.31.4+k3s1)
+# Empty = latest stable
 k3s_version: ""
 
 # Flannel backend: vxlan (default), wireguard-native, host-gw
@@ -12,7 +13,6 @@ k3s_server_extra_args: []
 k3s_tls_san: []
 
 # Disable built-in components (e.g. traefik, servicelb)
-# By default we keep Traefik (built into K3s)
 k3s_disable: []
 
 # Data directory for K3s state
@@ -20,3 +20,10 @@ k3s_data_dir: /var/lib/rancher/k3s
 
 # Where to write the kubeconfig
 k3s_kubeconfig_output: /etc/rancher/k3s/k3s.yaml
+
+# Skip binary download (use when binary is pre-installed or GitHub is blocked)
+k3s_skip_download: false
+
+# Mirror URL for K3s binary download (useful when github.com is slow/blocked)
+# Example: https://mirror.example.com
+k3s_install_mirror: ""

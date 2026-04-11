@@ -44,6 +44,8 @@
        'K3S_TOKEN': k3s_token,
        'K3S_DATA_DIR': k3s_data_dir}
       | combine({'INSTALL_K3S_VERSION': k3s_version} if k3s_version | length > 0 else {})
+      | combine({'INSTALL_K3S_SKIP_DOWNLOAD': 'true'} if k3s_skip_download | bool else {})
+      | combine({'INSTALL_K3S_MIRROR': k3s_install_mirror} if k3s_install_mirror | length > 0 else {})
     }}
   when: not k3s_agent_binary.stat.exists
   changed_when: true
