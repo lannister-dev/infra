@@ -1,0 +1,69 @@
+---
+# ============================================================
+# k3s-agent: Install K3s in agent (worker) mode and join existing cluster
+#
+# What this does:
+#   1. Downloads K3s installer
+#   2. Joins the cluster using server URL + token
+#   3. Applies node labels (role=vpn, channel=prod, etc.)
+#   4. Applies node taints if needed (to prevent non-VPN pods scheduling)
+#
+# After this role runs, the node appears in `kubectl get nodes`
+# and is ready to receive pod scheduling.
+# ============================================================
+
+- name: Check if K3s agent is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_agent_binary
+
+- name: Download K3s install script
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: "0755"
+  when: not k3s_agent_binary.stat.exists
+
+- name: Build K3s agent extra arguments
+  ansible.builtin.set_fact:
+    k3s_agent_install_args: >-
+      {{
+        (k3s_node_labels | map('regex_replace', '^(.*)$', '--node-label=\1') | list)
+        + (k3s_node_taints | map('regex_replace', '^(.*)$', '--node-taint=\1') | list)
+        + k3s_agent_extra_args
+      }}
+
+- name: Install K3s agent
+  ansible.builtin.command:
+    argv:
+      - /tmp/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version | default(omit, true) }}"
+    INSTALL_K3S_EXEC: "agent {{ k3s_agent_install_args | join(' ') }}"
+    K3S_URL: "{{ k3s_url }}"
+    K3S_TOKEN: "{{ k3s_token }}"
+    K3S_DATA_DIR: "{{ k3s_data_dir }}"
+  when: not k3s_agent_binary.stat.exists
+  changed_when: true
+  no_log: true
+
+- name: Ensure K3s agent service is enabled and running
+  ansible.builtin.systemd:
+    name: k3s-agent
+    state: started
+    enabled: true
+
+- name: Wait for K3s agent to register with server
+  ansible.builtin.command:
+    argv:
+      - k3s
+      - kubectl
+      - get
+      - node
+      - "{{ ansible_hostname }}"
+  delegate_to: "{{ k3s_server_host | default(groups['k3s_servers'][0]) }}"
+  register: k3s_agent_registered
+  retries: 30
+  delay: 5
+  until: k3s_agent_registered.rc == 0
+  changed_when: false

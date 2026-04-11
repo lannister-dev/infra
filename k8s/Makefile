@@ -1,0 +1,103 @@
+# K8s / K3s management
+# Usage:
+#   make ns              — apply namespaces
+#   make install-data    — deploy data chart to dev/prod
+#   make install-nats    — deploy NATS
+#   make install-xray    — deploy xray
+#   make status          — cluster overview
+#   make lint            — helm lint all charts
+
+SHELL := /bin/bash
+.DEFAULT_GOAL := help
+
+CHARTS_DIR := charts
+VALUES_DIR := values
+NS_FILE := namespaces/namespaces.yml
+
+# ── Namespaces ──────────────────────────────────────────────
+.PHONY: ns
+ns: ## Apply namespaces
+	kubectl apply -f $(NS_FILE)
+
+# ── Data (PostgreSQL + Redis) ──────────────────────────────
+.PHONY: install-data-dev
+install-data-dev: ## Deploy data chart to data-dev namespace
+	helm upgrade --install data-dev $(CHARTS_DIR)/data \
+		-n data-dev --create-namespace \
+		$(if $(wildcard $(VALUES_DIR)/data-dev.yaml),-f $(VALUES_DIR)/data-dev.yaml)
+
+.PHONY: install-data-prod
+install-data-prod: ## Deploy data chart to data-prod namespace
+	helm upgrade --install data-prod $(CHARTS_DIR)/data \
+		-n data-prod --create-namespace \
+		$(if $(wildcard $(VALUES_DIR)/data-prod.yaml),-f $(VALUES_DIR)/data-prod.yaml)
+
+.PHONY: install-data
+install-data: install-data-dev install-data-prod ## Deploy data to both envs
+
+# ── NATS ───────────────────────────────────────────────────
+.PHONY: install-nats
+install-nats: ## Deploy NATS
+	helm upgrade --install nats $(CHARTS_DIR)/nats-custom \
+		-n nats --create-namespace \
+		$(if $(wildcard $(VALUES_DIR)/nats.yaml),-f $(VALUES_DIR)/nats.yaml)
+
+# ── VPN Xray ──────────────────────────────────────────────
+.PHONY: install-xray
+install-xray: ## Deploy xray to vpn-prod
+	helm upgrade --install vpn-xray $(CHARTS_DIR)/vpn-xray \
+		-n vpn-prod --create-namespace \
+		$(if $(wildcard $(VALUES_DIR)/vpn-xray.yaml),-f $(VALUES_DIR)/vpn-xray.yaml)
+
+.PHONY: install-xray-dev
+install-xray-dev: ## Deploy xray to vpn-dev
+	helm upgrade --install vpn-xray-dev $(CHARTS_DIR)/vpn-xray \
+		-n vpn-dev --create-namespace \
+		-f $(VALUES_DIR)/vpn-xray-dev.yaml
+
+# ── All ───────────────────────────────────────────────────
+.PHONY: install-all
+install-all: ns install-data install-nats install-xray ## Deploy everything
+
+# ── Status ────────────────────────────────────────────────
+.PHONY: status
+status: ## Cluster overview
+	@echo "=== Nodes ==="
+	@kubectl get nodes -o wide
+	@echo ""
+	@echo "=== Pods (all namespaces) ==="
+	@kubectl get pods -A -o wide
+	@echo ""
+	@echo "=== Services ==="
+	@kubectl get svc -A
+
+# ── Lint ──────────────────────────────────────────────────
+.PHONY: lint
+lint: ## Helm lint all charts
+	@for chart in $(CHARTS_DIR)/*/; do \
+		echo "Linting $$chart..."; \
+		helm lint "$$chart" || exit 1; \
+	done
+
+# ── Uninstall ─────────────────────────────────────────────
+.PHONY: uninstall-data-dev
+uninstall-data-dev: ## Remove data-dev
+	helm uninstall data-dev -n data-dev 2>/dev/null || true
+
+.PHONY: uninstall-data-prod
+uninstall-data-prod: ## Remove data-prod
+	helm uninstall data-prod -n data-prod 2>/dev/null || true
+
+.PHONY: uninstall-nats
+uninstall-nats: ## Remove NATS
+	helm uninstall nats -n nats 2>/dev/null || true
+
+.PHONY: uninstall-xray
+uninstall-xray: ## Remove xray
+	helm uninstall vpn-xray -n vpn-prod 2>/dev/null || true
+
+# ── Help ──────────────────────────────────────────────────
+.PHONY: help
+help: ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'

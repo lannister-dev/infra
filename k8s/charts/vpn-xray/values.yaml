@@ -1,0 +1,60 @@
+# vpn-xray: Xray-core VPN proxy
+# Deploys as DaemonSet on nodes with label role=vpn
+
+image:
+  repository: ghcr.io/xtls/xray-core
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Node selection — only VPN nodes
+nodeSelector:
+  role: vpn
+  channel: prod
+
+# Tolerations for dedicated VPN nodes
+tolerations:
+  - key: dedicated
+    value: vpn
+    effect: NoSchedule
+
+# Xray listens on host ports
+hostNetwork: false
+ports:
+  tls:
+    containerPort: 10002
+    hostPort: 443
+  stats:
+    containerPort: 10085
+    hostPort: 10085
+
+# Paths for Traefik Ingress routing
+vpn:
+  wsPath: /api/v1/stream
+  xhttpPath: /api/v1/mobile
+
+# Xray config — mounted as ConfigMap
+# In production, create ConfigMap from actual xray config.json
+config:
+  existingConfigMap: ""
+  # Inline config (used if existingConfigMap is empty)
+  # json: |
+  #   { ... }
+
+# Fallback nginx (optional)
+fallback:
+  enabled: true
+  image:
+    repository: nginx
+    tag: "1.27.5-alpine"
+  replicas: 1
+
+resources:
+  limits:
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+logging:
+  maxSize: "32m"
+  maxFile: "8"

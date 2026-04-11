@@ -1,0 +1,40 @@
+# data: PostgreSQL + Redis
+# Deployed per-environment (data-dev, data-prod namespaces)
+
+postgres:
+  image:
+    repository: postgres
+    tag: "16-alpine"
+  port: 5432
+  # Published port on host (NodePort)
+  nodePort: null
+  database: app
+  user: app
+  # Secret name containing password (key: password)
+  existingSecret: ""
+  storage:
+    size: 10Gi
+    storageClass: local-path
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+redis:
+  image:
+    repository: redis
+    tag: "7-alpine"
+  port: 6379
+  # Secret name containing password (key: password)
+  existingSecret: ""
+  storage:
+    size: 2Gi
+    storageClass: local-path
+  resources:
+    limits:
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
