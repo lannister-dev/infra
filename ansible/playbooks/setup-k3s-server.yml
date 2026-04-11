@@ -1,0 +1,21 @@
+---
+# Setup K3s Server (Control Plane)
+#
+# Usage:
+#   ansible-playbook playbooks/setup-k3s-server.yml
+#
+# After this runs:
+#   - K3s server is running on the target node
+#   - kubeconfig is fetched to local machine
+#   - kubectl get nodes works locally
+
+- name: Install K3s server
+  hosts: k3s_servers
+  become: true
+  roles:
+    - role: k3s-server
+      vars:
+        k3s_tls_san:
+          - "{{ ansible_host }}"
+        k3s_disable:
+          - traefik
