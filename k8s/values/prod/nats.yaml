@@ -1,8 +1,5 @@
 # NATS official Helm chart values — production
 #
-# Uses official chart instead of our custom nats-custom chart.
-# Official chart is more maintained and supports clustering out of the box.
-#
 # Install:
 #   helm repo add nats https://nats-io.github.io/k8s/helm/charts/
 #   helm upgrade --install nats nats/nats \
@@ -16,24 +13,28 @@ config:
   jetstream:
     enabled: true
     fileStore:
+      enabled: true
       pvc:
         size: 5Gi
         storageClassName: local-path
+      maxSize: 512Mi
     memoryStore:
+      enabled: true
       maxSize: 128Mi
 
   merge:
     authorization:
-      token: "$NATS_AUTH_TOKEN"
+      token: $NATS_AUTH_TOKEN
 
 container:
+  image:
+    tag: 2.11-alpine
   env:
     NATS_AUTH_TOKEN:
       valueFrom:
         secretKeyRef:
           name: nats-auth
           key: token
-
   merge:
     resources:
       limits:
@@ -42,17 +43,9 @@ container:
         cpu: 100m
         memory: 128Mi
 
-service:
-  merge:
-    spec:
-      type: ClusterIP
-
-# NATS exporter for Prometheus
 promExporter:
   enabled: true
-  image: natsio/prometheus-nats-exporter:0.19.1
+  image:
+    repository: natsio/prometheus-nats-exporter
+    tag: "0.19.1"
   port: 7777
-
-# Monitoring port for healthchecks
-monitor:
-  port: 8222
