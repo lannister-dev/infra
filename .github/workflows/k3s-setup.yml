@@ -128,7 +128,9 @@ jobs:
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
           export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          SSH_KEY_FILE="${ANSIBLE_SSH_PRIVATE_KEY_FILE:-${ANSIBLE_SSH_KEYS_DIR}/prod_infra}"
           ansible-playbook -i ansible/inventory/production.ini \
+            -e "ansible_ssh_private_key_file=${SSH_KEY_FILE}" \
             ansible/playbooks/setup-k3s-server.yml
 
       - name: Setup K3s agent
@@ -137,7 +139,9 @@ jobs:
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
           export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
+          SSH_KEY_FILE="${ANSIBLE_SSH_PRIVATE_KEY_FILE:-${ANSIBLE_SSH_KEYS_DIR}/prod_infra}"
           ansible-playbook -i ansible/inventory/production.ini \
+            -e "ansible_ssh_private_key_file=${SSH_KEY_FILE}" \
             ansible/playbooks/setup-k3s-agent.yml
 
       - name: Cleanup
