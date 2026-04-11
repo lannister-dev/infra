@@ -9,6 +9,9 @@
 # After install:
 #   kubectl exec -n vault vault-0 -- vault operator init
 #   kubectl exec -n vault vault-0 -- vault operator unseal <key>
+#
+# Auto-unseal:
+#   kubectl create secret generic vault-unseal-key -n vault --from-literal=key=<UNSEAL_KEY>
 
 server:
   enabled: true
@@ -41,6 +44,18 @@ server:
     requests:
       cpu: 25m
       memory: 64Mi
+
+  extraVolumes:
+    - type: secret
+      name: vault-unseal-key
+
+  postStart:
+    - /bin/sh
+    - -c
+    - |
+      sleep 5
+      UNSEAL_KEY=$(cat /vault/userconfig/vault-unseal-key/key)
+      vault operator unseal "$UNSEAL_KEY" || true
 
   ingress:
     enabled: true
