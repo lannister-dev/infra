@@ -1,0 +1,33 @@
+# vpn-xray chart values — production
+#
+# Install:
+#   helm upgrade --install vpn-xray charts/vpn-xray \
+#     -n vpn-prod --create-namespace \
+#     -f values/prod/vpn-xray.yaml
+#
+# Config (create before install):
+#   kubectl create configmap xray-config -n vpn-prod --from-file=config.json=<path>
+
+image:
+  tag: "latest"
+
+nodeSelector:
+  role: vpn
+  channel: prod
+
+tolerations:
+  - key: dedicated
+    value: vpn
+    effect: NoSchedule
+
+hostNetwork: true
+
+config:
+  existingConfigMap: xray-config
+
+vpn:
+  wsPath: /api/v1/stream
+  xhttpPath: /api/v1/mobile
+
+fallback:
+  enabled: true

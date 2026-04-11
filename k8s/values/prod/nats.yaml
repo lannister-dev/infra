@@ -1,0 +1,58 @@
+# NATS official Helm chart values — production
+#
+# Uses official chart instead of our custom nats-custom chart.
+# Official chart is more maintained and supports clustering out of the box.
+#
+# Install:
+#   helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+#   helm upgrade --install nats nats/nats \
+#     -n nats --create-namespace \
+#     -f values/prod/nats.yaml
+#
+# Secrets (create before install):
+#   kubectl create secret generic nats-auth -n nats --from-literal=token=<token>
+
+config:
+  jetstream:
+    enabled: true
+    fileStore:
+      pvc:
+        size: 5Gi
+        storageClassName: local-path
+    memoryStore:
+      maxSize: 128Mi
+
+  merge:
+    authorization:
+      token: "$NATS_AUTH_TOKEN"
+
+container:
+  env:
+    NATS_AUTH_TOKEN:
+      valueFrom:
+        secretKeyRef:
+          name: nats-auth
+          key: token
+
+  merge:
+    resources:
+      limits:
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+service:
+  merge:
+    spec:
+      type: ClusterIP
+
+# NATS exporter for Prometheus
+promExporter:
+  enabled: true
+  image: natsio/prometheus-nats-exporter:0.19.1
+  port: 7777
+
+# Monitoring port for healthchecks
+monitor:
+  port: 8222

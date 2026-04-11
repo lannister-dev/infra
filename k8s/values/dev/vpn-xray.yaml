@@ -1,0 +1,40 @@
+# vpn-xray chart values — dev
+#
+# Install:
+#   helm upgrade --install vpn-xray-dev charts/vpn-xray \
+#     -n vpn-dev --create-namespace \
+#     -f values/dev/vpn-xray.yaml
+#
+# Config (create before install):
+#   kubectl create configmap xray-config-dev -n vpn-dev --from-file=config.json=<path>
+
+image:
+  tag: "latest"
+
+nodeSelector:
+  role: vpn
+  channel: dev
+
+tolerations:
+  - key: dedicated
+    value: vpn
+    effect: NoSchedule
+
+hostNetwork: true
+
+config:
+  existingConfigMap: xray-config-dev
+
+vpn:
+  wsPath: /api/v1/stream
+  xhttpPath: /api/v1/mobile
+
+fallback:
+  enabled: false
+
+resources:
+  limits:
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
