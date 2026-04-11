@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}-xray
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: xray
+    chart: {{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: xray
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: xray
+    spec:
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      hostNetwork: {{ .Values.hostNetwork }}
+      containers:
+        - name: xray
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["xray", "run", "-config", "/etc/xray/config.json"]
+          ports:
+            - name: tls
+              containerPort: {{ .Values.ports.tls.containerPort }}
+              hostPort: {{ .Values.ports.tls.hostPort }}
+              protocol: TCP
+            - name: stats
+              containerPort: {{ .Values.ports.stats.containerPort }}
+              hostPort: {{ .Values.ports.stats.hostPort }}
+              protocol: TCP
+          volumeMounts:
+            - name: xray-config
+              mountPath: /etc/xray
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command: ["xray", "api", "statsquery", "--server=127.0.0.1:10085"]
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command: ["xray", "api", "statsquery", "--server=127.0.0.1:10085"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: xray-config
+          configMap:
+            name: {{ .Values.config.existingConfigMap | default (printf "%s-xray-config" .Release.Name) }}

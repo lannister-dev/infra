@@ -1,0 +1,83 @@
+---
+# ============================================================
+# k3s-server: Install and configure K3s in server (control plane) mode
+#
+# What this does:
+#   1. Downloads the K3s installer script
+#   2. Runs it with server arguments (flannel backend, TLS SANs, etc.)
+#   3. Waits for the API server to be ready
+#   4. Reads the node token (agents need it to join)
+#   5. Reads the kubeconfig (for kubectl access)
+#
+# After this role runs, you have a working single-node K8s cluster.
+# ============================================================
+
+- name: Check if K3s is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Download K3s install script
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: "0755"
+  when: not k3s_binary.stat.exists
+
+- name: Build K3s server install arguments
+  ansible.builtin.set_fact:
+    k3s_install_args: >-
+      {{
+        ['--flannel-backend=' + k3s_flannel_backend]
+        + (k3s_tls_san | map('regex_replace', '^(.*)$', '--tls-san=\1') | list)
+        + (k3s_disable | map('regex_replace', '^(.*)$', '--disable=\1') | list)
+        + k3s_server_extra_args
+      }}
+
+- name: Install K3s server
+  ansible.builtin.command:
+    argv:
+      - /tmp/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version | default(omit, true) }}"
+    INSTALL_K3S_EXEC: "server {{ k3s_install_args | join(' ') }}"
+    K3S_DATA_DIR: "{{ k3s_data_dir }}"
+  when: not k3s_binary.stat.exists
+  changed_when: true
+
+- name: Ensure K3s service is enabled and running
+  ansible.builtin.systemd:
+    name: k3s
+    state: started
+    enabled: true
+
+- name: Wait for K3s API server to be ready
+  ansible.builtin.command:
+    argv:
+      - k3s
+      - kubectl
+      - get
+      - nodes
+  register: k3s_nodes_check
+  retries: 30
+  delay: 5
+  until: k3s_nodes_check.rc == 0
+  changed_when: false
+
+- name: Read K3s node token
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_node_token_raw
+
+- name: Store K3s node token
+  ansible.builtin.set_fact:
+    k3s_node_token: "{{ k3s_node_token_raw.content | b64decode | trim }}"
+
+- name: Read kubeconfig
+  ansible.builtin.slurp:
+    src: "{{ k3s_kubeconfig_output }}"
+  register: k3s_kubeconfig_raw
+
+- name: Store kubeconfig content
+  ansible.builtin.set_fact:
+    k3s_kubeconfig: "{{ k3s_kubeconfig_raw.content | b64decode }}"

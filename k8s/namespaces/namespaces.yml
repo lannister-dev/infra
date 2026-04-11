@@ -1,0 +1,63 @@
+# ============================================================
+# Kubernetes Namespaces
+#
+# Namespace = изолированное пространство имён.
+# Аналог: в Swarm у тебя стеки vpn, vpn-dev, monitoring, data-prod.
+# В K8s — namespaces. Ресурсы в разных namespaces не пересекаются.
+#
+# Применить: kubectl apply -f k8s/namespaces/namespaces.yml
+# Посмотреть: kubectl get namespaces
+# ============================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vpn-prod
+  labels:
+    env: prod
+    purpose: vpn
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vpn-dev
+  labels:
+    env: dev
+    purpose: vpn
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    purpose: monitoring
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: data-prod
+  labels:
+    env: prod
+    purpose: data
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: data-dev
+  labels:
+    env: dev
+    purpose: data
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nats
+  labels:
+    purpose: messaging
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vault
+  labels:
+    purpose: secrets
