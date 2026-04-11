@@ -1,21 +1,9 @@
 # 1) Manual nodes by public IP (optional fallback mode)
 infra_nodes = {}
 
-# 2) Existing Timeweb servers by server_id (recommended current mode)
-# Set provider_api_enabled=true after replacing server_id placeholders below.
-provider_api_enabled = true
-timeweb_infra_nodes = {
-  "infra-manager-01" = {
-    server_id   = "6183431"
-    role        = "manager"
-    kind        = "prod"
-    ssh_user    = "root"
-    ssh_port    = 22
-    ssh_key_ref = "prod_infra"
-    enabled     = true
-    region      = "ru-1"
-  }
-}
+# 2) Existing Timeweb servers by server_id (legacy lookup mode)
+provider_api_enabled = false
+timeweb_infra_nodes  = {}
 
 # 3) Timeweb compute mode (create/destroy VPS via Terraform)
 timeweb_compute_enabled = true
