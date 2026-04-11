@@ -19,6 +19,11 @@ NS_FILE := namespaces/namespaces.yml
 ns: ## Apply namespaces
 	kubectl apply -f $(NS_FILE)
 
+# ── Legacy aliases ────────────────────────────────────────
+.PHONY: install-legacy-data-aliases
+install-legacy-data-aliases: ## Create Swarm-compatible data service aliases in K8s app namespaces
+	kubectl apply -f manifests/legacy-data-service-aliases.yaml
+
 # ── Data (PostgreSQL + Redis) ──────────────────────────────
 .PHONY: install-data-dev
 install-data-dev: ## Deploy data chart to data-dev namespace
@@ -81,7 +86,7 @@ install-xray-dev: ## Deploy xray to vpn-dev
 
 # ── All ───────────────────────────────────────────────────
 .PHONY: install-all
-install-all: ns install-monitoring install-data install-nats install-vault install-xray ## Deploy everything
+install-all: ns install-monitoring install-data install-legacy-data-aliases install-nats install-vault install-xray ## Deploy everything
 
 # ── Status ────────────────────────────────────────────────
 .PHONY: status
