@@ -1,5 +1,0 @@
-apiVersion: v2
-name: nats-custom
-description: NATS with JetStream — messaging backbone
-version: 0.1.0
-appVersion: "2.11"
