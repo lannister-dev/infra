@@ -42,6 +42,19 @@ install-nats: ## Deploy NATS
 		-n nats --create-namespace \
 		$(if $(wildcard $(VALUES_DIR)/nats.yaml),-f $(VALUES_DIR)/nats.yaml)
 
+# ── Monitoring (kube-prometheus-stack) ────────────────────
+.PHONY: install-monitoring
+install-monitoring: ## Deploy kube-prometheus-stack
+	helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
+	helm repo update prometheus-community
+	helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+		-n monitoring --create-namespace \
+		-f $(VALUES_DIR)/prod/monitoring.yaml
+
+.PHONY: uninstall-monitoring
+uninstall-monitoring: ## Remove monitoring stack
+	helm uninstall monitoring -n monitoring 2>/dev/null || true
+
 # ── VPN Xray ──────────────────────────────────────────────
 .PHONY: install-xray
 install-xray: ## Deploy xray to vpn-prod
@@ -57,7 +70,7 @@ install-xray-dev: ## Deploy xray to vpn-dev
 
 # ── All ───────────────────────────────────────────────────
 .PHONY: install-all
-install-all: ns install-data install-nats install-xray ## Deploy everything
+install-all: ns install-monitoring install-data install-nats install-xray ## Deploy everything
 
 # ── Status ────────────────────────────────────────────────
 .PHONY: status
