@@ -303,15 +303,6 @@ jobs:
           ansible-playbook -i ansible/inventory/production.ini \
             ansible/playbooks/deploy-stacks.yml
 
-      - name: Sync Harbor Traefik dynamic config to active host path
-        run: |
-          set -Eeo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
-          ansible swarm_managers -i ansible/inventory/production.ini \
-            -m copy \
-            -a "src=${GITHUB_WORKSPACE}/docker/traefik/dynamic/harbor.yml dest=/opt/vpn-infra/docker/traefik/dynamic/harbor.yml mode=0644"
-
       - name: Reconcile node configs with control plane
         if: ${{ inputs.reconcile_nodes == true }}
         run: |
