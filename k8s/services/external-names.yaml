@@ -1,0 +1,60 @@
+# ExternalName services — short DNS aliases for cross-namespace access
+# Applied to vpn-dev and vpn-prod so apps can use simple names
+# like "postgres-prod", "redis-dev", "nats"
+
+---
+# vpn-dev
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-dev
+  namespace: vpn-dev
+spec:
+  type: ExternalName
+  externalName: data-dev-postgres.data-dev.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-dev
+  namespace: vpn-dev
+spec:
+  type: ExternalName
+  externalName: data-dev-redis.data-dev.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+  namespace: vpn-dev
+spec:
+  type: ExternalName
+  externalName: nats.nats.svc.cluster.local
+---
+# vpn-prod
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-prod
+  namespace: vpn-prod
+spec:
+  type: ExternalName
+  externalName: data-prod-postgres.data-prod.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-prod
+  namespace: vpn-prod
+spec:
+  type: ExternalName
+  externalName: data-prod-redis.data-prod.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+  namespace: vpn-prod
+spec:
+  type: ExternalName
+  externalName: nats.nats.svc.cluster.local
