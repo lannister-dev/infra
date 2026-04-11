@@ -19,14 +19,10 @@ spec:
       labels:
         app: xray
     spec:
-      {{- with .Values.nodeSelector }}
       nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
       tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- toYaml .Values.tolerations | nindent 8 }}
       hostNetwork: {{ .Values.hostNetwork }}
       containers:
         - name: xray
@@ -46,10 +42,8 @@ spec:
             - name: xray-config
               mountPath: /etc/xray
               readOnly: true
-          {{- with .Values.resources }}
           resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             exec:
               command: ["xray", "api", "statsquery", "--server=127.0.0.1:10085"]

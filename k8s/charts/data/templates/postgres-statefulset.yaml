@@ -38,10 +38,8 @@ spec:
             - name: data
               mountPath: /var/lib/postgresql/data
               subPath: pgdata
-          {{- with .Values.postgres.resources }}
           resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
           livenessProbe:
             exec:
               command: ["pg_isready", "-U", {{ .Values.postgres.user | quote }}]
