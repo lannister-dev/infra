@@ -17,7 +17,7 @@ tolerations:
     value: vpn
     effect: NoSchedule
 
-hostNetwork: false
+hostNetwork: true
 
 config:
   json: |
@@ -80,7 +80,7 @@ config:
         {
           "tag": "vless-reality",
           "listen": "0.0.0.0",
-          "port": 10002,
+          "port": 443,
           "protocol": "vless",
           "settings": { "clients": [], "decryption": "none" },
           "streamSettings": {
