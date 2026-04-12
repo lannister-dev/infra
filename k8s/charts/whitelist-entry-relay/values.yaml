@@ -1,0 +1,21 @@
+image:
+  repository: haproxy
+  tag: "3.1-alpine"
+
+nodeSelector:
+  role: vpn
+  traffic_role: whitelist_entry
+
+tolerations:
+  - key: dedicated
+    value: vpn
+    effect: NoSchedule
+
+upstream: "45.38.228.130:443"
+
+resources:
+  limits:
+    memory: 128Mi
+  requests:
+    cpu: 25m
+    memory: 32Mi
