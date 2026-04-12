@@ -24,7 +24,7 @@ config:
 
   merge:
     authorization:
-      token: $NATS_AUTH_TOKEN
+      token: "<< $NATS_AUTH_TOKEN >>"
 
 container:
   image:
