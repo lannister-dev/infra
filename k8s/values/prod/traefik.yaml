@@ -1,0 +1,94 @@
+# Traefik Ingress Controller — production
+#
+# Install:
+#   helm repo add traefik https://traefik.github.io/charts
+#   helm upgrade --install traefik traefik/traefik \
+#     -n traefik --create-namespace \
+#     -f values/prod/traefik.yaml
+
+# All DNS in Cloudflare points to prod node
+nodeSelector:
+  kind: prod
+
+# Ports
+ports:
+  web:
+    port: 80
+    exposedPort: 80
+    protocol: TCP
+  websecure:
+    port: 443
+    exposedPort: 443
+    protocol: TCP
+  metrics:
+    port: 9101
+    exposedPort: 9101
+    protocol: TCP
+  traefik:
+    port: 9000
+    exposedPort: 9000
+    protocol: TCP
+
+# Dashboard
+ingressRoute:
+  dashboard:
+    enabled: false
+
+api:
+  dashboard: true
+  insecure: true
+
+# hostNetwork binds 80/443 directly on the node
+service:
+  type: ClusterIP
+
+hostNetwork: true
+
+deployment:
+  strategy:
+    type: Recreate
+
+securityContext:
+  capabilities:
+    add:
+      - NET_BIND_SERVICE
+    drop:
+      - ALL
+  runAsNonRoot: false
+  runAsUser: 0
+
+# Let's Encrypt
+additionalArguments:
+  - "--certificatesresolvers.letsencrypt.acme.email=admin@lannister-dev.ru"
+  - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
+  - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+  - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+  - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+# Persistence for ACME certs
+persistence:
+  enabled: true
+  size: 128Mi
+  storageClass: local-path
+  path: /data
+
+# Resources
+resources:
+  limits:
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# Logs
+logs:
+  general:
+    level: INFO
+  access:
+    enabled: true
+
+# Watch all namespaces
+providers:
+  kubernetesIngress:
+    publishedService:
+      enabled: true
