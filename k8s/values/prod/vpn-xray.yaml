@@ -130,5 +130,5 @@ fallback:
   enabled: true
 
 nodeAgent:
-  bootstrapToken: "jnfDjwj8EzBncWWoXUb4r2KtnSjebSmcYclRBaVzv_A"
+  bootstrapToken: ""
   secretName: node-agent-prod-bootstrap

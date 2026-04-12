@@ -130,7 +130,7 @@ fallback:
   enabled: false
 
 nodeAgent:
-  bootstrapToken: "jnfDjwj8EzBncWWoXUb4r2KtnSjebSmcYclRBaVzv_A"
+  bootstrapToken: ""
   secretName: node-agent-dev-bootstrap
 
 resources:
