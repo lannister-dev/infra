@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubernetes-dashboard
+  labels:
+    app: kubernetes-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubernetes-dashboard
+  template:
+    metadata:
+      labels:
+        app: kubernetes-dashboard
+    spec:
+      serviceAccountName: kubernetes-dashboard
+      containers:
+        - name: dashboard
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: 8443
+              protocol: TCP
+          args:
+            - --auto-generate-certificates
+            - --namespace={{ .Release.Namespace }}
+          volumeMounts:
+            - name: kubernetes-dashboard-certs
+              mountPath: /certs
+            - name: tmp-volume
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /
+              port: 8443
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsUser: 1001
+            runAsGroup: 2001
+          resources:
+            {{- toYaml .Values.resources.dashboard | nindent 12 }}
+      volumes:
+        - name: kubernetes-dashboard-certs
+          secret:
+            secretName: kubernetes-dashboard-certs
+        - name: tmp-volume
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard-metrics-scraper
+  labels:
+    app: dashboard-metrics-scraper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard-metrics-scraper
+  template:
+    metadata:
+      labels:
+        app: dashboard-metrics-scraper
+    spec:
+      serviceAccountName: kubernetes-dashboard
+      containers:
+        - name: metrics-scraper
+          image: "{{ .Values.metricsScraperImage.repository }}:{{ .Values.metricsScraperImage.tag }}"
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /
+              port: 8000
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsUser: 1001
+            runAsGroup: 2001
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+          resources:
+            {{- toYaml .Values.resources.metricsScraper | nindent 12 }}
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}

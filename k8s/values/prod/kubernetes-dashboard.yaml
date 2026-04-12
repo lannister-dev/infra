@@ -1,0 +1,10 @@
+# Kubernetes Dashboard — production
+#
+# Install:
+#   helm upgrade --install kubernetes-dashboard charts/kubernetes-dashboard \
+#     -n kubernetes-dashboard --create-namespace \
+#     -f values/prod/kubernetes-dashboard.yaml
+
+ingress:
+  enabled: true
+  host: kubernetes.lannister-dev.ru
