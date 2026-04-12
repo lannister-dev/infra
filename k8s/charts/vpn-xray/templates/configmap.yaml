@@ -1,0 +1,12 @@
+{{- if not .Values.config.existingConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-xray-config
+  labels:
+    app: xray
+    chart: {{ .Chart.Name }}
+data:
+  config.json: |
+    {{- .Values.config.json | nindent 4 }}
+{{- end }}
