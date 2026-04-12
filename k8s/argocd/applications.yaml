@@ -1,0 +1,145 @@
+# Local charts from this repo
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vpn-xray
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: git@github.com:lannister-dev/infra.git
+    targetRevision: main
+    path: k8s/charts/vpn-xray
+    helm:
+      valueFiles:
+        - ../../values/prod/vpn-xray.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vpn-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vpn-xray-dev
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: git@github.com:lannister-dev/infra.git
+    targetRevision: main
+    path: k8s/charts/vpn-xray
+    helm:
+      valueFiles:
+        - ../../values/dev/vpn-xray.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vpn-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: whitelist-entry-relay
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: git@github.com:lannister-dev/infra.git
+    targetRevision: main
+    path: k8s/charts/whitelist-entry-relay
+    helm:
+      valueFiles:
+        - ../../values/prod/whitelist-entry-relay.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vpn-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: data-dev
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: git@github.com:lannister-dev/infra.git
+    targetRevision: main
+    path: k8s/charts/data
+    helm:
+      valueFiles:
+        - ../../values/dev/data.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: data-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: data-prod
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: git@github.com:lannister-dev/infra.git
+    targetRevision: main
+    path: k8s/charts/data
+    helm:
+      valueFiles:
+        - ../../values/prod/data.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: data-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubernetes-dashboard
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: git@github.com:lannister-dev/infra.git
+    targetRevision: main
+    path: k8s/charts/kubernetes-dashboard
+    helm:
+      valueFiles:
+        - ../../values/prod/kubernetes-dashboard.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubernetes-dashboard
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -84,6 +84,20 @@ install-xray-dev: ## Deploy xray to vpn-dev
 		-n vpn-dev --create-namespace \
 		-f $(VALUES_DIR)/dev/vpn-xray.yaml
 
+# ── ArgoCD ────────────────────────────────────────────────
+.PHONY: install-argocd
+install-argocd: ## Install ArgoCD and apply app definitions
+	kubectl create namespace argocd 2>/dev/null || true
+	kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --server-side
+	kubectl apply -f argocd/ingress.yaml
+	kubectl apply -f argocd/project.yaml
+	kubectl apply -f argocd/applications.yaml
+	kubectl apply -f argocd/applications-external.yaml
+
+.PHONY: argocd-password
+argocd-password: ## Show ArgoCD admin password
+	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo
+
 # ── All ───────────────────────────────────────────────────
 .PHONY: install-all
 install-all: ns install-monitoring install-data install-data-service-aliases install-nats install-vault install-xray ## Deploy everything

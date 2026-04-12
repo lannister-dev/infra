@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: infra
+  namespace: argocd
+spec:
+  description: VPN Infrastructure
+  sourceRepos:
+    - git@github.com:lannister-dev/infra.git
+    - https://nats-io.github.io/k8s/helm/charts/
+    - https://helm.releases.hashicorp.com
+    - https://prometheus-community.github.io/helm-charts
+  destinations:
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
