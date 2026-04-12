@@ -1,0 +1,172 @@
+# Harbor container registry — production
+#
+# Chart: https://helm.goharbor.io (harbor)
+# Docs: https://goharbor.io/docs/2.14.0/install-config/harbor-ha-helm/
+#
+# Secrets (create before deploy):
+#   kubectl create namespace harbor
+#   kubectl create secret generic harbor-admin -n harbor --from-literal=password=<password>
+#   kubectl create secret generic harbor-secret-key -n harbor --from-literal=key=<16-char-secret>
+
+# ── Expose ────────────────────────────────────────────────
+expose:
+  type: ingress
+  tls:
+    enabled: false  # TLS terminated by Traefik certResolver
+  ingress:
+    hosts:
+      core: harbor.lannister-dev.ru
+    className: traefik
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      traefik.ingress.kubernetes.io/router.tls: "true"
+      traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+
+externalURL: https://harbor.lannister-dev.ru
+
+# ── Auth ──────────────────────────────────────────────────
+existingSecretAdminPassword: harbor-admin
+existingSecretAdminPasswordKey: password
+existingSecretSecretKey: harbor-secret-key
+
+# ── Image pull policy ─────────────────────────────────────
+# IfNotPresent prevents chicken-and-egg: Harbor images come from
+# Docker Hub (goharbor/*), cached on node after first pull.
+imagePullPolicy: IfNotPresent
+
+# ── Persistence ───────────────────────────────────────────
+persistence:
+  enabled: true
+  resourcePolicy: "keep"
+  persistentVolumeClaim:
+    registry:
+      storageClass: local-path
+      accessMode: ReadWriteOnce
+      size: 30Gi
+    database:
+      storageClass: local-path
+      accessMode: ReadWriteOnce
+      size: 5Gi
+    redis:
+      storageClass: local-path
+      accessMode: ReadWriteOnce
+      size: 1Gi
+    jobservice:
+      jobLog:
+        storageClass: local-path
+        accessMode: ReadWriteOnce
+        size: 1Gi
+    trivy:
+      storageClass: local-path
+      accessMode: ReadWriteOnce
+      size: 5Gi
+
+# ── Components ────────────────────────────────────────────
+# ── Node placement ───────────────────────────────────────
+# All components on infra-manager-02 (kind=prod, most resources).
+# local-path PVCs are node-local, so everything must be co-located.
+# Harbor chart has per-component nodeSelector, no global option.
+_nodeSelector: &ns
+  kind: prod
+
+# ── Components ────────────────────────────────────────────
+portal:
+  replicas: 1
+  nodeSelector: *ns
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+core:
+  replicas: 1
+  nodeSelector: *ns
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+jobservice:
+  replicas: 1
+  nodeSelector: *ns
+  maxJobWorkers: 5
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+registry:
+  replicas: 1
+  nodeSelector: *ns
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+trivy:
+  enabled: true
+  replicas: 1
+  nodeSelector: *ns
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+database:
+  type: internal
+  internal:
+    nodeSelector: *ns
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+redis:
+  type: internal
+  internal:
+    nodeSelector: *ns
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+exporter:
+  replicas: 1
+  nodeSelector: *ns
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+nginx:
+  replicas: 0
+
+# ── Metrics ───────────────────────────────────────────────
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+
+# ── Update strategy ───────────────────────────────────────
+# local-path is RWO — cannot use RollingUpdate
+updateStrategy:
+  type: Recreate
+
+cache:
+  enabled: false

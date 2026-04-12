@@ -54,3 +54,30 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor
+  namespace: argocd
+spec:
+  project: infra
+  sources:
+    - repoURL: https://helm.goharbor.io
+      targetRevision: "1.18.*"
+      chart: harbor
+      helm:
+        valueFiles:
+          - $values/k8s/values/prod/harbor.yaml
+    - repoURL: git@github.com:lannister-dev/infra.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: harbor
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
