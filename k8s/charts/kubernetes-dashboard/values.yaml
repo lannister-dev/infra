@@ -1,0 +1,26 @@
+image:
+  repository: kubernetesui/dashboard
+  tag: "v2.7.0"
+
+metricsScraperImage:
+  repository: kubernetesui/metrics-scraper
+  tag: "v1.0.9"
+
+ingress:
+  enabled: true
+  host: kubernetes.lannister-dev.ru
+  annotations: {}
+
+resources:
+  dashboard:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  metricsScraper:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
