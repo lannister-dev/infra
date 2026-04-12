@@ -61,3 +61,10 @@ metadata:
   name: vault
   labels:
     purpose: secrets
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: harbor
+  labels:
+    purpose: registry
