@@ -1,13 +1,9 @@
 # Terraform Layout
 
-Terraform is split into two root modules with separate state:
+Terraform manages VPS server provisioning for the K3s cluster.
 
 - Terraform version: `>= 1.8.0, < 2.0.0`
 
-- `terraform/foundation`
-  - overlay networks
-  - persistent volumes
-  - docker configs rendered from repository files/templates
 - `terraform/nodes`
   - declarative desired VPN node catalog
   - generated Ansible inventory for node reconciliation
@@ -18,18 +14,15 @@ Terraform is split into two root modules with separate state:
 
 Remote backend examples:
 
-- `terraform/backends/foundation.hcl.example`
 - `terraform/backends/nodes.hcl.example`
 - `terraform/backends/infra-nodes.hcl.example`
 
 State key recommendation:
 
-- `foundation.tfstate`
 - `nodes.tfstate`
 - `infra-nodes.tfstate`
 
 Development var-files (used by `.github/workflows/infra-deploy-dev.yml`):
 
-- `terraform/foundation/terraform.dev.tfvars`
 - `terraform/nodes/catalog.dev.tfvars`
 - `terraform/infra-nodes/catalog.dev.tfvars`

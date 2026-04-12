@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: "Apply Terraform and run Ansible reconciliation/deploy"
+        description: "Apply Terraform and reconcile node configs"
         required: true
         type: boolean
         default: true
@@ -14,21 +14,16 @@ on:
         required: true
         type: string
         default: ""
-      reconcile_nodes:
-        description: "Run VPN node reconciliation playbook"
-        required: true
-        type: boolean
-        default: true
       apply_infra_nodes:
-        description: "Apply terraform/infra-nodes before Ansible deploy"
+        description: "Apply terraform/infra-nodes"
         required: true
         type: boolean
         default: false
-      replace_vpn_nodes:
-        description: "Deprecated. Leave empty; use drain -> migrate -> deactivate lifecycle instead."
-        required: false
-        type: string
-        default: ""
+      reconcile_nodes:
+        description: "Reconcile VPN node configs with control plane API"
+        required: true
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -137,111 +132,9 @@ jobs:
           echo "${tf_bin_dir}" >> "${GITHUB_PATH}"
           "${tf_bin_dir}/terraform" version
 
-      - name: Validate production isolation guardrails
-        run: |
-          set -Eeuo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          source ./scripts/core/prepare-terraform-env.sh
-
-          required_primary_tfvars=(
-            TF_VAR_vpn_domain
-            TF_VAR_vpn_ws_path
-            TF_VAR_vpn_xhttp_path
-            TF_VAR_vpn_reality_server_name
-            TF_VAR_vpn_reality_private_key
-            TF_VAR_vpn_reality_short_id
-            TF_VAR_vpn_reality_dest_host
-          )
-
-          if [ -z "${TF_STATE_KEY_PREFIX:-}" ]; then
-            echo "::error::TF_STATE_KEY_PREFIX must be set in INFRA_ENV_PROD"
-            exit 1
-          fi
-          if printf '%s' "${TF_STATE_KEY_PREFIX}" | grep -Eq '(^|/)dev($|/)'; then
-            echo "::error::TF_STATE_KEY_PREFIX must not target dev scope in Infra Deploy: current='${TF_STATE_KEY_PREFIX}'"
-            exit 1
-          fi
-          if [ "${DEPLOY_DATA_DEV_STACK:-false}" = "true" ]; then
-            echo "::error::DEPLOY_DATA_DEV_STACK=true is forbidden in Infra Deploy"
-            exit 1
-          fi
-
-          for var_name in "${required_primary_tfvars[@]}"; do
-            if [ -z "${!var_name:-}" ]; then
-              alias_name="IAC_TFVAR_${var_name#TF_VAR_}"
-              alias_name="${alias_name^^}"
-              echo "::error::${var_name} is required in INFRA_ENV_PROD (or set ${alias_name})"
-              exit 1
-            fi
-          done
-
-      - name: Prepare SSH key for Ansible
-        run: |
-          set -Eeuo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-
-          KEYS_DIR="${RUNNER_TEMP}/ansible_ssh_keys"
-          mkdir -p "${KEYS_DIR}"
-          chmod 700 "${KEYS_DIR}"
-          keys_written=0
-
-          if [ -n "${ANSIBLE_SSH_KEYS_B64_JSON:-}" ]; then
-            command -v python3 >/dev/null 2>&1 || {
-              echo "::error::python3 is required to parse ANSIBLE_SSH_KEYS_B64_JSON"
-              exit 1
-            }
-
-            export KEYS_DIR
-            json_count="$(python3 ./scripts/core/render-ansible-ssh-keys.py --keys-dir "${KEYS_DIR}")"
-            keys_written=$((keys_written + json_count))
-          fi
-
-          if [ -n "${ANSIBLE_SSH_PRIVATE_KEY_B64:-}" ]; then
-            printf '%s' "${ANSIBLE_SSH_PRIVATE_KEY_B64}" | base64 -d > "${KEYS_DIR}/default" || {
-              echo "::error::Failed to decode ANSIBLE_SSH_PRIVATE_KEY_B64"
-              exit 1
-            }
-            chmod 600 "${KEYS_DIR}/default"
-            keys_written=$((keys_written + 1))
-          elif [ -n "${ANSIBLE_SSH_PRIVATE_KEY:-}" ]; then
-            printf '%s\n' "${ANSIBLE_SSH_PRIVATE_KEY}" > "${KEYS_DIR}/default"
-            chmod 600 "${KEYS_DIR}/default"
-            keys_written=$((keys_written + 1))
-          elif [ -n "${ANSIBLE_SSH_PRIVATE_KEY_FILE:-}" ]; then
-            test -f "${ANSIBLE_SSH_PRIVATE_KEY_FILE}" || {
-              echo "::error::ANSIBLE_SSH_PRIVATE_KEY_FILE points to a missing file: ${ANSIBLE_SSH_PRIVATE_KEY_FILE}"
-              exit 1
-            }
-            cp "${ANSIBLE_SSH_PRIVATE_KEY_FILE}" "${KEYS_DIR}/default"
-            chmod 600 "${KEYS_DIR}/default"
-            keys_written=$((keys_written + 1))
-          fi
-
-          if [ "${keys_written}" -eq 0 ]; then
-            echo "::error::Set ANSIBLE_SSH_KEYS_B64_JSON (recommended) or one of: ANSIBLE_SSH_PRIVATE_KEY_B64 / ANSIBLE_SSH_PRIVATE_KEY / ANSIBLE_SSH_PRIVATE_KEY_FILE in INFRA_ENV_PROD"
-            exit 1
-          fi
-
-          for key_file in "${KEYS_DIR}"/*; do
-            [ -f "${key_file}" ] || continue
-            key_ref="$(basename "${key_file}")"
-            if ! ssh-keygen -y -f "${key_file}" >/dev/null 2>&1; then
-              echo "::error::SSH key ref '${key_ref}' is invalid or passphrase-protected; CI requires unencrypted private keys"
-              exit 1
-            fi
-            key_fp_sha256="$(ssh-keygen -lf "${key_file}" -E sha256 | awk '{print $2}')"
-            echo "::notice::Loaded SSH key ref '${key_ref}' fingerprint sha256=${key_fp_sha256}"
-          done
-
-          echo "ANSIBLE_SSH_KEYS_DIR=${KEYS_DIR}" >> "${GITHUB_ENV}"
-          if [ -f "${KEYS_DIR}/default" ]; then
-            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEYS_DIR}/default" >> "${GITHUB_ENV}"
-          fi
-
       - name: Terraform apply
         env:
           APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
-          REPLACE_VPN_NODES: ${{ inputs.replace_vpn_nodes }}
         run: |
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
@@ -272,36 +165,6 @@ jobs:
 
       - name: Install Ansible
         run: python -m pip install --upgrade pip ansible
-
-      - name: Reconcile VPN nodes (Ansible)
-        if: ${{ inputs.reconcile_nodes == true }}
-        run: |
-          set -Eeo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          export REPO_ROOT="${GITHUB_WORKSPACE}"
-          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
-          ansible-playbook -i ansible/inventory/production.ini \
-            ansible/playbooks/reconcile-vpn-nodes.yml
-
-      - name: Reconcile infra nodes (Ansible)
-        if: ${{ inputs.apply_infra_nodes == true }}
-        run: |
-          set -Eeo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          export REPO_ROOT="${GITHUB_WORKSPACE}"
-          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
-          ansible-playbook -i ansible/inventory/production.ini \
-            ansible/playbooks/reconcile-infra-nodes.yml
-
-      - name: Deploy stacks (Ansible)
-        run: |
-          set -Eeo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          export REPO_ROOT="${GITHUB_WORKSPACE}"
-          export RUN_SANITY_CHECK="true"
-          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
-          ansible-playbook -i ansible/inventory/production.ini \
-            ansible/playbooks/deploy-stacks.yml
 
       - name: Reconcile node configs with control plane
         if: ${{ inputs.reconcile_nodes == true }}

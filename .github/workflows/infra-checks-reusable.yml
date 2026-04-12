@@ -31,7 +31,7 @@ jobs:
       - name: Terraform validate roots
         run: |
           set -Eeuo pipefail
-          for root in foundation nodes infra-nodes; do
+          for root in nodes infra-nodes; do
             terraform -chdir="terraform/${root}" init -backend=false -input=false
             terraform -chdir="terraform/${root}" validate -no-color
           done
@@ -46,7 +46,7 @@ jobs:
           set -Eeuo pipefail
           TFLINT_CONFIG="${GITHUB_WORKSPACE}/.tflint.hcl"
           tflint --init --config "${TFLINT_CONFIG}"
-          for root in foundation nodes infra-nodes; do
+          for root in nodes infra-nodes; do
             tflint --config "${TFLINT_CONFIG}" --chdir "terraform/${root}"
           done
 
@@ -75,16 +75,23 @@ jobs:
         run: |
           set -Eeuo pipefail
           export ANSIBLE_CONFIG="$(pwd)/ansible/ansible.cfg"
-          ansible-playbook --syntax-check -i ansible/inventory/production.ini ansible/playbooks/reconcile-vpn-nodes.yml
-          ansible-playbook --syntax-check -i ansible/inventory/production.ini ansible/playbooks/deploy-stacks.yml
+          ansible-playbook --syntax-check -i ansible/inventory/production.ini ansible/playbooks/setup-k3s-server.yml
+          ansible-playbook --syntax-check ansible/playbooks/reconcile-node-configs.yml
 
       - name: ansible-lint
-        run: ansible-lint -c .ansible-lint.yml ansible/playbooks/reconcile-vpn-nodes.yml ansible/playbooks/deploy-stacks.yml
+        run: ansible-lint -c .ansible-lint.yml ansible/
 
       - name: yamllint
-        run: yamllint -c .yamllint.yml ansible docker/stacks .github/workflows
+        run: yamllint -c .yamllint.yml ansible .github/workflows k8s/
+
+      - name: Helm lint
+        run: |
+          set -Eeuo pipefail
+          for chart in k8s/charts/*/; do
+            helm lint "${chart}" || exit 1
+          done
 
       - name: shellcheck (core only)
         run: |
           set -Eeuo pipefail
-          find scripts/core wireguard/manager -type f -name "*.sh" -print0 | xargs -0 shellcheck
+          find scripts/core -type f -name "*.sh" -print0 | xargs -0 shellcheck
