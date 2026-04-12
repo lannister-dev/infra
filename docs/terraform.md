@@ -1,15 +1,13 @@
 # Terraform Infrastructure
 
-Terraform is the source of truth for infrastructure state in this repository.
+Terraform manages VPS server provisioning for the K3s cluster.
 
 ## Root modules
 
-- `terraform/foundation`: Swarm foundation (networks, volumes, Docker configs).
 - `terraform/nodes`: provider-agnostic VPN node catalog (provider modules underneath).
 - `terraform/infra-nodes`: non-VPN infra nodes (Timeweb).
 
 Each root has its own remote state key:
-- `foundation.tfstate`
 - `nodes.tfstate`
 - `infra-nodes.tfstate`
 
@@ -31,7 +29,6 @@ Topology is declared in versioned tfvars files:
 
 - `terraform/nodes/catalog.auto.tfvars`
 - `terraform/infra-nodes/catalog.auto.tfvars`
-- `terraform/foundation/terraform.dev.tfvars` (dev workflow toggles only)
 - `terraform/nodes/catalog.dev.tfvars` (dev workflow var-file)
 - `terraform/infra-nodes/catalog.dev.tfvars` (dev workflow var-file)
 
@@ -43,9 +40,6 @@ CI convention for variables:
 - if your environment supports lowercase names, you can define `TF_VAR_<terraform_variable_name>` directly.
 - for uppercase-only environments, use `IAC_TFVAR_<UPPER_SNAKE_NAME>`; it is auto-converted to `TF_VAR_<lower_snake_name>`.
 - conversion is done by `scripts/core/prepare-terraform-env.sh`.
-
-This keeps workflow provider-agnostic: adding/removing providers does not require
-editing workflow `export` lists.
 
 ## Provider modes
 
@@ -99,41 +93,15 @@ Timeweb for `terraform/infra-nodes` provider modes:
 
 ## Local run
 
-Linux/macOS:
-
 ```bash
 set -a
 source .env
 set +a
 
-terraform -chdir=terraform/foundation init -input=false -backend-config="$(pwd)/terraform/backends/foundation.hcl"
-terraform -chdir=terraform/foundation apply -input=false
-
 terraform -chdir=terraform/nodes init -input=false -backend-config="$(pwd)/terraform/backends/nodes.hcl"
 terraform -chdir=terraform/nodes apply -input=false
 
 terraform -chdir=terraform/infra-nodes init -input=false -backend-config="$(pwd)/terraform/backends/infra-nodes.hcl"
-terraform -chdir=terraform/infra-nodes apply -input=false
-```
-
-Windows PowerShell:
-
-```powershell
-Get-Content .\.env | ForEach-Object {
-  if ($_ -match '^\s*#' -or $_ -match '^\s*$') { return }
-  $pair = $_ -split '=', 2
-  if ($pair.Length -eq 2) {
-    [Environment]::SetEnvironmentVariable($pair[0], $pair[1], 'Process')
-  }
-}
-
-terraform -chdir=terraform/foundation init -input=false -backend-config="$PWD/terraform/backends/foundation.hcl"
-terraform -chdir=terraform/foundation apply -input=false
-
-terraform -chdir=terraform/nodes init -input=false -backend-config="$PWD/terraform/backends/nodes.hcl"
-terraform -chdir=terraform/nodes apply -input=false
-
-terraform -chdir=terraform/infra-nodes init -input=false -backend-config="$PWD/terraform/backends/infra-nodes.hcl"
 terraform -chdir=terraform/infra-nodes apply -input=false
 ```
 
@@ -145,10 +113,6 @@ deploy workflows download the Terraform binary from
 `https://hashicorp-releases.yandexcloud.net/terraform`.
 In restricted regions, configure provider mirror via `TF_PROVIDER_MIRROR_URL`
 or full CLI config vars (`TF_CLI_CONFIG_CONTENT*`) in deploy environment.
-
-If IDE shows `Unknown resource` or `Unresolved reference` for provider resources
-(`twc_server`, `openstack_compute_instance_v2`), run init in each root so provider
-schemas are downloaded.
 
 ## CI
 
@@ -167,59 +131,8 @@ Topology for CI comes from repository tfvars.
 Runtime secrets are read from Vault:
 - prod infra env: `kv/infra/prod#config`
 - dev infra env: `kv/infra/dev#config`
-- prod node-agent env: `kv/node-agent/prod#config`
-- dev node-agent env: `kv/node-agent/dev#config`
 
-Repository stores only non-secret template:
-- `node-agent.env.example`
+## K8s deployment
 
-Dev workflow pins explicit var-files:
-- `terraform/foundation/terraform.dev.tfvars`
-- `terraform/nodes/catalog.dev.tfvars`
-- `terraform/infra-nodes/catalog.dev.tfvars`
-
-For `terraform/foundation`, real Xray domains, paths and REALITY values should come
-from `INFRA_ENV_DEV` / `INFRA_ENV_PROD` via `TF_VAR_*`. There is no fallback or
-inheritance between primary and dev Xray fields; if `enable_vpn_dev_stack=true`,
-set the full dev value set explicitly. The repository var-file is only for
-non-secret dev toggles such as `enable_vpn_dev_stack`.
-
-Recommended Vault `kv/infra/prod#config` style:
-
-```bash
-TF_STATE_BUCKET=...
-TF_STATE_REGION=...
-TF_STATE_KEY_PREFIX=...
-
-# Provider mirror in restricted regions (recommended)
-TF_PROVIDER_MIRROR_URL=https://terraform-mirror.yandexcloud.net/
-
-TF_VAR_vpn_domain=example.com
-TF_VAR_vpn_ws_path=/api/v1/stream
-TF_VAR_vpn_xhttp_path=/api/v1/mobile
-
-# optional generic alias style (auto-converted)
-# IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
-# IAC_TFVAR_HOSTVDS_OS_USERNAME=...
-
-# Ansible SSH keys for reconcile/deploy (required for node bootstrap)
-# Recommended (multi-key): map key refs to base64 private keys.
-# Nodes select key via ssh_key_ref in terraform/nodes/catalog.auto.tfvars.
-# ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"LS0tLS1CRUdJTi...","backup":"LS0tLS1CRUdJTi..."}'
-#
-# Backward-compatible single-key options:
-# ANSIBLE_SSH_PRIVATE_KEY_B64=LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K...
-# ANSIBLE_SSH_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----...
-# ANSIBLE_SSH_PRIVATE_KEY_FILE=/home/github-runner/.ssh/dev
-```
-
-Mirror behavior in deploy workflow:
-- if `TF_CLI_CONFIG_CONTENT_B64` is set, it is used as full Terraform/OpenTofu CLI config;
-- else if `TF_CLI_CONFIG_CONTENT` is set, it is used as full config;
-- else if `TF_PROVIDER_MIRROR_URL` is set, workflow generates `provider_installation` config
-  with mirror for `registry.terraform.io/*/*` and direct fallback for non-registry providers
-  (for example, `tf.timeweb.cloud`).
-
-Full example template:
-- `docs/infra-env-prod.example`
-- `docs/infra-env-dev.example`
+After Terraform provisions VPS servers, K3s cluster management and workload
+deployment is handled via Helm charts in `k8s/`. See `k8s/Makefile` for targets.

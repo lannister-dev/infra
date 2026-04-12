@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: "Apply Terraform and run Ansible reconciliation/deploy for development"
+        description: "Apply Terraform and reconcile node configs for development"
         required: true
         type: boolean
         default: true
@@ -14,31 +14,16 @@ on:
         required: true
         type: string
         default: ""
-      reconcile_nodes:
-        description: "Run VPN node reconciliation playbook"
-        required: true
-        type: boolean
-        default: false
       apply_infra_nodes:
-        description: "Apply terraform/infra-nodes before Ansible deploy"
+        description: "Apply terraform/infra-nodes"
         required: true
         type: boolean
         default: false
-      apply_nodes:
-        description: "Apply terraform/nodes (disable for data-only dev runs)"
+      reconcile_nodes:
+        description: "Reconcile VPN node configs with control plane API"
         required: true
         type: boolean
         default: false
-      apply_foundation:
-        description: "Apply terraform/foundation (disable to avoid foundation changes in dev run)"
-        required: true
-        type: boolean
-        default: true
-      replace_vpn_nodes:
-        description: "Deprecated. Leave empty; use drain -> migrate -> deactivate lifecycle instead."
-        required: false
-        type: string
-        default: ""
 
 permissions:
   contents: read
@@ -102,14 +87,9 @@ jobs:
       - name: Load runtime env from Vault
         run: |
           set -Eeuo pipefail
-          forbidden_keys_regex='^(APPLY_FOUNDATION|APPLY_NODES|APPLY_INFRA_NODES|REPLACE_VPN_NODES)='
           ENV_FILE="${RUNNER_TEMP}/infra.dev.env"
           printf '%s\n' "${INFRA_ENV_CONTENT}" > "${ENV_FILE}"
           chmod 600 "${ENV_FILE}"
-          if grep -Eq "${forbidden_keys_regex}" "${ENV_FILE}"; then
-            echo "::error::Vault infra env must not define APPLY_FOUNDATION, APPLY_NODES, APPLY_INFRA_NODES, or REPLACE_VPN_NODES"
-            exit 1
-          fi
           echo "INFRA_ENV_FILE=${ENV_FILE}" >> "${GITHUB_ENV}"
 
       - name: Install Terraform CLI
@@ -152,157 +132,9 @@ jobs:
           echo "${tf_bin_dir}" >> "${GITHUB_PATH}"
           "${tf_bin_dir}/terraform" version
 
-      - name: Validate development isolation guardrails
-        run: |
-          set -Eeuo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          source ./scripts/core/prepare-terraform-env.sh
-
-          tf_enable_vpn_dev_stack="${TF_VAR_enable_vpn_dev_stack:-false}"
-          reserved_control_vars=(
-            APPLY_FOUNDATION
-            APPLY_NODES
-            APPLY_INFRA_NODES
-            REPLACE_VPN_NODES
-          )
-
-          # Dev workflow must use a dev state scope.
-          if [ -z "${TF_STATE_KEY_PREFIX:-}" ]; then
-            echo "::error::TF_STATE_KEY_PREFIX must be set in INFRA_ENV_DEV"
-            exit 1
-          fi
-          if ! printf '%s' "${TF_STATE_KEY_PREFIX}" | grep -Eq '(^|/)dev($|/)'; then
-            echo "::error::TF_STATE_KEY_PREFIX must target dev scope (contains '/dev'): current='${TF_STATE_KEY_PREFIX}'"
-            exit 1
-          fi
-
-          # Dev workflow must never deploy prod data stack.
-          if [ "${DEPLOY_DATA_PROD_STACK:-false}" = "true" ]; then
-            echo "::error::DEPLOY_DATA_PROD_STACK=true is forbidden in Infra Deploy Dev"
-            exit 1
-          fi
-
-          if [ "${{ inputs.reconcile_nodes }}" = "true" ] && [ "${{ inputs.apply_nodes }}" != "true" ]; then
-            echo "::error::reconcile_nodes=true requires apply_nodes=true in Infra Deploy Dev"
-            exit 1
-          fi
-
-          for var_name in "${reserved_control_vars[@]}"; do
-            if [ -n "${!var_name:-}" ]; then
-              echo "::error::${var_name} must not be defined in INFRA_ENV_DEV. These controls come only from workflow_dispatch inputs."
-              exit 1
-            fi
-          done
-
-          if [ "${ENABLE_VPN_DEV_STACK:-false}" != "${tf_enable_vpn_dev_stack}" ]; then
-            echo "::error::ENABLE_VPN_DEV_STACK (${ENABLE_VPN_DEV_STACK:-false}) must match Terraform toggle TF_VAR/IAC_TFVAR_enable_vpn_dev_stack (${tf_enable_vpn_dev_stack})"
-            exit 1
-          fi
-
-          if [ "${tf_enable_vpn_dev_stack}" = "true" ] && [ "${{ inputs.apply_foundation }}" != "true" ]; then
-            echo "::error::apply_foundation=true is required when vpn-dev stack is enabled, otherwise stale xray_config_dev from state may be reused"
-            exit 1
-          fi
-
-          if [ "${tf_enable_vpn_dev_stack}" = "true" ]; then
-            required_primary_tfvars=(
-              TF_VAR_vpn_domain
-              TF_VAR_vpn_ws_path
-              TF_VAR_vpn_xhttp_path
-              TF_VAR_vpn_reality_server_name
-              TF_VAR_vpn_reality_private_key
-              TF_VAR_vpn_reality_short_id
-              TF_VAR_vpn_reality_dest_host
-            )
-            required_dev_tfvars=(
-              TF_VAR_vpn_dev_domain
-              TF_VAR_vpn_dev_ws_path
-              TF_VAR_vpn_dev_xhttp_path
-              TF_VAR_vpn_dev_reality_server_name
-              TF_VAR_vpn_dev_reality_private_key
-              TF_VAR_vpn_dev_reality_short_id
-              TF_VAR_vpn_dev_reality_dest_host
-            )
-
-            for var_name in "${required_primary_tfvars[@]}" "${required_dev_tfvars[@]}"; do
-              if [ -z "${!var_name:-}" ]; then
-                echo "::error::${var_name} is required when vpn-dev stack is enabled"
-                exit 1
-              fi
-            done
-          fi
-
-      - name: Prepare SSH key for Ansible
-        if: ${{ inputs.reconcile_nodes == true }}
-        run: |
-          set -Eeuo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-
-          KEYS_DIR="${RUNNER_TEMP}/ansible_ssh_keys"
-          mkdir -p "${KEYS_DIR}"
-          chmod 700 "${KEYS_DIR}"
-          keys_written=0
-
-          if [ -n "${ANSIBLE_SSH_KEYS_B64_JSON:-}" ]; then
-            command -v python3 >/dev/null 2>&1 || {
-              echo "::error::python3 is required to parse ANSIBLE_SSH_KEYS_B64_JSON"
-              exit 1
-            }
-
-            export KEYS_DIR
-            json_count="$(python3 ./scripts/core/render-ansible-ssh-keys.py --keys-dir "${KEYS_DIR}")"
-            keys_written=$((keys_written + json_count))
-          fi
-
-          if [ -n "${ANSIBLE_SSH_PRIVATE_KEY_B64:-}" ]; then
-            printf '%s' "${ANSIBLE_SSH_PRIVATE_KEY_B64}" | base64 -d > "${KEYS_DIR}/default" || {
-              echo "::error::Failed to decode ANSIBLE_SSH_PRIVATE_KEY_B64"
-              exit 1
-            }
-            chmod 600 "${KEYS_DIR}/default"
-            keys_written=$((keys_written + 1))
-          elif [ -n "${ANSIBLE_SSH_PRIVATE_KEY:-}" ]; then
-            printf '%s\n' "${ANSIBLE_SSH_PRIVATE_KEY}" > "${KEYS_DIR}/default"
-            chmod 600 "${KEYS_DIR}/default"
-            keys_written=$((keys_written + 1))
-          elif [ -n "${ANSIBLE_SSH_PRIVATE_KEY_FILE:-}" ]; then
-            test -f "${ANSIBLE_SSH_PRIVATE_KEY_FILE}" || {
-              echo "::error::ANSIBLE_SSH_PRIVATE_KEY_FILE points to a missing file: ${ANSIBLE_SSH_PRIVATE_KEY_FILE}"
-              exit 1
-            }
-            cp "${ANSIBLE_SSH_PRIVATE_KEY_FILE}" "${KEYS_DIR}/default"
-            chmod 600 "${KEYS_DIR}/default"
-            keys_written=$((keys_written + 1))
-          fi
-
-          if [ "${keys_written}" -eq 0 ]; then
-            echo "::error::Set ANSIBLE_SSH_KEYS_B64_JSON (recommended) or one of: ANSIBLE_SSH_PRIVATE_KEY_B64 / ANSIBLE_SSH_PRIVATE_KEY / ANSIBLE_SSH_PRIVATE_KEY_FILE in INFRA_ENV_DEV"
-            exit 1
-          fi
-
-          for key_file in "${KEYS_DIR}"/*; do
-            [ -f "${key_file}" ] || continue
-            key_ref="$(basename "${key_file}")"
-            if ! ssh-keygen -y -f "${key_file}" >/dev/null 2>&1; then
-              echo "::error::SSH key ref '${key_ref}' is invalid or passphrase-protected; CI requires unencrypted private keys"
-              exit 1
-            fi
-            key_fp_sha256="$(ssh-keygen -lf "${key_file}" -E sha256 | awk '{print $2}')"
-            echo "::notice::Loaded SSH key ref '${key_ref}' fingerprint sha256=${key_fp_sha256}"
-          done
-
-          echo "ANSIBLE_SSH_KEYS_DIR=${KEYS_DIR}" >> "${GITHUB_ENV}"
-          if [ -f "${KEYS_DIR}/default" ]; then
-            echo "ANSIBLE_SSH_PRIVATE_KEY_FILE=${KEYS_DIR}/default" >> "${GITHUB_ENV}"
-          fi
-
       - name: Terraform apply
         env:
-          WF_APPLY_FOUNDATION: ${{ inputs.apply_foundation }}
-          WF_APPLY_NODES: ${{ inputs.apply_nodes }}
-          WF_APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
-          WF_REPLACE_VPN_NODES: ${{ inputs.replace_vpn_nodes }}
-          FOUNDATION_TFVARS_FILE: ${{ github.workspace }}/terraform/foundation/terraform.dev.tfvars
+          APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
           NODES_TFVARS_FILE: ${{ github.workspace }}/terraform/nodes/catalog.dev.tfvars
           INFRA_NODES_TFVARS_FILE: ${{ github.workspace }}/terraform/infra-nodes/catalog.dev.tfvars
         run: |
@@ -317,57 +149,13 @@ jobs:
             export TF_VAR_yandex_service_account_key_file="${YC_SA_KEY_FILE}"
             unset YC_TOKEN || true
             unset TF_VAR_yandex_token || true
-            echo "::notice::Yandex auth prepared from YC_SERVICE_ACCOUNT_KEY_B64"
-          elif [ -n "${YC_SERVICE_ACCOUNT_KEY_JSON:-}" ]; then
-            YC_SA_KEY_FILE="${RUNNER_TEMP}/yc-sa-key.json"
-            printf '%s' "${YC_SERVICE_ACCOUNT_KEY_JSON}" > "${YC_SA_KEY_FILE}"
-            chmod 600 "${YC_SA_KEY_FILE}"
-            export YC_SERVICE_ACCOUNT_KEY_FILE="${YC_SA_KEY_FILE}"
-            export TF_VAR_yandex_service_account_key_file="${YC_SA_KEY_FILE}"
-            unset YC_TOKEN || true
-            unset TF_VAR_yandex_token || true
-            echo "::notice::Yandex auth prepared from YC_SERVICE_ACCOUNT_KEY_JSON"
-          else
-            echo "::notice::Yandex auth fallback: service account key not present in workflow env"
           fi
 
-          export APPLY_FOUNDATION="${WF_APPLY_FOUNDATION}"
-          export APPLY_NODES="${WF_APPLY_NODES}"
-          export APPLY_INFRA_NODES="${WF_APPLY_INFRA_NODES}"
-          export REPLACE_VPN_NODES="${WF_REPLACE_VPN_NODES}"
           bash ./scripts/ci/apply-terraform.sh
 
       - name: Install Ansible
-        run: python -m pip install --upgrade pip ansible
-
-      - name: Reconcile infra nodes (Ansible)
-        if: ${{ inputs.apply_infra_nodes == true }}
-        run: |
-          set -Eeo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          export REPO_ROOT="${GITHUB_WORKSPACE}"
-          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
-          ansible-playbook -i ansible/inventory/development.ini \
-            ansible/playbooks/reconcile-infra-nodes.yml
-
-      - name: Reconcile VPN nodes (Ansible)
         if: ${{ inputs.reconcile_nodes == true }}
-        run: |
-          set -Eeo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          export REPO_ROOT="${GITHUB_WORKSPACE}"
-          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
-          ansible-playbook -i ansible/inventory/development.ini \
-            ansible/playbooks/reconcile-vpn-nodes.yml
-
-      - name: Deploy stacks (Ansible)
-        run: |
-          set -Eeo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          export REPO_ROOT="${GITHUB_WORKSPACE}"
-          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
-          ansible-playbook -i ansible/inventory/development.ini \
-            ansible/playbooks/deploy-dev-stacks.yml
+        run: python -m pip install --upgrade pip ansible
 
       - name: Reconcile node configs with control plane
         if: ${{ inputs.reconcile_nodes == true }}
@@ -382,4 +170,3 @@ jobs:
         run: |
           rm -f "${INFRA_ENV_FILE:-}"
           rm -f "${RUNNER_TEMP}/yc-sa-key.json"
-          rm -rf "${RUNNER_TEMP}/ansible_ssh_keys"

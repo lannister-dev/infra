@@ -61,7 +61,7 @@ server:
     enabled: true
     ingressClassName: traefik
     hosts:
-      - host: vault.example.com  # ← заменить на VAULT_HOST
+      - host: vault.lannister-dev.ru
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: websecure
       traefik.ingress.kubernetes.io/router.tls: "true"

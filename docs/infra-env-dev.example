@@ -4,33 +4,10 @@ TF_STATE_REGION=ru-central1
 TF_STATE_KEY_PREFIX=vpn-infra/dev
 # TF_STATE_DYNAMODB_TABLE=terraform-locks
 
-# Do not put workflow_dispatch control vars here.
-# Reserved for workflow inputs only: APPLY_FOUNDATION, APPLY_NODES,
-# APPLY_INFRA_NODES, REPLACE_VPN_NODES.
-
 # Terraform provider mirror (recommended in restricted regions)
 # TF_PROVIDER_MIRROR_URL=https://terraform-mirror.yandexcloud.net/
 
-# Foundation TF vars (required, uppercase-only alias style)
-IAC_TFVAR_VPN_DOMAIN=dev.vpn.example.com
-IAC_TFVAR_VPN_WS_PATH=/api/v1/stream
-IAC_TFVAR_VPN_XHTTP_PATH=/api/v1/mobile
-IAC_TFVAR_VPN_REALITY_SERVER_NAME=www.cloudflare.com
-IAC_TFVAR_VPN_REALITY_PRIVATE_KEY=<x25519_private_key>
-IAC_TFVAR_VPN_REALITY_SHORT_ID=<short_id_hex>
-IAC_TFVAR_VPN_REALITY_DEST_HOST=www.cloudflare.com
-
-# Enable dev channel stack in development environment
-IAC_TFVAR_ENABLE_VPN_DEV_STACK=true
-IAC_TFVAR_VPN_DEV_DOMAIN=dev-vpn.example.com
-IAC_TFVAR_VPN_DEV_WS_PATH=/api/v1/stream
-IAC_TFVAR_VPN_DEV_XHTTP_PATH=/api/v1/mobile
-IAC_TFVAR_VPN_DEV_REALITY_SERVER_NAME=www.cloudflare.com
-IAC_TFVAR_VPN_DEV_REALITY_PRIVATE_KEY=<x25519_private_key>
-IAC_TFVAR_VPN_DEV_REALITY_SHORT_ID=<short_id_hex>
-IAC_TFVAR_VPN_DEV_REALITY_DEST_HOST=www.cloudflare.com
-
-# Provider credentials (if provider modes are enabled in dev catalogs)
+# ---- Provider credentials (if provider modes are enabled in dev catalogs) ----
 # IAC_TFVAR_HOSTVDS_OS_AUTH_URL=...
 # IAC_TFVAR_HOSTVDS_OS_USERNAME=...
 # IAC_TFVAR_HOSTVDS_OS_PASSWORD=...
@@ -38,85 +15,26 @@ IAC_TFVAR_VPN_DEV_REALITY_DEST_HOST=www.cloudflare.com
 # IAC_TFVAR_HOSTVDS_OS_PROJECT_DOMAIN_ID=default
 # IAC_TFVAR_HOSTVDS_OS_INTERFACE=public
 # YC_SERVICE_ACCOUNT_KEY_B64=<base64_of_authorized_key.json>
-# Optional raw JSON variant:
-# YC_SERVICE_ACCOUNT_KEY_JSON={"id":"...","service_account_id":"..."}
-# Legacy short-lived fallback only:
-# YC_TOKEN=...
 # IAC_TFVAR_YANDEX_CLOUD_ID=b1g...
 # IAC_TFVAR_YANDEX_FOLDER_ID=b1g...
 # IAC_TFVAR_TIMEWEB_API_TOKEN=...
 
-# Runtime HostVDS credentials may still be required by other HostVDS/OpenStack operations:
-# HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
-# HOSTVDS_OS_USERNAME=hostvds-...
-# HOSTVDS_OS_PASSWORD=...
-# HOSTVDS_OS_PROJECT_NAME=hostvds-...
-# HOSTVDS_OS_USER_DOMAIN_NAME=Default
-# HOSTVDS_OS_PROJECT_DOMAIN_ID=default
-# HOSTVDS_OS_REGION_NAME=eu-north1b
-# HOSTVDS_OS_INTERFACE=public
-
-# Ansible runtime toggles
-RUN_SANITY_CHECK=true
-DEPLOY_NATS_STACK=true
-ENABLE_VPN_DEV_STACK=true
-ALLOW_EMPTY_VPN_NODES=false
-DEPLOY_DATA_DEV_STACK=true
-VPN_DEV_NETWORK_NAME=vpn-dev-net
-NODE_AGENT_IMAGE_REF=harbor.lannister-dev.ru/vpn-service/node-agent:prod
-NODE_AGENT_IMAGE_REF_DEV=harbor.lannister-dev.ru/vpn-service/node-agent:dev
-# HAPROXY_ALPINE_IMAGE_TAG=3.1-alpine
-# Only when dev catalog includes traffic_role=whitelist_entry nodes:
-# VPN_WHITELIST_ENTRY_UPSTREAM_HOST=203.0.113.10
-# VPN_WHITELIST_ENTRY_UPSTREAM_PORT=443
+# ---- K8s / Helm ----
 
 # Control plane (development)
 CONTROL_PLANE_URL=https://dev-api.example.com/api/v1/artifacts
 ADMIN_API_KEY=<dev_admin_token>
 
-# Dev ingress / edge settings
-NATS_AUTH_TOKEN=<strong_random_token>
-NATS_MONITOR_HOST=nats.dev.example.com
-NATS_MONITOR_AUTH_USERS=admin:<htpasswd_hash>
+# Harbor registry
+HARBOR_HOST=harbor.lannister-dev.ru
 
-# External data services precheck (enable only if dev DB/Redis are external)
-EXTERNAL_DATA_PRECHECK_ENABLED=false
-# EXTERNAL_POSTGRES_HOST=127.0.0.1
-# EXTERNAL_POSTGRES_PORT=5432
-# EXTERNAL_REDIS_HOST=127.0.0.1
-# EXTERNAL_REDIS_PORT=6379
-# EXTERNAL_DATA_PRECHECK_TIMEOUT=10
+# Node agent images
+NODE_AGENT_IMAGE_REF=harbor.lannister-dev.ru/vpn-service/node-agent:prod
+NODE_AGENT_IMAGE_REF_DEV=harbor.lannister-dev.ru/vpn-service/node-agent:dev
 
-# Managed data-dev stack (recommended for dev)
-POSTGRES_IMAGE_TAG=16-alpine
-REDIS_IMAGE_TAG=7-alpine
-DATA_DEV_NETWORK_NAME=data-dev-net
-DEV_POSTGRES_DB=vpn_control_dev
-DEV_POSTGRES_USER=vpn_dev_user
-DEV_POSTGRES_PUBLISHED_PORT=15434
-DEV_POSTGRES_PASSWORD=<strong_password>
-DEV_REDIS_PASSWORD=<strong_password>
-
-# SSH keys for Ansible reconcile/deploy
+# ---- SSH keys for Ansible / K3s node setup ----
 # ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>","yc":"<base64_private_key>"}'
 
 # Vault layout:
 # kv/infra/dev field: config      -> this file content
 # kv/node-agent/dev field: config -> node-agent.dev.env content
-
-# Shared edge stack settings are managed outside dev-only workflow.
-# If you still run the full production-oriented deploy path, set:
-# TRAEFIK_ACME_EMAIL=ops@example.com
-# TRAEFIK_DASHBOARD_HOST=traefik.example.com
-# TRAEFIK_DASHBOARD_AUTH_USERS=admin:<bcrypt_hash>
-# TRAEFIK_WEB_FORWARDED_HEADERS_INSECURE=false
-# TRAEFIK_WEBSECURE_FORWARDED_HEADERS_INSECURE=false
-# PROMETHEUS_HOST=prometheus.example.com
-# PROMETHEUS_AUTH_USERS=admin:<htpasswd_hash>
-# GRAFANA_HOST=grafana.example.com
-# ALERTMANAGER_IMAGE_TAG=v0.27.0
-# ALERTMANAGER_HOST=alertmanager.dev.example.com
-# Generate with: htpasswd -nbB admin <password>
-# Escape $ as $$ for Docker Compose interpolation:
-# ALERTMANAGER_AUTH_USERS=admin:$$2y$$05$$REPLACE_WITH_REAL_BCRYPT_HASH
-# ALERTMANAGER_WEBHOOK_URL=http://placeholder:5001/alert

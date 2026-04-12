@@ -1,3 +1,0 @@
----
-overlay_networks: []
-# Each item: {name: "net_name", condition: true}

@@ -33,7 +33,7 @@ prometheus:
     enabled: true
     ingressClassName: traefik
     hosts:
-      - prometheus.example.com  # ← заменить на PROMETHEUS_HOST
+      - prometheus.lannister-dev.ru
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: websecure
       traefik.ingress.kubernetes.io/router.tls: "true"
@@ -51,7 +51,7 @@ grafana:
     passwordKey: admin-password
   grafana.ini:
     server:
-      domain: grafana.example.com  # ← заменить на GRAFANA_HOST
+      domain: grafana.lannister-dev.ru
       root_url: "https://%(domain)s/"
   persistence:
     enabled: true
@@ -61,7 +61,7 @@ grafana:
     enabled: true
     ingressClassName: traefik
     hosts:
-      - grafana.example.com  # ← заменить на GRAFANA_HOST
+      - grafana.lannister-dev.ru
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: websecure
       traefik.ingress.kubernetes.io/router.tls: "true"
@@ -120,7 +120,7 @@ alertmanager:
     enabled: true
     ingressClassName: traefik
     hosts:
-      - alertmanager.example.com  # ← заменить на ALERTMANAGER_HOST
+      - alertmanager.lannister-dev.ru
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: websecure
       traefik.ingress.kubernetes.io/router.tls: "true"
