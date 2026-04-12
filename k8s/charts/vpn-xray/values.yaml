@@ -33,12 +33,11 @@ vpn:
   xhttpPath: /api/v1/mobile
 
 # Xray config — mounted as ConfigMap
-# In production, create ConfigMap from actual xray config.json
+# Set existingConfigMap to use a pre-created ConfigMap,
+# or provide inline JSON via config.json
 config:
   existingConfigMap: ""
-  # Inline config (used if existingConfigMap is empty)
-  # json: |
-  #   { ... }
+  json: "{}"
 
 # Fallback nginx (optional)
 fallback:
@@ -58,3 +57,8 @@ resources:
 logging:
   maxSize: "32m"
   maxFile: "8"
+
+# node-agent bootstrap secret (optional)
+nodeAgent:
+  bootstrapToken: ""
+  secretName: node-agent-prod-bootstrap
