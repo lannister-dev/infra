@@ -1,0 +1,83 @@
+# External Helm charts with values from this repo (multi-source)
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+spec:
+  project: infra
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      targetRevision: "77.3.*"
+      chart: kube-prometheus-stack
+      helm:
+        valueFiles:
+          - $values/k8s/values/prod/monitoring.yaml
+    - repoURL: git@github.com:lannister-dev/infra.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nats
+  namespace: argocd
+spec:
+  project: infra
+  sources:
+    - repoURL: https://nats-io.github.io/k8s/helm/charts/
+      targetRevision: "1.*"
+      chart: nats
+      helm:
+        valueFiles:
+          - $values/k8s/values/prod/nats.yaml
+    - repoURL: git@github.com:lannister-dev/infra.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nats
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+spec:
+  project: infra
+  sources:
+    - repoURL: https://helm.releases.hashicorp.com
+      targetRevision: "0.*"
+      chart: vault
+      helm:
+        valueFiles:
+          - $values/k8s/values/prod/vault.yaml
+    - repoURL: git@github.com:lannister-dev/infra.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
