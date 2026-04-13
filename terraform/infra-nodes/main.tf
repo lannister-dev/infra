@@ -33,7 +33,7 @@ locals {
 
   merged_infra_nodes = {
     for name, node in local.merged_infra_nodes_raw : name => {
-      public_ip   = tostring(coalesce(try(node["public_ip"], null), ""))
+      public_ip   = try(tostring(node["public_ip"]), "")
       role        = tostring(try(node["role"], "worker"))
       kind        = tostring(try(node["kind"], "prod"))
       ssh_user    = tostring(try(node["ssh_user"], "root"))
@@ -82,7 +82,7 @@ resource "local_file" "infra_nodes_inventory" {
     precondition {
       condition = alltrue([
         for name, node in local.merged_infra_nodes : (
-          !try(node.enabled, true) || length(trimspace(node.public_ip)) > 0
+          !try(node.enabled, true) || length(trimspace(coalesce(node.public_ip, ""))) > 0
         )
       ])
       error_message = "Every enabled infra node must have a non-empty public_ip in generated inventory."
