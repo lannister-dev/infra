@@ -93,6 +93,7 @@ install-argocd: ## Install ArgoCD and apply app definitions
 	kubectl apply -f argocd/project.yaml
 	kubectl apply -f argocd/applications.yaml
 	kubectl apply -f argocd/applications-external.yaml
+	kubectl apply -f argocd/argocd-cm-patch.yaml --server-side --force-conflicts
 
 .PHONY: argocd-password
 argocd-password: ## Show ArgoCD admin password
