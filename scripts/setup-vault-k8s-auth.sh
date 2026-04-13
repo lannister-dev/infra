@@ -29,11 +29,23 @@ vault write auth/kubernetes/config \
 
 echo "==> Creating policy for ESO..."
 vault policy write external-secrets - <<'POLICY'
-# Read-only access to control-plane secrets for ESO
+# Read-only access to secrets for ESO
 path "kv/data/control-plane/*" {
   capabilities = ["read"]
 }
 path "kv/metadata/control-plane/*" {
+  capabilities = ["read", "list"]
+}
+path "kv/data/node-agent/*" {
+  capabilities = ["read"]
+}
+path "kv/metadata/node-agent/*" {
+  capabilities = ["read", "list"]
+}
+path "kv/data/probe/*" {
+  capabilities = ["read"]
+}
+path "kv/metadata/probe/*" {
   capabilities = ["read", "list"]
 }
 POLICY
