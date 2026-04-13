@@ -1,0 +1,98 @@
+{{- if .Values.postgres.backup.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-postgres-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: postgres-backup
+    chart: {{ .Chart.Name }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: {{ .Values.postgres.backup.storage.storageClass | default .Values.postgres.storage.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.backup.storage.size | default "5Gi" }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-postgres-backup
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: postgres-backup
+    chart: {{ .Chart.Name }}
+spec:
+  schedule: {{ .Values.postgres.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            app: postgres-backup
+            release: {{ .Release.Name }}
+        spec:
+          {{- if .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml .Values.nodeSelector | nindent 12 }}
+          {{- end }}
+          restartPolicy: Never
+          containers:
+            - name: backup
+              image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+                  BACKUP_FILE="/backups/{{ .Values.postgres.database }}_${TIMESTAMP}.sql.gz"
+
+                  echo "Starting backup: {{ .Values.postgres.database }} -> ${BACKUP_FILE}"
+                  pg_dump -h {{ .Release.Name }}-postgres \
+                    -U {{ .Values.postgres.user }} \
+                    -d {{ .Values.postgres.database }} | gzip > "${BACKUP_FILE}"
+
+                  if [ ! -s "${BACKUP_FILE}" ]; then
+                    echo "ERROR: backup file is empty"
+                    rm -f "${BACKUP_FILE}"
+                    exit 1
+                  fi
+
+                  echo "Backup complete: $(du -h "${BACKUP_FILE}" | cut -f1)"
+
+                  # Rotate: keep last N backups
+                  RETENTION={{ .Values.postgres.backup.retention | default 7 }}
+                  COUNT=$(ls -1 /backups/*.sql.gz 2>/dev/null | wc -l)
+                  if [ "$COUNT" -gt "$RETENTION" ]; then
+                    REMOVE=$((COUNT - RETENTION))
+                    echo "Pruning ${REMOVE} old backup(s)"
+                    ls -1t /backups/*.sql.gz | tail -n "$REMOVE" | xargs rm -f
+                  fi
+
+                  echo "Done. Backups: $(ls -1 /backups/*.sql.gz | wc -l)"
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.postgres.existingSecret | default (printf "%s-postgres" .Release.Name) }}
+                      key: password
+              volumeMounts:
+                - name: backup
+                  mountPath: /backups
+              resources:
+                limits:
+                  memory: 256Mi
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: {{ .Release.Name }}-postgres-backup
+{{- end }}

@@ -24,6 +24,12 @@ postgres:
     requests:
       cpu: 250m
       memory: 256Mi
+  backup:
+    enabled: false
+    schedule: "0 3 * * *"   # daily at 3 AM UTC
+    retention: 7
+    storage:
+      size: 5Gi
 
 redis:
   image:
