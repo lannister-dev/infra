@@ -51,6 +51,8 @@ kind: Application
 metadata:
   name: external-secrets-config
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: infra
   source:
@@ -63,8 +65,15 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    retry:
+      limit: 5
+      backoff:
+        duration: 30s
+        maxDuration: 5m
+        factor: 2
     syncOptions:
       - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true
 ---
 # Local charts from this repo
 ---
