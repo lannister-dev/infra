@@ -55,8 +55,7 @@ grafana:
       root_url: "https://%(domain)s/"
   persistence:
     enabled: true
-    size: 5Gi
-    storageClassName: local-path
+    existingClaim: monitoring-grafana
   ingress:
     enabled: true
     ingressClassName: traefik
