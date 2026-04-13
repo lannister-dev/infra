@@ -28,6 +28,13 @@ postgres:
       cpu: 50m
       memory: 128Mi
 
+  backup:
+    enabled: true
+    schedule: "0 3 * * *"
+    retention: 7
+    storage:
+      size: 10Gi
+
 redis:
   image:
     tag: "7-alpine"
