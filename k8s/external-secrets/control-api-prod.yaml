@@ -1,0 +1,24 @@
+# ExternalSecret — syncs Vault KV → K8s Secret for control-api (prod)
+#
+# Vault path: kv/data/control-plane/prod/env
+# K8s secret: control-api-prod-env in namespace vpn-prod
+#
+# Each field in the Vault KV secret becomes a key in the K8s Secret.
+# ESO polls Vault every 5 minutes and updates the secret automatically.
+# Pods pick up changes on next restart (or with reloader).
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: control-api-prod-env
+  namespace: vpn-prod
+spec:
+  refreshInterval: 5m
+  secretStoreRef:
+    name: vault
+    kind: ClusterSecretStore
+  target:
+    name: control-api-prod-env
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: control-plane/prod/env

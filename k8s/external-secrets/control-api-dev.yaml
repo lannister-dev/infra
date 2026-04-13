@@ -1,0 +1,17 @@
+# ExternalSecret — syncs Vault KV → K8s Secret for control-api (dev)
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: control-api-dev-env
+  namespace: vpn-dev
+spec:
+  refreshInterval: 5m
+  secretStoreRef:
+    name: vault
+    kind: ClusterSecretStore
+  target:
+    name: control-api-dev-env
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: control-plane/dev/env
