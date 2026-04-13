@@ -1,0 +1,16 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: probe-dev-env
+  namespace: vpn-dev
+spec:
+  refreshInterval: 5m
+  secretStoreRef:
+    name: vault
+    kind: ClusterSecretStore
+  target:
+    name: probe-dev-env
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: probe/dev/env

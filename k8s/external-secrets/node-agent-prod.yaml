@@ -1,0 +1,16 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: node-agent-prod-env
+  namespace: vpn-prod
+spec:
+  refreshInterval: 5m
+  secretStoreRef:
+    name: vault
+    kind: ClusterSecretStore
+  target:
+    name: node-agent-prod-env
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: node-agent/prod/env
