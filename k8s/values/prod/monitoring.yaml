@@ -12,6 +12,8 @@
 # ── Prometheus ─────────────────────────────────────────────
 prometheus:
   prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
     retention: 14d
     scrapeInterval: 15s
     evaluationInterval: 15s
