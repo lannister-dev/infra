@@ -73,6 +73,19 @@ reconcile-nodes: ## Reconcile VPN node configs with control plane API
 	ANSIBLE_CONFIG=$(REPO_ROOT)/$(ANSIBLE_CFG) \
 		ansible-playbook -i $(INVENTORY) ansible/playbooks/reconcile-node-configs.yml $(ANSIBLE_ARGS)
 
+# ---------- Backup ----------
+
+.PHONY: backup-prod
+backup-prod: ## Backup production PostgreSQL
+	bash scripts/core/backup-data.sh --namespace data-prod --pod data-prod-postgres-0
+
+.PHONY: backup-dev
+backup-dev: ## Backup dev PostgreSQL
+	bash scripts/core/backup-data.sh --namespace data-dev --pod data-dev-postgres-0
+
+.PHONY: backup
+backup: backup-prod backup-dev ## Backup all PostgreSQL databases
+
 # ---------- Quality ----------
 
 .PHONY: lint

@@ -1,0 +1,16 @@
+# Custom ArgoCD configmap overrides (applied as strategic merge patch).
+#
+# Traefik with ClusterIP does not populate Ingress status.loadBalancer,
+# so ArgoCD's default health check keeps Ingress in "Progressing" forever.
+# This override marks all Ingress objects as Healthy unconditionally.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+data:
+  resource.customizations.health.networking.k8s.io_Ingress: |
+    hs = {}
+    hs.status = "Healthy"
+    hs.message = ""
+    return hs
