@@ -3,9 +3,8 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODULE_DIRS=(
-  "terraform/foundation"
-  "terraform/nodes"
   "terraform/infra-nodes"
+  "terraform/yandex-vpn"
 )
 
 for module_dir in "${MODULE_DIRS[@]}"; do

@@ -8,7 +8,7 @@ TF_ARGS      ?=
 ANSIBLE_ARGS ?=
 
 REPO_ROOT    := $(CURDIR)
-TF_ROOTS     := nodes infra-nodes
+TF_ROOTS     := infra-nodes yandex-vpn
 INVENTORY    := ansible/inventory/production.ini
 ANSIBLE_CFG  := ansible/ansible.cfg
 
@@ -67,11 +67,6 @@ k8s-lint: ## Helm lint all charts
 setup-k3s: ## Setup K3s server on control plane node
 	ANSIBLE_CONFIG=$(REPO_ROOT)/$(ANSIBLE_CFG) \
 		ansible-playbook -i $(INVENTORY) ansible/playbooks/setup-k3s-server.yml $(ANSIBLE_ARGS)
-
-.PHONY: reconcile-nodes
-reconcile-nodes: ## Reconcile VPN node configs with control plane API
-	ANSIBLE_CONFIG=$(REPO_ROOT)/$(ANSIBLE_CFG) \
-		ansible-playbook -i $(INVENTORY) ansible/playbooks/reconcile-node-configs.yml $(ANSIBLE_ARGS)
 
 # ---------- Backup ----------
 
