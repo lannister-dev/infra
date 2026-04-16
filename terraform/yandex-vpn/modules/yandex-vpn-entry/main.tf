@@ -40,15 +40,18 @@ locals {
   }
 
   # ---- adopt mode: mirror existing resource configuration ---------------
+  # YC provider returns -1 as a sentinel for "unset" port/from_port/to_port;
+  # normalise it to null so rules match `required_ingress_rules` (which uses
+  # null) during dedup.
   existing_ingress_rules = {
     for name, group in data.yandex_vpc_security_group.adopted : name => [
       for rule in group.ingress : {
         description       = try(rule.description, null)
         labels            = try(rule.labels, {})
         protocol          = rule.protocol
-        port              = try(rule.port, null)
-        from_port         = try(rule.from_port, null)
-        to_port           = try(rule.to_port, null)
+        port              = try(rule.port, null) != null && rule.port != -1 ? rule.port : null
+        from_port         = try(rule.from_port, null) != null && rule.from_port != -1 ? rule.from_port : null
+        to_port           = try(rule.to_port, null) != null && rule.to_port != -1 ? rule.to_port : null
         v4_cidr_blocks    = sort(try(rule.v4_cidr_blocks, []))
         v6_cidr_blocks    = sort(try(rule.v6_cidr_blocks, []))
         predefined_target = try(rule.predefined_target, null)
@@ -63,9 +66,9 @@ locals {
         description       = try(rule.description, null)
         labels            = try(rule.labels, {})
         protocol          = rule.protocol
-        port              = try(rule.port, null)
-        from_port         = try(rule.from_port, null)
-        to_port           = try(rule.to_port, null)
+        port              = try(rule.port, null) != null && rule.port != -1 ? rule.port : null
+        from_port         = try(rule.from_port, null) != null && rule.from_port != -1 ? rule.from_port : null
+        to_port           = try(rule.to_port, null) != null && rule.to_port != -1 ? rule.to_port : null
         v4_cidr_blocks    = sort(try(rule.v4_cidr_blocks, []))
         v6_cidr_blocks    = sort(try(rule.v6_cidr_blocks, []))
         predefined_target = try(rule.predefined_target, null)
@@ -74,20 +77,24 @@ locals {
     ]
   }
 
+  # Dedup by a composite key. Existing rules come first in `concat` so they
+  # "win" on collisions — we prefer keeping the current YC state verbatim.
   merged_adopt_ingress_rules = {
-    for name, node in local.adopt_nodes : name => values({
-      for rule in concat(local.existing_ingress_rules[name], local.required_ingress_rules[name]) :
-      join("|", [
-        rule.protocol != null && trimspace(rule.protocol) != "" ? upper(rule.protocol) : "ANY",
-        tostring(rule.port != null ? rule.port : 0),
-        tostring(rule.from_port != null ? rule.from_port : 0),
-        tostring(rule.to_port != null ? rule.to_port : 0),
-        join(",", sort(try(rule.v4_cidr_blocks, []))),
-        join(",", sort(try(rule.v6_cidr_blocks, []))),
-        rule.predefined_target != null ? rule.predefined_target : "",
-        rule.security_group_id != null ? rule.security_group_id : "",
-      ]) => rule
-    })
+    for name, node in local.adopt_nodes : name => [
+      for group in values({
+        for rule in concat(local.existing_ingress_rules[name], local.required_ingress_rules[name]) :
+        join("|", [
+          rule.protocol != null && trimspace(rule.protocol) != "" ? upper(rule.protocol) : "ANY",
+          tostring(rule.port != null ? rule.port : 0),
+          tostring(rule.from_port != null ? rule.from_port : 0),
+          tostring(rule.to_port != null ? rule.to_port : 0),
+          join(",", sort(try(rule.v4_cidr_blocks, []))),
+          join(",", sort(try(rule.v6_cidr_blocks, []))),
+          rule.predefined_target != null ? rule.predefined_target : "",
+          rule.security_group_id != null ? rule.security_group_id : "",
+        ]) => rule...
+      }) : group[0]
+    ]
   }
 
   adopt_instance_security_group_ids = {
