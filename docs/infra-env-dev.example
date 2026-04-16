@@ -7,16 +7,12 @@ TF_STATE_KEY_PREFIX=vpn-infra/dev
 # Terraform provider mirror (recommended in restricted regions)
 # TF_PROVIDER_MIRROR_URL=https://terraform-mirror.yandexcloud.net/
 
-# ---- Provider credentials (if provider modes are enabled in dev catalogs) ----
-# IAC_TFVAR_HOSTVDS_OS_AUTH_URL=...
-# IAC_TFVAR_HOSTVDS_OS_USERNAME=...
-# IAC_TFVAR_HOSTVDS_OS_PASSWORD=...
-# IAC_TFVAR_HOSTVDS_OS_PROJECT_NAME=...
-# IAC_TFVAR_HOSTVDS_OS_PROJECT_DOMAIN_ID=default
-# IAC_TFVAR_HOSTVDS_OS_INTERFACE=public
+# ---- Provider credentials (required only when corresponding TF root is applied) ----
+# Yandex Cloud VPN nodes (terraform/yandex-vpn)
 # YC_SERVICE_ACCOUNT_KEY_B64=<base64_of_authorized_key.json>
 # IAC_TFVAR_YANDEX_CLOUD_ID=b1g...
 # IAC_TFVAR_YANDEX_FOLDER_ID=b1g...
+# Timeweb (terraform/infra-nodes)
 # IAC_TFVAR_TIMEWEB_API_TOKEN=...
 
 # ---- K8s / Helm ----
@@ -33,7 +29,9 @@ NODE_AGENT_IMAGE_REF=harbor.lannister-dev.ru/vpn-service/node-agent:prod
 NODE_AGENT_IMAGE_REF_DEV=harbor.lannister-dev.ru/vpn-service/node-agent:dev
 
 # ---- SSH keys for Ansible / K3s node setup ----
+# Consumed by the k3s-setup workflow; Ansible does not talk to VPN nodes anymore.
 # ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>","yc":"<base64_private_key>"}'
+# ANSIBLE_SSH_PRIVATE_KEY_B64=<base64_private_key>
 
 # Vault layout:
 # kv/infra/dev field: config      -> this file content
