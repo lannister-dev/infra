@@ -4,6 +4,7 @@ image:
 
 nodeSelector:
   role: vpn
+  channel: prod
   traffic_role: whitelist_entry
 
 tolerations:
