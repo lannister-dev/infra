@@ -13,19 +13,9 @@ TF_STATE_KEY_PREFIX=vpn-infra/prod
 # TF_STATE_ACCESS_KEY=...
 # TF_STATE_SECRET_KEY=...
 
-# ---- Provider credentials (optional; only if corresponding mode is enabled in tfvars) ----
+# ---- Provider credentials (optional; only if the corresponding TF root is applied) ----
 
-# HostVDS / OpenStack (terraform/nodes)
-# IAC_TFVAR_HOSTVDS_OS_AUTH_URL=https://os-api.hostvds.com/identity
-# IAC_TFVAR_HOSTVDS_OS_USERNAME=hostvds-...
-# IAC_TFVAR_HOSTVDS_OS_PASSWORD=...
-# IAC_TFVAR_HOSTVDS_OS_PROJECT_NAME=hostvds-...
-# IAC_TFVAR_HOSTVDS_OS_USER_DOMAIN_NAME=Default
-# IAC_TFVAR_HOSTVDS_OS_PROJECT_DOMAIN_ID=default
-# IAC_TFVAR_HOSTVDS_OS_REGION_NAME=eu-north1b
-# IAC_TFVAR_HOSTVDS_OS_INTERFACE=public
-
-# Yandex Cloud whitelist entry auth (terraform/nodes)
+# Yandex Cloud (terraform/yandex-vpn)
 # YC_SERVICE_ACCOUNT_KEY_B64=<base64_of_authorized_key.json>
 # YC_SERVICE_ACCOUNT_KEY_JSON={"id":"...","service_account_id":"..."}
 # YC_TOKEN=...
@@ -48,6 +38,7 @@ HARBOR_HOST=harbor.lannister-dev.ru
 NODE_AGENT_IMAGE_REF=harbor.lannister-dev.ru/vpn-service/node-agent:prod
 
 # ---- SSH keys for Ansible / K3s node setup ----
+# Consumed by the k3s-setup workflow; Ansible does not talk to VPN nodes anymore.
 # ANSIBLE_SSH_KEYS_B64_JSON='{"dev":"<base64_private_key>","yc":"<base64_private_key>"}'
 # ANSIBLE_SSH_PRIVATE_KEY_B64=<base64_private_key>
 

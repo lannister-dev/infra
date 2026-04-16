@@ -1,34 +1,38 @@
 # vpn-infra
 
-Infrastructure as Code repository for VPN platform operations.
+Infrastructure as Code repository for the VPN platform.
 
 ## Stack
 
-- Terraform: infrastructure state and node catalogs
-- Ansible: reconciliation and deployment
-- Docker Swarm: runtime orchestration
-- WireGuard + Xray: VPN data plane
+- Terraform: Yandex Cloud VPN nodes + non-VPN infra-node catalogs.
+- Ansible: K3s server/agent bootstrap on infra nodes.
+- K3s + Helm (`k8s/`): runtime orchestration.
+- WireGuard + Xray: VPN data plane (deployed as K8s workloads).
+- `vpn-control-api`: source of truth for VPN-node lifecycle (admin UI +
+  installer one-liner); not part of this repo.
 
 ## IaC model
 
-Terraform is the control plane:
-- `terraform/foundation` for Swarm foundation resources
-- `terraform/nodes` for VPN nodes
-- `terraform/infra-nodes` for non-VPN infra nodes
+Terraform roots:
+- `terraform/yandex-vpn` — Yandex Cloud VPN entry nodes (adopt existing + create new).
+- `terraform/infra-nodes` — non-VPN infra nodes (K3s managers/workers).
+
+Non-YC VPN nodes are **not** managed by Terraform. They are created and tracked inside
+`vpn-control-api`; the admin UI emits a bootstrap one-liner that joins the node to the
+K3s cluster, and Helm takes over from there.
 
 Topology source of truth:
-- `terraform/nodes/catalog.auto.tfvars`
+- `terraform/yandex-vpn/catalog.auto.tfvars`
 - `terraform/infra-nodes/catalog.auto.tfvars`
 
-Secrets and provider credentials stay in local `.env` / CI secrets.
+Secrets and provider credentials stay in local `.env` / Vault.
 
 ## Docs
 
 - `docs/terraform.md`
 - `docs/ansible.md`
-- `docs/vpn-nodes-api.md`
+- `docs/yandex-vpn.md`
 - `docs/infra-nodes.md`
-- `docs/add-vpn-node.md`
 - `docs/operations-runbook.md`
 - `docs/harbor.md`
 - `docs/profiles-artifact.md`
@@ -36,14 +40,17 @@ Secrets and provider credentials stay in local `.env` / CI secrets.
 - `docs/data-dev.md`
 - `docs/data-prod-migration.md`
 - `docs/infra-env-dev.example`
+- `docs/infra-env-prod.example`
 
-## Note on scripts
+## Scripts
 
-Scripts are organized by lifecycle:
-- `scripts/core` for current operational helpers used in active CI/CD flow.
-- `scripts/legacy` for break-glass and one-time migration scripts (stored for reserve, not part of the main flow).
+- `scripts/core` — operational helpers used in the active CI/CD flow.
+- `scripts/ci` — helpers used exclusively from GitHub Actions.
 
 Reference: `scripts/README.md`.
 
-Shell scripts in `scripts/` are operational helpers and emergency fallback tools.
-Primary production flow is Terraform + Ansible.
+## K8s bootstrap
+
+`k8s/bootstrap/install-agent.sh` is the current manual K3s join helper. It will be
+replaced by the installer shipped by `vpn-control-api` once the admin UI "Add Node" flow
+lands.
