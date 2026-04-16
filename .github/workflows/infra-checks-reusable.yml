@@ -44,7 +44,7 @@ jobs:
       - name: TFLint roots
         run: |
           set -Eeuo pipefail
-          TFLINT_CONFIG="${GITHUB_WORKSPACE}/.tflint.hcl"
+          TFLINT_CONFIG="${GITHUB_WORKSPACE}/linters/tflint.hcl"
           tflint --init --config "${TFLINT_CONFIG}"
           for root in infra-nodes yandex-vpn; do
             tflint --config "${TFLINT_CONFIG}" --chdir "terraform/${root}"
@@ -78,10 +78,10 @@ jobs:
           ansible-playbook --syntax-check -i ansible/inventory/production.ini ansible/playbooks/setup-k3s-server.yml
 
       - name: ansible-lint
-        run: ansible-lint -c .ansible-lint.yml ansible/
+        run: ansible-lint -c linters/ansible-lint.yml ansible/
 
       - name: yamllint
-        run: yamllint -c .yamllint.yml ansible .github/workflows k8s/
+        run: yamllint -c linters/yamllint.yml ansible .github/workflows k8s/
 
       - name: Helm lint
         run: |
