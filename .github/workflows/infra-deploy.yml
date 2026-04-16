@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: "Apply Terraform and reconcile node configs"
+        description: "Apply Terraform roots"
         required: true
         type: boolean
         default: true
@@ -19,11 +19,11 @@ on:
         required: true
         type: boolean
         default: false
-      reconcile_nodes:
-        description: "Reconcile VPN node configs with control plane API"
+      apply_yandex_vpn:
+        description: "Apply terraform/yandex-vpn"
         required: true
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
@@ -135,6 +135,7 @@ jobs:
       - name: Terraform apply
         env:
           APPLY_INFRA_NODES: ${{ inputs.apply_infra_nodes }}
+          APPLY_YANDEX_VPN: ${{ inputs.apply_yandex_vpn }}
         run: |
           set -Eeo pipefail
           set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
@@ -163,20 +164,8 @@ jobs:
 
           bash ./scripts/ci/apply-terraform.sh
 
-      - name: Install Ansible
-        run: python -m pip install --upgrade pip ansible
-
-      - name: Reconcile node configs with control plane
-        if: ${{ inputs.reconcile_nodes == true }}
-        run: |
-          set -Eeo pipefail
-          set -a; source "${INFRA_ENV_FILE}"; set +a; set -u
-          export ANSIBLE_CONFIG="${GITHUB_WORKSPACE}/ansible/ansible.cfg"
-          ansible-playbook ansible/playbooks/reconcile-node-configs.yml
-
       - name: Cleanup
         if: always()
         run: |
           rm -f "${INFRA_ENV_FILE:-}"
           rm -f "${RUNNER_TEMP}/yc-sa-key.json"
-          rm -rf "${RUNNER_TEMP}/ansible_ssh_keys"

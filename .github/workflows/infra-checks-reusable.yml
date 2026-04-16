@@ -31,7 +31,7 @@ jobs:
       - name: Terraform validate roots
         run: |
           set -Eeuo pipefail
-          for root in nodes infra-nodes; do
+          for root in infra-nodes yandex-vpn; do
             terraform -chdir="terraform/${root}" init -backend=false -input=false
             terraform -chdir="terraform/${root}" validate -no-color
           done
@@ -46,7 +46,7 @@ jobs:
           set -Eeuo pipefail
           TFLINT_CONFIG="${GITHUB_WORKSPACE}/.tflint.hcl"
           tflint --init --config "${TFLINT_CONFIG}"
-          for root in nodes infra-nodes; do
+          for root in infra-nodes yandex-vpn; do
             tflint --config "${TFLINT_CONFIG}" --chdir "terraform/${root}"
           done
 
@@ -76,7 +76,6 @@ jobs:
           set -Eeuo pipefail
           export ANSIBLE_CONFIG="$(pwd)/ansible/ansible.cfg"
           ansible-playbook --syntax-check -i ansible/inventory/production.ini ansible/playbooks/setup-k3s-server.yml
-          ansible-playbook --syntax-check ansible/playbooks/reconcile-node-configs.yml
 
       - name: ansible-lint
         run: ansible-lint -c .ansible-lint.yml ansible/
