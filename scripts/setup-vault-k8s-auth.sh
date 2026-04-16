@@ -58,6 +58,3 @@ vault write auth/kubernetes/role/external-secrets \
   ttl="1h"
 
 echo "==> Done. ESO can now authenticate to Vault."
-echo ""
-echo "Next step: migrate env blob to individual KV fields:"
-echo "  bash scripts/vault-migrate-env-secrets.sh"
