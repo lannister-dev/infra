@@ -1,12 +1,2 @@
 ---
 repo_root: "{{ lookup('env', 'REPO_ROOT') | default('/opt/vpn-infra', true) }}"
-
-# Control plane API (used by reconcile-node-configs.yml)
-control_plane_url: "{{ lookup('env', 'CONTROL_PLANE_URL') | default('', true) }}"
-
-# Harbor registry
-harbor_host: "{{ lookup('env', 'HARBOR_HOST') | default('harbor.lannister-dev.ru', true) }}"
-
-# Node agent images
-node_agent_image_ref: "{{ lookup('env', 'NODE_AGENT_IMAGE_REF') | default('harbor.lannister-dev.ru/vpn-service/node-agent:prod', true) }}"
-node_agent_image_ref_dev: "{{ lookup('env', 'NODE_AGENT_IMAGE_REF_DEV') | default(node_agent_image_ref, true) }}"

@@ -1,7 +1,0 @@
----
-desired_hostname: "{{ inventory_hostname }}"
-ufw_ports:
-  - 6443/tcp
-  - 10250/tcp
-  - 51820/udp
-install_wireguard: false
