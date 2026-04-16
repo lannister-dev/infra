@@ -10,7 +10,7 @@ repos:
     rev: v1.37.1
     hooks:
       - id: yamllint
-        args: ["-c", ".yamllint.yml"]
+        args: ["-c", "linters/yamllint.yml"]
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.11.0
     hooks:
@@ -24,27 +24,21 @@ repos:
         language: system
         pass_filenames: false
         files: ^terraform/
-      - id: tflint-foundation
-        name: tflint foundation
-        entry: tflint --config .tflint.hcl --chdir terraform/foundation
-        language: system
-        pass_filenames: false
-        files: ^terraform/foundation/
-      - id: tflint-nodes
-        name: tflint nodes
-        entry: tflint --config .tflint.hcl --chdir terraform/nodes
-        language: system
-        pass_filenames: false
-        files: ^terraform/nodes/
       - id: tflint-infra-nodes
         name: tflint infra-nodes
-        entry: tflint --config .tflint.hcl --chdir terraform/infra-nodes
+        entry: tflint --config linters/tflint.hcl --chdir terraform/infra-nodes
         language: system
         pass_filenames: false
         files: ^terraform/infra-nodes/
+      - id: tflint-yandex-vpn
+        name: tflint yandex-vpn
+        entry: tflint --config linters/tflint.hcl --chdir terraform/yandex-vpn
+        language: system
+        pass_filenames: false
+        files: ^terraform/yandex-vpn/
       - id: ansible-lint-playbooks
         name: ansible-lint playbooks
-        entry: ansible-lint -c .ansible-lint.yml ansible/playbooks/reconcile-vpn-nodes.yml ansible/playbooks/deploy-stacks.yml
+        entry: ansible-lint -c linters/ansible-lint.yml ansible/playbooks/setup-k3s-server.yml
         language: system
         pass_filenames: false
         files: ^ansible/

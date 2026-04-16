@@ -1,0 +1,41 @@
+# Yandex Cloud credentials.
+# Prefer service account key file for automation; IAM token is suitable only for short-lived manual runs.
+# yandex_service_account_key_file = "./sa-key.json"
+# yandex_token = "..."
+# yandex_cloud_id = "b1g..."
+# yandex_folder_id = "b1g..."
+# yandex_zone = "ru-central1-a"
+
+# VPN nodes managed in Yandex Cloud.
+# mode = "adopt" reuses an existing VM + reserved IP + security group (use for the initial
+# migration from manual ad-hoc nodes or when another tool created the VM).
+# mode = "create" provisions a fresh VM end-to-end.
+#
+# yandex_vpn_nodes = {
+#   "vpn-yc-whitelist-entry-01" = {
+#     mode                = "adopt"
+#     instance_id         = "fhm***************"
+#     address_id          = "e9b***************"
+#     security_group_id   = "enp***************"
+#     zone                = "ru-central1-a"
+#     ssh_ingress_cidrs   = ["0.0.0.0/0"]
+#     https_ingress_cidrs = ["0.0.0.0/0"]
+#     prevent_destroy     = true
+#   }
+#
+#   "vpn-yc-entry-02" = {
+#     mode            = "create"
+#     zone            = "ru-central1-b"
+#     subnet_id       = "e2l***************"
+#     network_id      = "enp***************"
+#     image_id        = "fd8***************"
+#     platform_id     = "standard-v3"
+#     cores           = 2
+#     memory          = 2
+#     disk_size       = 20
+#     nat_enabled     = true
+#     ssh_public_key  = "ssh-ed25519 AAAA... admin"
+#     user_data       = "#!/bin/bash\ncurl -fsSL https://control.example.com/agent/install.sh | TOKEN=... bash\n"
+#     prevent_destroy = false
+#   }
+# }

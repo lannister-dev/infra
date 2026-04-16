@@ -1,5 +1,5 @@
 bucket = "vpn-infra-terraform-state"
-key    = "prod/nodes.tfstate"
+key    = "prod/yandex-vpn.tfstate"
 region = "ru-central1"
 
 # Lock table (recommended — prevents concurrent state writes):
