@@ -11,32 +11,48 @@ locals {
   create_nodes = { for name, node in var.nodes : name => node if node.mode == "create" }
 
   required_ingress_rules = {
-    for name, node in var.nodes : name => [
-      {
-        description       = "Allow SSH"
-        labels            = {}
-        protocol          = "TCP"
-        port              = 22
-        from_port         = null
-        to_port           = null
-        v4_cidr_blocks    = sort(node.ssh_ingress_cidrs)
-        v6_cidr_blocks    = []
-        predefined_target = null
-        security_group_id = null
-      },
-      {
-        description       = "Allow HTTPS"
-        labels            = {}
-        protocol          = "TCP"
-        port              = 443
-        from_port         = null
-        to_port           = null
-        v4_cidr_blocks    = sort(node.https_ingress_cidrs)
-        v6_cidr_blocks    = []
-        predefined_target = null
-        security_group_id = null
-      },
-    ]
+    for name, node in var.nodes : name => concat(
+      [
+        {
+          description       = "Allow SSH"
+          labels            = {}
+          protocol          = "TCP"
+          port              = 22
+          from_port         = null
+          to_port           = null
+          v4_cidr_blocks    = sort(node.ssh_ingress_cidrs)
+          v6_cidr_blocks    = []
+          predefined_target = null
+          security_group_id = null
+        },
+        {
+          description       = "Allow HTTPS"
+          labels            = {}
+          protocol          = "TCP"
+          port              = 443
+          from_port         = null
+          to_port           = null
+          v4_cidr_blocks    = sort(node.https_ingress_cidrs)
+          v6_cidr_blocks    = []
+          predefined_target = null
+          security_group_id = null
+        },
+      ],
+      length(node.kubelet_ingress_cidrs) > 0 ? [
+        {
+          description       = "Allow kubelet (metrics-server scrape)"
+          labels            = {}
+          protocol          = "TCP"
+          port              = 10250
+          from_port         = null
+          to_port           = null
+          v4_cidr_blocks    = sort(node.kubelet_ingress_cidrs)
+          v6_cidr_blocks    = []
+          predefined_target = null
+          security_group_id = null
+        },
+      ] : [],
+    )
   }
 
   # ---- adopt mode: mirror existing resource configuration ---------------
