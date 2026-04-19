@@ -2,6 +2,8 @@ image:
   repository: haproxy
   tag: "3.1-alpine"
 
+mode: whitelist_entry
+
 nodeSelector:
   role: vpn
   channel: prod
@@ -12,7 +14,15 @@ tolerations:
     value: vpn
     effect: NoSchedule
 
-upstream: "45.38.228.130:443"
+upstream: "0.0.0.0:443"
+
+sharedHostPath: /var/lib/entry-shared
+
+pool:
+  slotCount: 20
+  checkIntervalMs: 10000
+  checkFall: 2
+  checkRise: 2
 
 resources:
   limits:

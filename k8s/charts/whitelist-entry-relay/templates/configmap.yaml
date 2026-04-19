@@ -9,6 +9,8 @@ data:
   haproxy.cfg: |
     global
       log stdout format raw local0
+      stats socket /shared/admin.sock mode 600 level admin expose-fd listeners
+      stats timeout 30s
 
     defaults
       log global
@@ -23,4 +25,17 @@ data:
       default_backend be_tls
 
     backend be_tls
+      {{- if eq .Values.mode "whitelist_entry" }}
+      balance first
+      option tcp-check
+      default-server check inter {{ .Values.pool.checkIntervalMs }} fall {{ .Values.pool.checkFall }} rise {{ .Values.pool.checkRise }}
       server upstream {{ .Values.upstream }} check
+      server-template srv {{ .Values.pool.slotCount }} 0.0.0.0:443 check backup disabled
+      {{- else if eq .Values.mode "entry" }}
+      balance random
+      option tcp-check
+      default-server check inter {{ .Values.pool.checkIntervalMs }} fall {{ .Values.pool.checkFall }} rise {{ .Values.pool.checkRise }}
+      server-template srv {{ .Values.pool.slotCount }} 0.0.0.0:443 check disabled
+      {{- else }}
+      {{- fail (printf "Unknown mode %q" .Values.mode) }}
+      {{- end }}

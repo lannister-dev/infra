@@ -1,0 +1,12 @@
+mode: entry
+
+nodeSelector:
+  role: vpn
+  channel: prod
+  traffic_role: entry
+
+pool:
+  slotCount: 20
+  checkIntervalMs: 10000
+  checkFall: 2
+  checkRise: 2
