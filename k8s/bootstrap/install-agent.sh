@@ -5,25 +5,24 @@
 # Что делает:
 #   1. Ставит K3s в режиме agent (worker)
 #   2. Подключается к существующему server по URL + token
-#   3. Навешивает labels на ноду (role=vpn, channel=prod, etc.)
-#   4. Опционально ставит taints (чтобы на VPN ноду не попадали чужие поды)
+#   3. Навешивает labels/taints на ноду
+#   4. Прокидывает произвольные k3s agent флаги через --extra-arg
 #
 # Использование:
 #   ./install-agent.sh --url https://<server-ip>:6443 --token <node-token> \
 #       --label role=vpn --label channel=prod \
 #       --taint dedicated=vpn:NoSchedule
 #
-# Для нод в Yandex Cloud (VM за приватной подсетью) обязательно передать:
-#       --label provider=yandex-cloud
-#   и задать hostname `vpn-yc-*`. Prometheus скрейпит такие ноды через
-#   ExternalIP (см. k8s/values/prod/monitoring.yaml) — без метки kubelet/
-#   node-exporter target'ы будут висеть таймаутом. UFW-правила на YC нодах
-#   ставит terraform/yandex-vpn/modules/yandex-vpn-entry через
-#   null_resource, этот скрипт их не трогает.
+# Для нод где eth0 не имеет публичного IP (1:1 NAT cloud: Yandex Cloud,
+# AWS, GCP) передать публичный адрес явно, чтобы k3s отрепортил его как
+# InternalIP — иначе кластер не достучится до hostNetwork-подов и
+# kubelet'а:
 #
-# После установки:
-#   - Нода появится в: kubectl get nodes (на server)
-#   - Поды будут запланированы автоматически (если DaemonSet/nodeSelector совпадёт)
+#   --extra-arg '--node-ip=158.160.231.247' \
+#   --extra-arg '--flannel-iface=eth0'
+#
+# Скрипт идемпотентен: повторный запуск с другим набором флагов
+# перезапишет systemd unit через get.k3s.io и рестартует сервис.
 # ============================================================
 set -Eeuo pipefail
 
@@ -41,6 +40,7 @@ usage() {
     echo "  --version <version>      K3s version (should match server)"
     echo "  --label <key=value>      Node label (repeatable)"
     echo "  --taint <key=val:effect> Node taint (repeatable)"
+    echo "  --extra-arg <arg>        Pass-through k3s agent flag (repeatable)"
     exit 1
 }
 
@@ -66,6 +66,10 @@ while [[ $# -gt 0 ]]; do
             TAINT_ARGS="${TAINT_ARGS} --node-taint=$2"
             shift 2
             ;;
+        --extra-arg)
+            EXTRA_ARGS="${EXTRA_ARGS} $2"
+            shift 2
+            ;;
         -h|--help)
             usage
             ;;
@@ -84,14 +88,15 @@ fi
 
 echo "=== Installing K3s Agent ==="
 echo "Server URL: ${K3S_URL}"
-echo "Labels: ${LABEL_ARGS:-none}"
-echo "Taints: ${TAINT_ARGS:-none}"
+echo "Labels:     ${LABEL_ARGS:-none}"
+echo "Taints:     ${TAINT_ARGS:-none}"
+echo "Extra:      ${EXTRA_ARGS:-none}"
 echo ""
 
 export K3S_URL
 export K3S_TOKEN
 export INSTALL_K3S_VERSION="${K3S_VERSION}"
-export INSTALL_K3S_EXEC="agent ${LABEL_ARGS} ${TAINT_ARGS}"
+export INSTALL_K3S_EXEC="agent${EXTRA_ARGS}${LABEL_ARGS}${TAINT_ARGS}"
 
 curl -sfL https://get.k3s.io | sh -
 
