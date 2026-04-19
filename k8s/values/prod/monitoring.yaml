@@ -17,62 +17,6 @@ prometheus:
     retention: 14d
     scrapeInterval: 15s
     evaluationInterval: 15s
-    # Nodes behind a private subnet (YC VPN VMs) are marked with the k8s
-    # label `provider=yandex-cloud` at k3s-agent install time. Their kubelet
-    # and node-exporter are reachable only via the public IP + SG rules
-    # opened by terraform/yandex-vpn. The default endpoints-SD ServiceMonitors
-    # drop them (see `kubelet.serviceMonitor.*relabelings` below and
-    # `prometheus-node-exporter.prometheus.monitor.relabelings`); these two
-    # role:node jobs scrape them via ExternalIP instead.
-    additionalScrapeConfigs:
-      - job_name: kubelet-external
-        scheme: https
-        authorization:
-          credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-        tls_config:
-          insecure_skip_verify: true
-        kubernetes_sd_configs:
-          - role: node
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_node_label_provider]
-            regex: yandex-cloud
-            action: keep
-          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
-            regex: "(.+)"
-            action: keep
-          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
-            regex: "(.+)"
-            replacement: "${1}:10250"
-            target_label: __address__
-          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
-            regex: "(.+)"
-            replacement: "${1}:10250"
-            target_label: instance
-          - source_labels: [__meta_kubernetes_node_name]
-            target_label: node
-      - job_name: node-exporter-external
-        scheme: http
-        kubernetes_sd_configs:
-          - role: node
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_node_label_provider]
-            regex: yandex-cloud
-            action: keep
-          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
-            regex: "(.+)"
-            action: keep
-          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
-            regex: "(.+)"
-            replacement: "${1}:9100"
-            target_label: __address__
-          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
-            regex: "(.+)"
-            replacement: "${1}:9100"
-            target_label: instance
-          - source_labels: [__meta_kubernetes_node_name]
-            target_label: node
-          - target_label: job
-            replacement: node-exporter
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -192,39 +136,12 @@ nodeExporter:
       cpu: 50m
       memory: 64Mi
 
-# Nodes with label `provider=yandex-cloud` sit behind a private YC subnet
-# whose InternalIP is unreachable from the rest of the cluster. The
-# default endpoints-SD ServiceMonitors drop them; the role:node jobs in
-# prometheus.prometheusSpec.additionalScrapeConfigs re-target via
-# ExternalIP. `__meta_kubernetes_endpoint_node_name` carries the node
-# name in endpoints SD, which lets us resolve the provider label via the
-# Prometheus endpointslice/pod meta chain without touching CIDRs.
 kubelet:
   enabled: true
   serviceMonitor:
     https: true
     cAdvisor: true
     probes: true
-    relabelings:
-      - sourceLabels: [__meta_kubernetes_endpoint_node_name]
-        regex: "vpn-yc-.*"
-        action: drop
-    cAdvisorRelabelings:
-      - sourceLabels: [__meta_kubernetes_endpoint_node_name]
-        regex: "vpn-yc-.*"
-        action: drop
-    probesRelabelings:
-      - sourceLabels: [__meta_kubernetes_endpoint_node_name]
-        regex: "vpn-yc-.*"
-        action: drop
-
-prometheus-node-exporter:
-  prometheus:
-    monitor:
-      relabelings:
-        - sourceLabels: [__meta_kubernetes_pod_node_name]
-          regex: "vpn-yc-.*"
-          action: drop
 
 # ── kube-state-metrics ─────────────────────────────────────
 kubeStateMetrics:

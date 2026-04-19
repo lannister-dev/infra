@@ -542,3 +542,72 @@ resource "null_resource" "ufw_monitoring" {
     interpreter = ["bash", "-c"]
   }
 }
+
+# =======================================================================
+# Netplan: expose the 1:1 NAT public IP as a /32 alias on eth0.
+#
+# On YC, eth0 carries only the private VPC IP (e.g. 10.130.0.14) — the
+# public address (e.g. 158.160.231.247) lives on the provider fabric and
+# is delivered to the VM via 1:1 NAT. Kubelet's `--node-ip=<public>`
+# validates against locally-configured addresses; without the alias it
+# silently falls back to the private IP, which is unreachable from the
+# rest of the cluster.
+#
+# Adding the public IP as a /32 alias keeps eth0's primary IP (and thus
+# outbound source selection) intact, while letting kubelet — and any
+# other process that binds explicitly — accept `158.160.231.247` as a
+# local address. Paired with k3s-agent args:
+#   --node-ip=<public> --node-external-ip=<public> --flannel-iface=eth0
+# the node reports the public IP as InternalIP and behaves identically
+# to non-NAT'd VPN nodes (timeweb/hostvds) as far as the cluster is
+# concerned — no scrape-path workarounds required.
+# =======================================================================
+
+locals {
+  netplan_targets = {
+    for name, node in var.nodes : name => {
+      instance_id = node.mode == "adopt" ? yandex_compute_instance.adopted[name].id : yandex_compute_instance.created[name].id
+      public_ip   = local.nodes_output[name].public_ip
+    }
+  }
+}
+
+resource "null_resource" "netplan_public_ip_alias" {
+  for_each = local.netplan_targets
+
+  triggers = {
+    instance_id = each.value.instance_id
+    public_ip   = each.value.public_ip
+  }
+
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      id_arg=""
+      if [ -n "${var.ssh_identity_file}" ]; then
+        id_arg="--identity-file ${var.ssh_identity_file}"
+      fi
+      remote=$(cat <<'REMOTE'
+set -euo pipefail
+sudo tee /etc/netplan/60-k3s-public-alias.yaml >/dev/null <<NETPLAN
+# Managed by terraform/yandex-vpn — do not edit by hand.
+# Exposes the 1:1 NAT public IP as a /32 alias on eth0 so kubelet
+# --node-ip=<public> passes its local-address check. Outbound routing
+# is unaffected: eth0 primary IP is still the source for default route.
+network:
+  version: 2
+  ethernets:
+    eth0:
+      addresses:
+        - PUBLIC_IP/32
+NETPLAN
+sudo chmod 0600 /etc/netplan/60-k3s-public-alias.yaml
+sudo netplan apply
+REMOTE
+)
+      remote="$${remote//PUBLIC_IP/${each.value.public_ip}}"
+      yc compute ssh --id ${each.value.instance_id} $id_arg -- "$remote"
+    EOT
+    interpreter = ["bash", "-c"]
+  }
+}
