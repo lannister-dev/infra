@@ -13,6 +13,12 @@
 #       --label role=vpn --label channel=prod \
 #       --taint dedicated=vpn:NoSchedule
 #
+# Для нод в Yandex Cloud (VM за приватной подсетью) обязательно передать:
+#       --label provider=yandex-cloud
+#   и задать hostname `vpn-yc-*`. Prometheus скрейпит такие ноды через
+#   ExternalIP (см. k8s/values/prod/monitoring.yaml) — без метки kubelet/
+#   node-exporter target'ы будут висеть таймаутом.
+#
 # После установки:
 #   - Нода появится в: kubectl get nodes (на server)
 #   - Поды будут запланированы автоматически (если DaemonSet/nodeSelector совпадёт)
