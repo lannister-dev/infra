@@ -136,6 +136,41 @@ nodeExporter:
       cpu: 50m
       memory: 64Mi
 
+# Some nodes (YC) have their kubelet InternalIP on a private Yandex Cloud
+# network that is not routable from other providers. Prefer ExternalIP when
+# the node exposes one — Prometheus then hits the public endpoint instead of
+# timing out on a dead overlay address. Nodes without an ExternalIP keep
+# the default relabeling chain untouched.
+kubelet:
+  enabled: true
+  serviceMonitor:
+    https: true
+    cAdvisor: true
+    probes: true
+    relabelings:
+      - sourceLabels: [__meta_kubernetes_node_address_ExternalIP]
+        regex: "(.+)"
+        action: replace
+        replacement: "${1}:10250"
+        targetLabel: __address__
+    cAdvisorRelabelings:
+      - sourceLabels: [__meta_kubernetes_node_address_ExternalIP]
+        regex: "(.+)"
+        action: replace
+        replacement: "${1}:10250"
+        targetLabel: __address__
+    probesRelabelings:
+      - sourceLabels: [__meta_kubernetes_node_address_ExternalIP]
+        regex: "(.+)"
+        action: replace
+        replacement: "${1}:10250"
+        targetLabel: __address__
+
+# Note: node-exporter Endpoints-based discovery can't see node.ExternalIP,
+# so its target on YC stays on the unreachable InternalIP. Left as TODO —
+# either switch to role: node discovery or deploy a dedicated exporter on
+# the YC VPN side that pushes via Pushgateway.
+
 # ── kube-state-metrics ─────────────────────────────────────
 kubeStateMetrics:
   enabled: true
