@@ -52,6 +52,20 @@ locals {
           security_group_id = null
         },
       ] : [],
+      length(node.node_exporter_ingress_cidrs) > 0 ? [
+        {
+          description       = "Allow node-exporter (prometheus scrape)"
+          labels            = {}
+          protocol          = "TCP"
+          port              = 9100
+          from_port         = null
+          to_port           = null
+          v4_cidr_blocks    = sort(node.node_exporter_ingress_cidrs)
+          v6_cidr_blocks    = []
+          predefined_target = null
+          security_group_id = null
+        },
+      ] : [],
     )
   }
 
