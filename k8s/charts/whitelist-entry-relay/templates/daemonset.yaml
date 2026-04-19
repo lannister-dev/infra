@@ -20,6 +20,16 @@ spec:
         {{- toYaml .Values.nodeSelector | nindent 8 }}
       tolerations:
         {{- toYaml .Values.tolerations | nindent 8 }}
+      initContainers:
+        - name: init-shared
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - chown 99:99 /shared && chmod 0775 /shared
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
       containers:
         - name: haproxy
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
