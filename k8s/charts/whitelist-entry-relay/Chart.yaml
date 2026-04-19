@@ -1,5 +1,5 @@
 apiVersion: v2
 name: whitelist-entry-relay
-description: HAProxy relay for VPN whitelist entry node — forwards TLS to upstream VPN backend
-version: 0.1.0
+description: HAProxy relay for VPN entry nodes. Supports whitelist_entry (single upstream, manual failover to backups) and entry (pool with weighted random balance) modes, both driven by node-agent via Runtime API socket.
+version: 0.2.0
 appVersion: "3.1"
