@@ -46,8 +46,6 @@ prometheus:
             target_label: __address__
           - source_labels: [__meta_kubernetes_node_name]
             target_label: node
-          - source_labels: [__meta_kubernetes_node_name]
-            target_label: instance
       - job_name: node-exporter-external
         scheme: http
         kubernetes_sd_configs:
@@ -65,8 +63,6 @@ prometheus:
             target_label: __address__
           - source_labels: [__meta_kubernetes_node_name]
             target_label: node
-          - source_labels: [__meta_kubernetes_node_name]
-            target_label: instance
           - target_label: job
             replacement: node-exporter
     storageSpec:
