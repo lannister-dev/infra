@@ -31,6 +31,7 @@ K3S_VERSION=""
 LABEL_ARGS=""
 TAINT_ARGS=""
 EXTRA_ARGS=""
+MONITORING_SOURCE_CIDR="82.97.253.81/32"
 
 usage() {
     echo "Usage: $0 --url <server_url> --token <node_token> [OPTIONS]"
@@ -92,6 +93,17 @@ export INSTALL_K3S_VERSION="${K3S_VERSION}"
 export INSTALL_K3S_EXEC="agent ${LABEL_ARGS} ${TAINT_ARGS}"
 
 curl -sfL https://get.k3s.io | sh -
+
+# YC ноды сидят за ufw с default DROP. Открываем kubelet/node-exporter
+# для Prometheus-хоста, иначе scrape'ы таймаутят несмотря на открытую SG.
+if [[ "${LABEL_ARGS}" == *"provider=yandex-cloud"* ]]; then
+    if command -v ufw >/dev/null 2>&1; then
+        echo ""
+        echo "=== Opening ufw for Prometheus (${MONITORING_SOURCE_CIDR}) ==="
+        ufw allow from "${MONITORING_SOURCE_CIDR}" to any port 10250 proto tcp
+        ufw allow from "${MONITORING_SOURCE_CIDR}" to any port 9100  proto tcp
+    fi
+fi
 
 echo ""
 echo "=== K3s Agent Installed ==="

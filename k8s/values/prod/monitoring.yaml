@@ -48,12 +48,27 @@ prometheus:
             target_label: node
           - source_labels: [__meta_kubernetes_node_name]
             target_label: instance
-      # node-exporter: не пробрасываем. YC блокирует inbound на публичном IP
-      # для нестандартных портов (9100, 9090, 3000 и др. timeout),
-      # несмотря на открытую SG. 22/443/10250 проходят. node-exporter
-      # metrics для YC-нод недоступны — базовый CPU/memory берётся из
-      # cadvisor через kubelet-external выше. TODO: поднять side-car
-      # pushgateway внутри VM или договориться с YC саппортом.
+      - job_name: node-exporter-external
+        scheme: http
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_node_label_provider]
+            regex: yandex-cloud
+            action: keep
+          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
+            regex: "(.+)"
+            action: keep
+          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
+            regex: "(.+)"
+            replacement: "${1}:9100"
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: node
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: instance
+          - target_label: job
+            replacement: node-exporter
     storageSpec:
       volumeClaimTemplate:
         spec:
