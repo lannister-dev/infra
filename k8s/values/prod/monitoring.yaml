@@ -44,6 +44,10 @@ prometheus:
             regex: "(.+)"
             replacement: "${1}:10250"
             target_label: __address__
+          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
+            regex: "(.+)"
+            replacement: "${1}:10250"
+            target_label: instance
           - source_labels: [__meta_kubernetes_node_name]
             target_label: node
       - job_name: node-exporter-external
@@ -61,6 +65,10 @@ prometheus:
             regex: "(.+)"
             replacement: "${1}:9100"
             target_label: __address__
+          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
+            regex: "(.+)"
+            replacement: "${1}:9100"
+            target_label: instance
           - source_labels: [__meta_kubernetes_node_name]
             target_label: node
           - target_label: job
