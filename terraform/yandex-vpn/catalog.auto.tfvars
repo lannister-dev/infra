@@ -1,9 +1,15 @@
 # Declarative Yandex Cloud VPN-node topology.
 # This file is the source of truth for YC-hosted VPN nodes only.
-# Secrets are NOT stored here.
+# Secrets are NOT stored here — the k3s join token is read from Vault.
 #
 # Non-YC VPN nodes are managed through vpn-control-api (admin UI +
 # installer bootstrap script). Terraform does not own them.
+
+# SSH used by netplan/k3s on-VM provisioners. `yc compute ssh` requires
+# the IAM username to exist on the VM; for hand-curated images it
+# doesn't, so we use plain SSH with a dedicated key instead.
+ssh_identity_file = "~/.ssh/id_ed25519_yandex"
+ssh_user          = "lannister"
 
 yandex_vpn_nodes = {
   "vpn-yc-whitelist-entry-01" = {
@@ -17,5 +23,16 @@ yandex_vpn_nodes = {
     kubelet_ingress_cidrs       = ["82.97.253.81/32"]
     node_exporter_ingress_cidrs = ["82.97.253.81/32"]
     prevent_destroy             = true
+
+    k3s_install = {
+      labels = [
+        "role=vpn",
+        "channel=prod",
+        "provider=yandex-cloud",
+        "traffic_role=whitelist_entry",
+      ]
+      taints     = ["dedicated=vpn:NoSchedule"]
+      extra_args = []
+    }
   }
 }

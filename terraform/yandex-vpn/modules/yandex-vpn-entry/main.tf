@@ -570,6 +570,11 @@ locals {
       public_ip   = local.nodes_output[name].public_ip
     }
   }
+
+  # When ssh_user + ssh_identity_file are both set, use plain SSH over
+  # the node's public IP (avoids yc compute ssh's IAM-username
+  # requirement). Otherwise fall back to `yc compute ssh` (OS Login).
+  use_plain_ssh = var.ssh_user != "" && var.ssh_identity_file != ""
 }
 
 resource "null_resource" "netplan_public_ip_alias" {
@@ -583,13 +588,12 @@ resource "null_resource" "netplan_public_ip_alias" {
   provisioner "local-exec" {
     command     = <<-EOT
       set -euo pipefail
-      id_arg=""
-      if [ -n "${var.ssh_identity_file}" ]; then
-        id_arg="--identity-file ${var.ssh_identity_file}"
-      fi
-      remote=$(cat <<'REMOTE'
+      ${local.use_plain_ssh
+      ? "ssh -i ${var.ssh_identity_file} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${var.ssh_user}@${each.value.public_ip} sudo bash -s"
+      : "yc compute ssh --id ${each.value.instance_id}${var.ssh_identity_file != "" ? " --identity-file ${var.ssh_identity_file}" : ""} -- sudo bash -s"
+} <<'REMOTE'
 set -euo pipefail
-sudo tee /etc/netplan/60-k3s-public-alias.yaml >/dev/null <<NETPLAN
+tee /etc/netplan/60-k3s-public-alias.yaml >/dev/null <<NETPLAN
 # Managed by terraform/yandex-vpn — do not edit by hand.
 # Exposes the 1:1 NAT public IP as a /32 alias on eth0 so kubelet
 # --node-ip=<public> passes its local-address check. Outbound routing
@@ -599,14 +603,104 @@ network:
   ethernets:
     eth0:
       addresses:
-        - PUBLIC_IP/32
+        - ${each.value.public_ip}/32
 NETPLAN
-sudo chmod 0600 /etc/netplan/60-k3s-public-alias.yaml
-sudo netplan apply
+chmod 0600 /etc/netplan/60-k3s-public-alias.yaml
+netplan apply
+REMOTE
+    EOT
+    interpreter = ["bash", "-c"]
+  }
+}
+
+# =======================================================================
+# k3s-agent auto-install + re-configuration.
+#
+# For each node with `k3s_install` set, run the upstream k3s installer
+# with INSTALL_K3S_EXEC that bakes in the NAT-friendly flags
+# (--node-ip=<public>, --node-external-ip=<public>, --flannel-iface=eth0)
+# plus user-provided labels, taints and extra args. The installer is
+# idempotent — re-running with a different INSTALL_K3S_EXEC rewrites the
+# systemd unit and restarts the agent.
+#
+# Depends on `netplan_public_ip_alias` so the public IP is locally
+# addressable before kubelet starts with `--node-ip=<public>`; without
+# the alias kubelet silently falls back to the private IP.
+# =======================================================================
+
+locals {
+  k3s_install_targets = {
+    for name, node in var.nodes : name => {
+      instance_id = node.mode == "adopt" ? yandex_compute_instance.adopted[name].id : yandex_compute_instance.created[name].id
+      public_ip   = local.nodes_output[name].public_ip
+      labels      = node.k3s_install.labels
+      taints      = node.k3s_install.taints
+      extra_args  = node.k3s_install.extra_args
+    }
+    if node.k3s_install != null
+  }
+}
+
+resource "null_resource" "k3s_install" {
+  for_each = local.k3s_install_targets
+
+  triggers = {
+    instance_id = each.value.instance_id
+    public_ip   = each.value.public_ip
+    join_url    = var.k3s_join_url
+    token_hash  = sha256(var.k3s_join_token)
+    labels      = join(",", sort(each.value.labels))
+    taints      = join(",", sort(each.value.taints))
+    extra_args  = join(",", sort(each.value.extra_args))
+  }
+
+  depends_on = [null_resource.netplan_public_ip_alias]
+
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      if [ -z "${var.k3s_join_url}" ] || [ -z "${var.k3s_join_token}" ]; then
+        echo "k3s_install requires k3s_join_url and k3s_join_token (sourced from Vault at module root)" >&2
+        exit 1
+      fi
+
+      # Flags injected on every NAT'd YC node. Public IP as both InternalIP
+      # and ExternalIP — they resolve to the same endpoint via 1:1 NAT.
+      nat_flags="--node-ip=${each.value.public_ip} --node-external-ip=${each.value.public_ip} --flannel-iface=eth0"
+
+      labels_flags=""
+      for l in ${join(" ", each.value.labels)}; do
+        labels_flags="$labels_flags --node-label=$l"
+      done
+      taints_flags=""
+      for t in ${join(" ", each.value.taints)}; do
+        taints_flags="$taints_flags --node-taint=$t"
+      done
+      extra_flags="${join(" ", each.value.extra_args)}"
+
+      install_exec="agent $nat_flags $labels_flags $taints_flags $extra_flags"
+
+      # Build a self-contained remote script with URL/TOKEN/EXEC inlined,
+      # then pipe it to the SSH/yc-ssh interactive shell. Sensitive values
+      # are marked sensitive at the terraform level; they appear in the
+      # local-exec command string briefly during apply.
+      remote_script=$(cat <<REMOTE
+set -euo pipefail
+# Make this null_resource the single owner of the k3s-agent systemd
+# unit — scrap any out-of-band drop-ins we may have created while
+# converging on the IaC flow.
+sudo rm -f /etc/systemd/system/k3s-agent.service.d/node-ip.conf
+sudo rmdir --ignore-fail-on-non-empty /etc/systemd/system/k3s-agent.service.d 2>/dev/null || true
+export K3S_URL='${var.k3s_join_url}'
+export K3S_TOKEN='${var.k3s_join_token}'
+export INSTALL_K3S_EXEC="$install_exec"
+curl -sfL https://get.k3s.io | sudo -E sh -
 REMOTE
 )
-      remote="$${remote//PUBLIC_IP/${each.value.public_ip}}"
-      yc compute ssh --id ${each.value.instance_id} $id_arg -- "$remote"
+      ${local.use_plain_ssh
+      ? "ssh -i ${var.ssh_identity_file} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${var.ssh_user}@${each.value.public_ip} bash -s"
+      : "yc compute ssh --id ${each.value.instance_id}${var.ssh_identity_file != "" ? " --identity-file ${var.ssh_identity_file}" : ""} -- bash -s"
+} <<<"$remote_script"
     EOT
     interpreter = ["bash", "-c"]
   }

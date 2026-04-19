@@ -32,6 +32,31 @@ variable "nodes" {
     kubelet_ingress_cidrs       = optional(list(string), [])
     node_exporter_ingress_cidrs = optional(list(string), [])
     prevent_destroy             = optional(bool, true)
+
+    k3s_install = optional(object({
+      labels     = optional(list(string), [])
+      taints     = optional(list(string), [])
+      extra_args = optional(list(string), [])
+    }), null)
   }))
   default = {}
+}
+
+variable "k3s_join_url" {
+  description = "K3s server URL (e.g. https://212.113.117.153:6443). Required when any node has k3s_install set."
+  type        = string
+  default     = ""
+}
+
+variable "k3s_join_token" {
+  description = "K3s node-join token. Required when any node has k3s_install set."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "ssh_user" {
+  description = "SSH login used by netplan/k3s provisioners when `ssh_identity_file` is also set. Empty falls back to `yc compute ssh` (OS Login). YC default image ships `ubuntu`."
+  type        = string
+  default     = ""
 }
