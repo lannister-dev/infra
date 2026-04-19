@@ -3,6 +3,9 @@ terraform {
     yandex = {
       source = "yandex-cloud/yandex"
     }
+    null = {
+      source = "hashicorp/null"
+    }
   }
 }
 
@@ -482,5 +485,60 @@ resource "yandex_compute_instance" "created" {
     nat                = each.value.nat_enabled
     nat_ip_address     = yandex_vpc_address.created[each.key].external_ipv4_address[0].address
     security_group_ids = [yandex_vpc_security_group.created[each.key].id]
+  }
+}
+
+# =======================================================================
+# UFW (on-VM firewall) for monitoring scrape endpoints
+#
+# YC Ubuntu images ship with ufw default-DROP on INPUT. Security Group at
+# the cloud edge is necessary but not sufficient — the kernel drops the
+# SYN despite an allow in SG. For each node whose kubelet_/
+# node_exporter_ingress_cidrs are set, we open matching ufw rules through
+# `yc compute ssh`. Idempotent (ufw allow is a no-op if the rule exists).
+#
+# Triggers re-run when either CIDR list changes, so changing the
+# Prometheus host IP in catalog.auto.tfvars is enough to apply.
+# =======================================================================
+
+locals {
+  ufw_targets = {
+    for name, node in var.nodes : name => {
+      instance_id    = node.mode == "adopt" ? yandex_compute_instance.adopted[name].id : yandex_compute_instance.created[name].id
+      kubelet_cidrs  = node.kubelet_ingress_cidrs
+      exporter_cidrs = node.node_exporter_ingress_cidrs
+    }
+    if length(node.kubelet_ingress_cidrs) + length(node.node_exporter_ingress_cidrs) > 0
+  }
+}
+
+resource "null_resource" "ufw_monitoring" {
+  for_each = local.ufw_targets
+
+  triggers = {
+    instance_id    = each.value.instance_id
+    kubelet_cidrs  = join(",", sort(each.value.kubelet_cidrs))
+    exporter_cidrs = join(",", sort(each.value.exporter_cidrs))
+  }
+
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -e
+      rules=()
+      for cidr in ${join(" ", each.value.kubelet_cidrs)}; do
+        rules+=("sudo ufw allow from $cidr to any port 10250 proto tcp")
+      done
+      for cidr in ${join(" ", each.value.exporter_cidrs)}; do
+        rules+=("sudo ufw allow from $cidr to any port 9100 proto tcp")
+      done
+      if [ $${#rules[@]} -eq 0 ]; then exit 0; fi
+      cmd=$(printf '%s; ' "$${rules[@]}")
+      id_arg=""
+      if [ -n "${var.ssh_identity_file}" ]; then
+        id_arg="--identity-file ${var.ssh_identity_file}"
+      fi
+      yc compute ssh --id ${each.value.instance_id} $id_arg -- "$cmd" || exit $?
+    EOT
+    interpreter = ["bash", "-c"]
   }
 }
