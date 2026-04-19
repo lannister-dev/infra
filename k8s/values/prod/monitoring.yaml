@@ -17,6 +17,33 @@ prometheus:
     retention: 14d
     scrapeInterval: 15s
     evaluationInterval: 15s
+    # role: node SD for kubelet on nodes whose InternalIP is unreachable
+    # from the cluster (YC VPN, etc.). Only nodes with ExternalIP set are
+    # kept; __address__ is rewritten to ExternalIP:10250.
+    additionalScrapeConfigs:
+      - job_name: kubelet-external
+        scheme: https
+        authorization:
+          credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        tls_config:
+          insecure_skip_verify: true
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
+            regex: "(.+)"
+            action: keep
+          - source_labels: [__meta_kubernetes_node_address_InternalIP]
+            regex: "10\\.130\\..*"
+            action: keep
+          - source_labels: [__meta_kubernetes_node_address_ExternalIP]
+            regex: "(.+)"
+            replacement: "${1}:10250"
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: node
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: instance
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -136,11 +163,15 @@ nodeExporter:
       cpu: 50m
       memory: 64Mi
 
-# Some nodes (YC) have their kubelet InternalIP on a private Yandex Cloud
-# network that is not routable from other providers. Prefer ExternalIP when
-# the node exposes one — Prometheus then hits the public endpoint instead of
-# timing out on a dead overlay address. Nodes without an ExternalIP keep
-# the default relabeling chain untouched.
+# YC VPN нodes sit on a private Yandex Cloud subnet (10.130.0.0/16) that
+# the rest of the cluster can't reach. The default kubelet/node-exporter
+# ServiceMonitors target kubelet via InternalIP → every scrape times out.
+# Strategy:
+#   1. Drop targets whose __address__ is in 10.130.0.0/16 from the default
+#      ServiceMonitors so Prometheus no longer alarms on them.
+#   2. Hit those nodes via a dedicated scrape job below, using role:node SD
+#      which exposes __meta_kubernetes_node_address_ExternalIP so we can
+#      rewrite __address__ to the public IP:10250.
 kubelet:
   enabled: true
   serviceMonitor:
@@ -148,28 +179,17 @@ kubelet:
     cAdvisor: true
     probes: true
     relabelings:
-      - sourceLabels: [__meta_kubernetes_node_address_ExternalIP]
-        regex: "(.+)"
-        action: replace
-        replacement: "${1}:10250"
-        targetLabel: __address__
+      - sourceLabels: [__address__]
+        regex: "10\\.130\\..*"
+        action: drop
     cAdvisorRelabelings:
-      - sourceLabels: [__meta_kubernetes_node_address_ExternalIP]
-        regex: "(.+)"
-        action: replace
-        replacement: "${1}:10250"
-        targetLabel: __address__
+      - sourceLabels: [__address__]
+        regex: "10\\.130\\..*"
+        action: drop
     probesRelabelings:
-      - sourceLabels: [__meta_kubernetes_node_address_ExternalIP]
-        regex: "(.+)"
-        action: replace
-        replacement: "${1}:10250"
-        targetLabel: __address__
-
-# Note: node-exporter Endpoints-based discovery can't see node.ExternalIP,
-# so its target on YC stays on the unreachable InternalIP. Left as TODO —
-# either switch to role: node discovery or deploy a dedicated exporter on
-# the YC VPN side that pushes via Pushgateway.
+      - sourceLabels: [__address__]
+        regex: "10\\.130\\..*"
+        action: drop
 
 # ── kube-state-metrics ─────────────────────────────────────
 kubeStateMetrics:
