@@ -30,9 +30,21 @@ variable "yandex_zone" {
 }
 
 variable "ssh_identity_file" {
-  description = "Path to the private SSH key used by `yc compute ssh` for on-VM provisioners (ufw). If empty, yc CLI falls back to OS Login with an IAM-issued cert (which requires a user matching YC_TOKEN's IAM profile to exist on the target VM)."
+  description = "Path to the private SSH key used by on-VM provisioners (netplan alias, k3s install) and by `yc compute ssh` for ufw. When `ssh_user` is also set, netplan/k3s provisioners use plain SSH over the node's public IP; this avoids YC OS-Login's requirement that the IAM username exist on the VM."
   type        = string
   default     = ""
+}
+
+variable "ssh_user" {
+  description = "SSH login name for on-VM provisioners. When empty, provisioners fall back to `yc compute ssh` (which uses OS Login via the IAM profile). YC Ubuntu images typically expose `ubuntu`; hand-curated VMs may use a custom account."
+  type        = string
+  default     = ""
+}
+
+variable "k3s_join_token_vault_path" {
+  description = "Vault KVv2 logical path (without the `data/` prefix) holding the k3s cluster join token. Must expose `token` and `url` fields — see `secret/k3s/join-token`. Set to \"\" to disable the k3s auto-install null_resource on nodes that carry `k3s_install`."
+  type        = string
+  default     = "secret/k3s/join-token"
 }
 
 variable "yandex_vpn_nodes" {
@@ -66,6 +78,18 @@ variable "yandex_vpn_nodes" {
     kubelet_ingress_cidrs       = optional(list(string), [])
     node_exporter_ingress_cidrs = optional(list(string), [])
     prevent_destroy             = optional(bool, true)
+
+    # k3s auto-install config. If set, terraform installs k3s-agent on the
+    # VM via `yc compute ssh` and re-applies on any trigger change. Join
+    # URL + token are read from Vault (see var.k3s_join_token_vault_path).
+    # --node-ip / --node-external-ip / --flannel-iface=eth0 are injected
+    # automatically using the node's public IP, so YC nodes behave the
+    # same as single-IP VPS nodes (timeweb/hostvds) at the k8s layer.
+    k3s_install = optional(object({
+      labels     = optional(list(string), [])
+      taints     = optional(list(string), [])
+      extra_args = optional(list(string), [])
+    }), null)
   }))
   default = {}
 
