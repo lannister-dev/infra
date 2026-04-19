@@ -6,5 +6,6 @@ module "yandex_vpn_entry" {
     yandex = yandex
   }
 
-  nodes = var.yandex_vpn_nodes
+  nodes             = var.yandex_vpn_nodes
+  ssh_identity_file = var.ssh_identity_file
 }

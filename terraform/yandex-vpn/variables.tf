@@ -29,6 +29,12 @@ variable "yandex_zone" {
   default     = ""
 }
 
+variable "ssh_identity_file" {
+  description = "Path to the private SSH key used by `yc compute ssh` for on-VM provisioners (ufw). If empty, yc CLI falls back to OS Login with an IAM-issued cert (which requires a user matching YC_TOKEN's IAM profile to exist on the target VM)."
+  type        = string
+  default     = ""
+}
+
 variable "yandex_vpn_nodes" {
   description = "Yandex Cloud VPN nodes. mode=adopt reuses existing resources by ID; mode=create provisions fresh VM+address+security_group."
   type = map(object({
