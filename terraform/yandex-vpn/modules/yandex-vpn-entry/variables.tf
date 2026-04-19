@@ -19,8 +19,8 @@ variable "nodes" {
     ssh_public_key = optional(string, "")
     user_data      = optional(string, "")
 
-    labels              = optional(map(string), {})
-    metadata            = optional(map(string), {})
+    labels                      = optional(map(string), {})
+    metadata                    = optional(map(string), {})
     ssh_ingress_cidrs           = optional(list(string), ["0.0.0.0/0"])
     https_ingress_cidrs         = optional(list(string), ["0.0.0.0/0"])
     kubelet_ingress_cidrs       = optional(list(string), [])
