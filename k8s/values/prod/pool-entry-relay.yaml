@@ -1,0 +1,10 @@
+# pool-entry-relay — production
+#
+# HAProxy relay for nodes with traffic_role=entry.
+# Pool slots are populated by node-agent-pool-entry via the /shared/admin.sock.
+#
+# Install:
+#   helm upgrade --install pool-entry-relay charts/whitelist-entry-relay \
+#     -n vpn-prod --create-namespace \
+#     -f k8s/charts/whitelist-entry-relay/values-entry.yaml \
+#     -f values/prod/pool-entry-relay.yaml
