@@ -32,7 +32,7 @@ data:
       server upstream {{ .Values.upstream }} check
       server-template srv {{ .Values.pool.slotCount }} 0.0.0.0:443 check backup disabled
       {{- else if eq .Values.mode "entry" }}
-      balance random
+      balance source
       option tcp-check
       default-server check inter {{ .Values.pool.checkIntervalMs }} fall {{ .Values.pool.checkFall }} rise {{ .Values.pool.checkRise }}
       server-template srv {{ .Values.pool.slotCount }} 0.0.0.0:443 check disabled
