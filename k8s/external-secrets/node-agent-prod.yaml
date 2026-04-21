@@ -11,6 +11,10 @@ spec:
   target:
     name: node-agent-prod-env
     creationPolicy: Owner
+    deletionPolicy: Retain
   dataFrom:
     - extract:
+        conversionStrategy: Default
+        decodingStrategy: None
         key: node-agent/prod/env
+        metadataPolicy: None

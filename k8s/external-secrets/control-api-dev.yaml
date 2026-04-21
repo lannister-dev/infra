@@ -12,6 +12,10 @@ spec:
   target:
     name: control-api-dev-env
     creationPolicy: Owner
+    deletionPolicy: Retain
   dataFrom:
     - extract:
+        conversionStrategy: Default
+        decodingStrategy: None
         key: control-plane/dev/env
+        metadataPolicy: None

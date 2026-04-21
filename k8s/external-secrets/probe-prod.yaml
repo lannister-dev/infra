@@ -11,6 +11,10 @@ spec:
   target:
     name: probe-prod-env
     creationPolicy: Owner
+    deletionPolicy: Retain
   dataFrom:
     - extract:
+        conversionStrategy: Default
+        decodingStrategy: None
         key: probe/prod/env
+        metadataPolicy: None
