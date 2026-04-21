@@ -19,6 +19,10 @@ spec:
   target:
     name: control-api-prod-env
     creationPolicy: Owner
+    deletionPolicy: Retain
   dataFrom:
     - extract:
+        conversionStrategy: Default
+        decodingStrategy: None
         key: control-plane/prod/env
+        metadataPolicy: None
