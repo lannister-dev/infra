@@ -138,7 +138,7 @@ spec:
   source:
     repoURL: git@github.com:lannister-dev/infra.git
     targetRevision: main
-    path: k8s/charts/whitelist-entry-relay
+    path: k8s/charts/entry-relay
     helm:
       valueFiles:
         - ../../values/prod/whitelist-entry-relay.yaml
@@ -162,7 +162,7 @@ spec:
   source:
     repoURL: git@github.com:lannister-dev/infra.git
     targetRevision: main
-    path: k8s/charts/whitelist-entry-relay
+    path: k8s/charts/entry-relay
     helm:
       valueFiles:
         - values-entry.yaml
