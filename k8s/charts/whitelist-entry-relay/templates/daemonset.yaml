@@ -3,17 +3,17 @@ kind: DaemonSet
 metadata:
   name: {{ .Release.Name }}
   labels:
-    app: whitelist-entry-relay
+    app: {{ .Release.Name }}
     chart: {{ .Chart.Name }}
     mode: {{ .Values.mode | quote }}
 spec:
   selector:
     matchLabels:
-      app: whitelist-entry-relay
+      app: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: whitelist-entry-relay
+        app: {{ .Release.Name }}
         mode: {{ .Values.mode | quote }}
     spec:
       nodeSelector:

@@ -155,6 +155,31 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
+  name: pool-entry-relay
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: git@github.com:lannister-dev/infra.git
+    targetRevision: main
+    path: k8s/charts/whitelist-entry-relay
+    helm:
+      valueFiles:
+        - values-entry.yaml
+        - ../../values/prod/pool-entry-relay.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vpn-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
   name: data-dev
   namespace: argocd
 spec:
