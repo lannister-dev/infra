@@ -16,9 +16,12 @@ data:
       log global
       mode tcp
       option tcplog
+      option clitcpka
+      option srvtcpka
       timeout connect 10s
-      timeout client 1m
-      timeout server 1m
+      timeout client 24h
+      timeout server 24h
+      timeout tunnel 24h
 
     frontend fe_tls
       bind :443
