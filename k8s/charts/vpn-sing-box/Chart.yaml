@@ -1,0 +1,5 @@
+apiVersion: v2
+name: vpn-sing-box
+description: sing-box per-user routing for VPN entry nodes
+version: 0.1.0
+appVersion: "1.10"

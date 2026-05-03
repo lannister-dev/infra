@@ -1,0 +1,19 @@
+nodeSelector:
+  role: vpn
+  channel: dev
+  traffic_role: entry
+
+reality:
+  privateKey: "2JcSaVDfb3caMQ3-XaNEqfzcHBFLlQ4zmiLcfD0sp2o"
+  shortId: "6c1ec52d8fabfd86"
+  serverName: "www.cloudflare.com"
+  handshakeServer: "www.cloudflare.com"
+  handshakePort: 443
+
+ports:
+  vless:
+    containerPort: 8443
+    hostPort: 8443
+  api:
+    containerPort: 9090
+    hostPort: 0
