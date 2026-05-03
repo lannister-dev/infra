@@ -1,0 +1,42 @@
+image:
+  repository: ghcr.io/sagernet/sing-box
+  tag: "v1.11.0"
+  pullPolicy: IfNotPresent
+
+nodeSelector:
+  role: vpn
+  channel: prod
+  traffic_role: entry
+
+tolerations:
+  - key: dedicated
+    value: vpn
+    effect: NoSchedule
+
+ports:
+  vless:
+    containerPort: 8443
+    hostPort: 8443
+  api:
+    containerPort: 9090
+    hostPort: 0
+
+reality:
+  privateKey: ""
+  shortId: ""
+  serverName: "www.cloudflare.com"
+  handshakeServer: "www.cloudflare.com"
+  handshakePort: 443
+
+api:
+  externalControllerListen: "127.0.0.1:9090"
+  secret: ""
+
+resources:
+  limits:
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+logLevel: info
