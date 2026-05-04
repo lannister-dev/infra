@@ -22,20 +22,40 @@ spec:
         {{- toYaml .Values.nodeSelector | nindent 8 }}
       tolerations:
         {{- toYaml .Values.tolerations | nindent 8 }}
+      hostPID: false
+      initContainers:
+        - name: init-config
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f {{ .Values.sharedConfigPath | quote }} ]; then
+                cp /etc/sing-box-bootstrap/config.json {{ .Values.sharedConfigPath | quote }}
+              fi
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /etc/sing-box-bootstrap
+              readOnly: true
+            - name: shared
+              mountPath: {{ dir .Values.sharedConfigPath | quote }}
       containers:
         - name: sing-box
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/usr/local/bin/sing-box", "run", "-c", "/etc/sing-box/config.json"]
+          command:
+            - /usr/local/bin/sing-box
+            - run
+            - -c
+            - {{ .Values.sharedConfigPath | quote }}
           ports:
             - name: vless
               containerPort: {{ .Values.ports.vless.containerPort }}
               hostPort: {{ .Values.ports.vless.hostPort }}
               protocol: TCP
           volumeMounts:
-            - name: config
-              mountPath: /etc/sing-box
-              readOnly: true
+            - name: shared
+              mountPath: {{ dir .Values.sharedConfigPath | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -50,6 +70,10 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
       volumes:
-        - name: config
+        - name: bootstrap
           configMap:
             name: {{ .Release.Name }}-config
+        - name: shared
+          hostPath:
+            path: {{ .Values.sharedHostPath | quote }}
+            type: DirectoryOrCreate
