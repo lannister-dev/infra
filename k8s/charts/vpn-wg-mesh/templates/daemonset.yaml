@@ -52,11 +52,17 @@ spec:
       containers:
         - name: wg
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          command: ["wg-quick", "up", "/config/{{ .Values.configFileName }}"]
+          command:
+            - sh
+            - -c
+            - |
+              CFG=/config/{{ .Values.configFileName }}
+              wg-quick down "$CFG" 2>/dev/null || true
+              exec wg-quick up "$CFG" && sleep infinity
           lifecycle:
             preStop:
               exec:
-                command: ["wg-quick", "down", "/config/{{ .Values.configFileName }}"]
+                command: ["sh", "-c", "wg-quick down /config/{{ .Values.configFileName }} || true"]
           securityContext:
             capabilities:
               add: ["NET_ADMIN", "SYS_MODULE"]
