@@ -272,3 +272,27 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vpn-sing-box
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: git@github.com:lannister-dev/infra.git
+    targetRevision: main
+    path: k8s/charts/vpn-sing-box
+    helm:
+      valueFiles:
+        - ../../values/prod/vpn-sing-box.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vpn-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -3,6 +3,9 @@ image:
   tag: "v1.11.0"
   pullPolicy: IfNotPresent
 
+sharedHostPath: /var/lib/sing-box-shared
+sharedConfigPath: /shared/sing-box/config.json
+
 nodeSelector:
   role: vpn
   channel: prod
