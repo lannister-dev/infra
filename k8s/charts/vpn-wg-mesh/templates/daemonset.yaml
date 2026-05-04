@@ -39,12 +39,16 @@ spec:
             - /bin/sh
             - /scripts/bootstrap-stub-config.sh
             - /config/{{ .Values.configFileName }}
+            - {{ .Values.listenPort | quote }}
           volumeMounts:
             - name: scripts
               mountPath: /scripts
               readOnly: true
             - name: config
               mountPath: /config
+            - name: keys
+              mountPath: /keys
+              readOnly: true
       containers:
         - name: wg
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
