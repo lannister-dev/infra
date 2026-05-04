@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      hostNetwork: true
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      initContainers:
+        - name: keygen
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["/bin/sh", "/scripts/bootstrap-keys.sh"]
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: keys
+              mountPath: /keys
+        - name: stub-config
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command:
+            - /bin/sh
+            - /scripts/bootstrap-stub-config.sh
+            - /config/{{ .Values.configFileName }}
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: config
+              mountPath: /config
+      containers:
+        - name: wg
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["wg-quick", "up", "/config/{{ .Values.configFileName }}"]
+          lifecycle:
+            preStop:
+              exec:
+                command: ["wg-quick", "down", "/config/{{ .Values.configFileName }}"]
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN", "SYS_MODULE"]
+          ports:
+            - name: wg
+              containerPort: {{ .Values.listenPort }}
+              hostPort: {{ .Values.listenPort }}
+              protocol: UDP
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: keys
+              mountPath: /keys
+              readOnly: true
+            - name: kernel-modules
+              mountPath: /lib/modules
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          readinessProbe:
+            exec:
+              command: ["wg", "show", "wg0"]
+            initialDelaySeconds: 5
+            periodSeconds: 30
+      volumes:
+        - name: scripts
+          configMap:
+            name: {{ .Release.Name }}-bootstrap
+            defaultMode: 0755
+        - name: keys
+          hostPath:
+            path: {{ .Values.keysHostPath | quote }}
+            type: DirectoryOrCreate
+        - name: config
+          hostPath:
+            path: {{ .Values.configHostPath | quote }}
+            type: DirectoryOrCreate
+        - name: kernel-modules
+          hostPath:
+            path: /lib/modules
+            type: Directory

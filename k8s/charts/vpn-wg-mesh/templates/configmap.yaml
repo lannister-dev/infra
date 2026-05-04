@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-bootstrap
+  labels:
+    app: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}
+data:
+  bootstrap-keys.sh: |
+    #!/bin/sh
+    set -eu
+    KEY_DIR="/keys"
+    PRIV="$KEY_DIR/private.key"
+    PUB="$KEY_DIR/public.key"
+    mkdir -p "$KEY_DIR"
+    chmod 700 "$KEY_DIR"
+    if [ ! -s "$PRIV" ]; then
+      umask 077
+      wg genkey > "$PRIV"
+    fi
+    wg pubkey < "$PRIV" > "$PUB"
+    echo "wg_public_key=$(cat "$PUB")"
+
+  bootstrap-stub-config.sh: |
+    #!/bin/sh
+    set -eu
+    CFG="$1"
+    if [ -s "$CFG" ]; then
+      exit 0
+    fi
+    cat > "$CFG" <<'EOF'
+    [Interface]
+    # node-agent rewrites this file after registering with control-api
+    # and receiving the peer list. Until then, the interface stays empty
+    # and wg-quick returns success without any peers configured.
+    PrivateKey = REPLACE_ME
+    ListenPort = 51820
+    EOF

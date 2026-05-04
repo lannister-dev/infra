@@ -1,0 +1,5 @@
+apiVersion: v2
+name: vpn-wg-mesh
+description: WireGuard mesh between VPN entry/backend nodes for plain-VLESS chain
+version: 0.1.0
+appVersion: "1.0"
