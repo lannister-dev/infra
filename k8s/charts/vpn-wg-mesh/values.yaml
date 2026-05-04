@@ -1,0 +1,34 @@
+image:
+  repository: linuxserver/wireguard
+  tag: "1.0.20210914-r4-ls64"
+  pullPolicy: IfNotPresent
+
+nodeSelector:
+  role: vpn
+
+tolerations:
+  - key: dedicated
+    value: vpn
+    effect: NoSchedule
+
+# UDP port the wg interface listens on locally. Must be open on all peers.
+listenPort: 51820
+
+# CIDR of the mesh. control-api allocates per-node addresses out of this range.
+# Reserved: .1 = control-api side bridge (unused for now), .2+ = nodes.
+meshCidr: "10.10.0.0/24"
+
+# Hostpath where per-node keys are stored — survives pod restarts.
+keysHostPath: /var/lib/wg-mesh
+
+# Path where node-agent writes the dynamic config (peers list).
+configHostPath: /var/lib/wg-mesh/config
+configFileName: wg0.conf
+
+resources:
+  limits:
+    memory: 64Mi
+    cpu: 100m
+  requests:
+    cpu: 25m
+    memory: 32Mi
