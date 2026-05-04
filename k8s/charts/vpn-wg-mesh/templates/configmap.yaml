@@ -25,14 +25,18 @@ data:
     #!/bin/sh
     set -eu
     CFG="$1"
-    if [ -s "$CFG" ]; then
+    LISTEN_PORT="${2:-51820}"
+    PRIV_KEY="$(cat /keys/private.key)"
+    if [ -z "$PRIV_KEY" ]; then
+      echo "private.key is empty — keygen must run first" >&2
+      exit 1
+    fi
+    if [ -s "$CFG" ] && grep -q "^PrivateKey = $PRIV_KEY$" "$CFG"; then
       exit 0
     fi
-    cat > "$CFG" <<'EOF'
+    umask 077
+    cat > "$CFG" <<EOF
     [Interface]
-    # node-agent rewrites this file after registering with control-api
-    # and receiving the peer list. Until then, the interface stays empty
-    # and wg-quick returns success without any peers configured.
-    PrivateKey = REPLACE_ME
-    ListenPort = 51820
+    PrivateKey = $PRIV_KEY
+    ListenPort = $LISTEN_PORT
     EOF
