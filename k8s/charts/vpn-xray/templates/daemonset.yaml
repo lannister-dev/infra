@@ -24,6 +24,32 @@ spec:
       tolerations:
         {{- toYaml .Values.tolerations | nindent 8 }}
       hostNetwork: {{ .Values.hostNetwork }}
+      {{- if .Values.wgIsolate.enabled }}
+      initContainers:
+        - name: wg-isolate
+          image: {{ .Values.wgIsolate.image | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              apk add --no-cache iptables >/dev/null 2>&1 || true
+              PORT={{ .Values.wgIsolate.port }}
+              IFACE={{ .Values.wgIsolate.interface | quote }}
+              iptables -C INPUT -p tcp --dport "$PORT" -i "$IFACE" -j ACCEPT 2>/dev/null \
+                || iptables -I INPUT 1 -p tcp --dport "$PORT" -i "$IFACE" -j ACCEPT
+              iptables -C INPUT -p tcp --dport "$PORT" -i lo -j ACCEPT 2>/dev/null \
+                || iptables -I INPUT 2 -p tcp --dport "$PORT" -i lo -j ACCEPT
+              iptables -C INPUT -p tcp --dport "$PORT" -j DROP 2>/dev/null \
+                || iptables -A INPUT -p tcp --dport "$PORT" -j DROP
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          resources:
+            limits:
+              memory: 32Mi
+              cpu: 50m
+      {{- end }}
       containers:
         - name: xray
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
