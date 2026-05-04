@@ -19,6 +19,12 @@ tolerations:
 
 hostNetwork: true
 
+wgIsolate:
+  enabled: true
+  image: alpine:3.20
+  port: 10100
+  interface: wg0
+
 config:
   json: |
     {
@@ -112,6 +118,20 @@ config:
           "protocol": "dokodemo-door",
           "settings": { "address": "www.cloudflare.com", "port": 443, "network": "tcp" },
           "sniffing": { "enabled": true, "routeOnly": true, "destOverride": ["http", "tls"] }
+        },
+        {
+          "tag": "vless-wg-internal",
+          "listen": "0.0.0.0",
+          "port": 10100,
+          "protocol": "vless",
+          "settings": {
+            "clients": [
+              {"id": "25d36220-93b2-433d-b17e-76e9bafd72f2", "email": "entry-relay-wg"}
+            ],
+            "decryption": "none"
+          },
+          "streamSettings": { "network": "tcp", "security": "none" },
+          "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] }
         }
       ],
       "routing": {

@@ -1,0 +1,18 @@
+nodeSelector:
+  role: vpn
+  channel: prod
+
+listenPort: 51820
+meshCidr: "10.10.0.0/24"
+
+keysHostPath: /var/lib/wg-mesh
+configHostPath: /var/lib/wg-mesh/config
+configFileName: wg0.conf
+
+resources:
+  limits:
+    memory: 64Mi
+    cpu: 100m
+  requests:
+    cpu: 25m
+    memory: 32Mi

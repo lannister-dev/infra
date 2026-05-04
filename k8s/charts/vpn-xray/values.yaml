@@ -58,6 +58,12 @@ logging:
   maxSize: "32m"
   maxFile: "8"
 
+wgIsolate:
+  enabled: false
+  image: alpine:3.20
+  port: 10100
+  interface: wg0
+
 # node-agent bootstrap secret (optional)
 nodeAgent:
   bootstrapToken: ""
