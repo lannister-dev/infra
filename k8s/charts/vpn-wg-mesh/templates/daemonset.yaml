@@ -58,7 +58,8 @@ spec:
             - |
               CFG=/config/{{ .Values.configFileName }}
               wg-quick down "$CFG" 2>/dev/null || true
-              exec wg-quick up "$CFG" && sleep infinity
+              wg-quick up "$CFG"
+              exec sleep infinity
           lifecycle:
             preStop:
               exec:
