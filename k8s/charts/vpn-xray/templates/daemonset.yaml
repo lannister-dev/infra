@@ -33,7 +33,7 @@ spec:
             - -c
             - |
               set -e
-              apk add --no-cache iptables >/dev/null 2>&1 || true
+              apk add --no-cache iptables >/dev/null
               PORT={{ .Values.wgIsolate.port }}
               IFACE={{ .Values.wgIsolate.interface | quote }}
               iptables -C INPUT -p tcp --dport "$PORT" -i "$IFACE" -j ACCEPT 2>/dev/null \
@@ -47,8 +47,8 @@ spec:
               add: ["NET_ADMIN"]
           resources:
             limits:
-              memory: 32Mi
-              cpu: 50m
+              memory: 128Mi
+              cpu: 100m
       {{- end }}
       containers:
         - name: xray
