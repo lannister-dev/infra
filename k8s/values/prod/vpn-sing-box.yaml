@@ -12,8 +12,8 @@ reality:
 
 ports:
   vless:
-    containerPort: 443
-    hostPort: 443
+    containerPort: 8443
+    hostPort: 8443
   api:
     containerPort: 9090
     hostPort: 0
