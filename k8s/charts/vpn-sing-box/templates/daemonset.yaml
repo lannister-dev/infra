@@ -18,6 +18,8 @@ spec:
       labels:
         app: {{ .Release.Name }}
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
         {{- toYaml .Values.nodeSelector | nindent 8 }}
       tolerations:
