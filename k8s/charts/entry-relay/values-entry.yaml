@@ -3,7 +3,7 @@ mode: entry
 nodeSelector:
   role: vpn
   channel: prod
-  traffic_role: legacy_entry_DISABLED
+  traffic_role: entry
 
 pool:
   slotCount: 20
