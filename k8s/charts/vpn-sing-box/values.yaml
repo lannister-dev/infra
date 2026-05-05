@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/sagernet/sing-box
-  tag: "v1.11.0"
+  tag: "v1.13.11"
   pullPolicy: IfNotPresent
 
 sharedHostPath: /var/lib/sing-box-shared
