@@ -21,6 +21,14 @@ spec:
     spec:
       nodeSelector:
         {{- toYaml .Values.nodeSelector | nindent 8 }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: traffic_role
+                    operator: NotIn
+                    values: ["entry"]
       tolerations:
         {{- toYaml .Values.tolerations | nindent 8 }}
       hostNetwork: {{ .Values.hostNetwork }}
