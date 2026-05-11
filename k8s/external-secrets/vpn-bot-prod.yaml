@@ -1,0 +1,20 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: vpn-bot-prod-env
+  namespace: vpn-prod
+spec:
+  refreshInterval: 5m
+  secretStoreRef:
+    name: vault
+    kind: ClusterSecretStore
+  target:
+    name: vpn-bot-prod-env
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  dataFrom:
+    - extract:
+        conversionStrategy: Default
+        decodingStrategy: None
+        key: vpn-bot/prod/env
+        metadataPolicy: None
