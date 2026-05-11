@@ -57,9 +57,22 @@ spec:
             - -c
             - |
               CFG=/config/{{ .Values.configFileName }}
+              IFACE=$(basename "$CFG" .conf)
               wg-quick down "$CFG" 2>/dev/null || true
               wg-quick up "$CFG"
-              exec sleep infinity
+              last_hash=$(sha256sum "$CFG" | awk '{print $1}')
+              while true; do
+                sleep {{ .Values.peerSyncIntervalSec | default 15 }}
+                cur_hash=$(sha256sum "$CFG" 2>/dev/null | awk '{print $1}')
+                if [ -n "$cur_hash" ] && [ "$cur_hash" != "$last_hash" ]; then
+                  if wg syncconf "$IFACE" <(wg-quick strip "$CFG") 2>&1; then
+                    echo "[wg-mesh] applied syncconf (hash $last_hash -> $cur_hash)"
+                    last_hash="$cur_hash"
+                  else
+                    echo "[wg-mesh] syncconf failed, retrying"
+                  fi
+                fi
+              done
           lifecycle:
             preStop:
               exec:
