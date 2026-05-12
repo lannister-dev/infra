@@ -16,8 +16,7 @@ data:
     : "${REASSERT_INTERVAL:?required}"
     : "${PROTECTED_PORTS:?required}"
 
-    apk add --no-cache iptables ip6tables ipset conntrack-tools >/dev/null 2>&1 \
-      || apk add --no-cache iptables ipset conntrack-tools >/dev/null
+    apk add --no-cache iptables ip6tables ipset conntrack-tools
 
     apply_sysctl() {
     {{- range $key, $val := .Values.sysctl }}
