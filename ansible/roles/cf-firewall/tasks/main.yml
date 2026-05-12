@@ -1,0 +1,58 @@
+---
+- name: Install ipset and iptables
+  ansible.builtin.apt:
+    name:
+      - ipset
+      - iptables
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Deploy Cloudflare IPs refresh script
+  ansible.builtin.template:
+    src: refresh-cf-ips.sh.j2
+    dest: /usr/local/sbin/refresh-cf-ips.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy refresh-cf-ips systemd service
+  ansible.builtin.template:
+    src: refresh-cf-ips.service.j2
+    dest: /etc/systemd/system/refresh-cf-ips.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload systemd
+
+- name: Deploy refresh-cf-ips systemd timer
+  ansible.builtin.template:
+    src: refresh-cf-ips.timer.j2
+    dest: /etc/systemd/system/refresh-cf-ips.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload systemd
+
+- name: Apply pending systemd changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable refresh-cf-ips on boot
+  ansible.builtin.systemd:
+    name: refresh-cf-ips.service
+    enabled: true
+
+- name: Enable and start refresh-cf-ips weekly timer
+  ansible.builtin.systemd:
+    name: refresh-cf-ips.timer
+    state: started
+    enabled: true
+
+- name: Run initial Cloudflare IPs refresh + apply firewall now
+  ansible.builtin.command: /usr/local/sbin/refresh-cf-ips.sh
+  register: cf_firewall_apply
+  changed_when: true
+
+- name: Show firewall apply summary
+  ansible.builtin.debug:
+    msg: "{{ cf_firewall_apply.stdout_lines }}"

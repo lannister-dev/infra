@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh Cloudflare IP ranges and apply iptables CF-only rules for tcp/{{ cf_firewall_protected_port }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/refresh-cf-ips.sh
+
+[Install]
+WantedBy=multi-user.target

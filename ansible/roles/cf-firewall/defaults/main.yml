@@ -1,0 +1,9 @@
+---
+cf_firewall_protected_port: 443
+cf_firewall_refresh_schedule: "Sun *-*-* 03:00:00"
+cf_ipv4_url: https://www.cloudflare.com/ips-v4
+cf_ipv6_url: https://www.cloudflare.com/ips-v6
+cf_firewall_chain_v4: CF-PROTECT
+cf_firewall_chain_v6: CF-PROTECT
+cf_firewall_ipset_v4: cf-v4
+cf_firewall_ipset_v6: cf-v6
