@@ -1,0 +1,68 @@
+#!/bin/bash
+set -euo pipefail
+
+PORT="{{ cf_firewall_protected_port }}"
+CHAIN_V4="{{ cf_firewall_chain_v4 }}"
+CHAIN_V6="{{ cf_firewall_chain_v6 }}"
+SET_V4="{{ cf_firewall_ipset_v4 }}"
+SET_V6="{{ cf_firewall_ipset_v6 }}"
+
+TMP_V4=$(mktemp)
+TMP_V6=$(mktemp)
+trap 'rm -f "$TMP_V4" "$TMP_V6"' EXIT
+
+curl -fsS --max-time 30 "{{ cf_ipv4_url }}" -o "$TMP_V4"
+curl -fsS --max-time 30 "{{ cf_ipv6_url }}" -o "$TMP_V6"
+
+[ -s "$TMP_V4" ] || { echo "empty IPv4 list from Cloudflare" >&2; exit 1; }
+[ -s "$TMP_V6" ] || { echo "empty IPv6 list from Cloudflare" >&2; exit 1; }
+
+ipset create "$SET_V4" hash:net family inet -exist
+ipset create "$SET_V6" hash:net family inet6 -exist
+
+ipset destroy "${SET_V4}-new" 2>/dev/null || true
+ipset destroy "${SET_V6}-new" 2>/dev/null || true
+
+ipset create "${SET_V4}-new" hash:net family inet
+while IFS= read -r cidr; do
+  [ -n "$cidr" ] && ipset add "${SET_V4}-new" "$cidr"
+done < "$TMP_V4"
+ipset swap "${SET_V4}-new" "$SET_V4"
+ipset destroy "${SET_V4}-new"
+
+ipset create "${SET_V6}-new" hash:net family inet6
+while IFS= read -r cidr; do
+  [ -n "$cidr" ] && ipset add "${SET_V6}-new" "$cidr"
+done < "$TMP_V6"
+ipset swap "${SET_V6}-new" "$SET_V6"
+ipset destroy "${SET_V6}-new"
+
+ensure_chain() {
+  local cmd="$1" chain="$2"
+  $cmd -L "$chain" -n >/dev/null 2>&1 || $cmd -N "$chain"
+}
+
+ensure_jump() {
+  local cmd="$1" chain="$2"
+  $cmd -C INPUT -p tcp --dport "$PORT" -j "$chain" 2>/dev/null \
+    || $cmd -I INPUT -p tcp --dport "$PORT" -j "$chain"
+}
+
+ensure_chain iptables  "$CHAIN_V4"
+ensure_chain ip6tables "$CHAIN_V6"
+
+iptables  -F "$CHAIN_V4"
+ip6tables -F "$CHAIN_V6"
+
+iptables  -A "$CHAIN_V4" -m set --match-set "$SET_V4" src -j ACCEPT
+iptables  -A "$CHAIN_V4" -j DROP
+
+ip6tables -A "$CHAIN_V6" -m set --match-set "$SET_V6" src -j ACCEPT
+ip6tables -A "$CHAIN_V6" -j DROP
+
+ensure_jump iptables  "$CHAIN_V4"
+ensure_jump ip6tables "$CHAIN_V6"
+
+V4_COUNT=$(ipset list "$SET_V4" | grep -c '^[0-9]')
+V6_COUNT=$(ipset list "$SET_V6" | grep -c '^[0-9a-f]')
+echo "Cloudflare firewall applied: $V4_COUNT IPv4 + $V6_COUNT IPv6 ranges allow tcp/$PORT"

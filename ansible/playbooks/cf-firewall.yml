@@ -1,0 +1,6 @@
+---
+- name: Lock down tcp/443 to Cloudflare IP ranges only
+  hosts: k3s_agents
+  become: true
+  roles:
+    - role: cf-firewall

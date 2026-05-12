@@ -1,0 +1,9 @@
+[Unit]
+Description=Weekly Cloudflare IP ranges refresh
+
+[Timer]
+OnCalendar={{ cf_firewall_refresh_schedule }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target
