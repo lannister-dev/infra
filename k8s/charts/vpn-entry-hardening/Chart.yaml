@@ -1,0 +1,5 @@
+apiVersion: v2
+name: vpn-entry-hardening
+description: Host-level DDoS hardening (iptables connlimit/recent + sysctl) for VPN entry nodes
+version: 0.1.0
+appVersion: "1.0"
