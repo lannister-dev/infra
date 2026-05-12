@@ -1,0 +1,15 @@
+nodeSelector:
+  role: vpn
+  channel: prod
+
+trafficRoles:
+  - entry
+  - whitelist_entry
+
+protectedPorts:
+  - 443
+
+connlimitMax: 50
+recentHitcount: 30
+recentSeconds: 60
+reassertIntervalSec: 60

@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+      annotations:
+        checksum/script: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      hostNetwork: true
+      hostPID: true
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  {{- range $k, $v := .Values.nodeSelector }}
+                  - key: {{ $k }}
+                    operator: In
+                    values: [{{ $v | quote }}]
+                  {{- end }}
+                  - key: traffic_role
+                    operator: In
+                    values:
+                      {{- range .Values.trafficRoles }}
+                      - {{ . | quote }}
+                      {{- end }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      containers:
+        - name: hardening
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "/scripts/apply-hardening.sh"]
+          env:
+            - name: CONNLIMIT_MAX
+              value: {{ .Values.connlimitMax | quote }}
+            - name: RECENT_HITCOUNT
+              value: {{ .Values.recentHitcount | quote }}
+            - name: RECENT_SECONDS
+              value: {{ .Values.recentSeconds | quote }}
+            - name: REASSERT_INTERVAL
+              value: {{ .Values.reassertIntervalSec | quote }}
+            - name: PROTECTED_PORTS
+              value: {{ .Values.protectedPorts | join " " | quote }}
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: lib-modules
+              mountPath: /lib/modules
+              readOnly: true
+            - name: xtables-lock
+              mountPath: /run/xtables.lock
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "iptables -L ENTRY-DDOS-V4 -n >/dev/null 2>&1"]
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            failureThreshold: 3
+      volumes:
+        - name: scripts
+          configMap:
+            name: {{ .Release.Name }}-script
+            defaultMode: 0755
+        - name: lib-modules
+          hostPath:
+            path: /lib/modules
+            type: Directory
+        - name: xtables-lock
+          hostPath:
+            path: /run/xtables.lock
+            type: FileOrCreate

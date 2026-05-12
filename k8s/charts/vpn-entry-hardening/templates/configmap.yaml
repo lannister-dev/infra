@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-script
+  labels:
+    app: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}
+data:
+  apply-hardening.sh: |
+    #!/bin/sh
+    set -eu
+
+    : "${CONNLIMIT_MAX:?required}"
+    : "${RECENT_HITCOUNT:?required}"
+    : "${RECENT_SECONDS:?required}"
+    : "${REASSERT_INTERVAL:?required}"
+    : "${PROTECTED_PORTS:?required}"
+
+    apk add --no-cache iptables ip6tables ipset conntrack-tools >/dev/null 2>&1 \
+      || apk add --no-cache iptables ipset conntrack-tools >/dev/null
+
+    apply_sysctl() {
+    {{- range $key, $val := .Values.sysctl }}
+      sysctl -w {{ $key }}={{ $val }} 2>/dev/null || echo "[hardening] sysctl {{ $key }}={{ $val }} skipped"
+    {{- end }}
+    }
+
+    ensure_chain() {
+      local cmd="$1" chain="$2"
+      $cmd -L "$chain" -n >/dev/null 2>&1 || $cmd -N "$chain"
+    }
+
+    build_chain() {
+      local cmd="$1" chain="$2" rname="$3"
+      $cmd -F "$chain"
+      $cmd -A "$chain" -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+      $cmd -A "$chain" -p tcp -m connlimit --connlimit-above "$CONNLIMIT_MAX" --connlimit-mask 32 -j DROP
+      $cmd -A "$chain" -p tcp --syn -m recent --set --name "$rname"
+      $cmd -A "$chain" -p tcp --syn -m recent --update --seconds "$RECENT_SECONDS" --hitcount "$RECENT_HITCOUNT" --name "$rname" -j DROP
+      $cmd -A "$chain" -j RETURN
+    }
+
+    ensure_jump() {
+      local cmd="$1" chain="$2" port="$3"
+      $cmd -C INPUT -p tcp --dport "$port" -j "$chain" 2>/dev/null \
+        || $cmd -I INPUT -p tcp --dport "$port" -j "$chain"
+    }
+
+    apply_iptables() {
+      ensure_chain iptables  ENTRY-DDOS-V4
+      ensure_chain ip6tables ENTRY-DDOS-V6
+      build_chain  iptables  ENTRY-DDOS-V4 ENTRY-DDOS4
+      build_chain  ip6tables ENTRY-DDOS-V6 ENTRY-DDOS6
+      for p in $PROTECTED_PORTS; do
+        ensure_jump iptables  ENTRY-DDOS-V4 "$p"
+        ensure_jump ip6tables ENTRY-DDOS-V6 "$p"
+      done
+    }
+
+    drift_detected() {
+      for p in $PROTECTED_PORTS; do
+        iptables  -C INPUT -p tcp --dport "$p" -j ENTRY-DDOS-V4 2>/dev/null || return 0
+        ip6tables -C INPUT -p tcp --dport "$p" -j ENTRY-DDOS-V6 2>/dev/null || return 0
+      done
+      return 1
+    }
+
+    apply_sysctl
+    apply_iptables
+    echo "[hardening] applied: connlimit=$CONNLIMIT_MAX recent=$RECENT_HITCOUNT/${RECENT_SECONDS}s ports=$PROTECTED_PORTS"
+
+    while true; do
+      sleep "$REASSERT_INTERVAL"
+      if drift_detected; then
+        echo "[hardening] drift detected, re-applying"
+        apply_iptables
+      fi
+    done
