@@ -46,10 +46,54 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
-            - /usr/local/bin/sing-box
-            - run
-            - -c
-            - {{ .Values.sharedConfigPath | quote }}
+            - sh
+            - -ec
+            - |
+              CONFIG={{ .Values.sharedConfigPath | quote }}
+              INTERVAL=2
+
+              checksum() {
+                set -- $(sha256sum "$CONFIG")
+                printf '%s' "$1"
+              }
+
+              child=""
+              stop() {
+                if [ -n "$child" ]; then
+                  kill -TERM "$child" 2>/dev/null || true
+                  wait "$child" 2>/dev/null || true
+                fi
+                exit 0
+              }
+              trap stop TERM INT
+
+              current="$(checksum)"
+              while true; do
+                restart=0
+                /usr/local/bin/sing-box run -c "$CONFIG" &
+                child="$!"
+
+                while kill -0 "$child" 2>/dev/null; do
+                  sleep "$INTERVAL"
+                  next="$(checksum)"
+                  if [ "$next" != "$current" ]; then
+                    echo "sing-box config changed, restarting process"
+                    current="$next"
+                    restart=1
+                    kill -TERM "$child" 2>/dev/null || true
+                    break
+                  fi
+                done
+
+                wait "$child"
+                status="$?"
+                child=""
+
+                if [ "$restart" = "1" ]; then
+                  continue
+                fi
+                exit "$status"
+              done
           ports:
             - name: vless
               containerPort: {{ .Values.ports.vless.containerPort }}
