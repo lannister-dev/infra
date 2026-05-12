@@ -36,8 +36,8 @@ sysctl:
 
 resources:
   limits:
-    memory: 32Mi
-    cpu: 50m
+    memory: 128Mi
+    cpu: 100m
   requests:
-    memory: 16Mi
+    memory: 32Mi
     cpu: 10m

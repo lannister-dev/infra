@@ -72,7 +72,7 @@ spec:
           livenessProbe:
             exec:
               command: ["sh", "-c", "iptables -L ENTRY-DDOS-V4 -n >/dev/null 2>&1"]
-            initialDelaySeconds: 30
+            initialDelaySeconds: 90
             periodSeconds: 60
             failureThreshold: 3
       volumes:
