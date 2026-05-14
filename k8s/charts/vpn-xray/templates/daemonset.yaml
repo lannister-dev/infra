@@ -28,7 +28,7 @@ spec:
               - matchExpressions:
                   - key: traffic_role
                     operator: NotIn
-                    values: ["entry"]
+                    values: ["entry", "whitelist_entry"]
       tolerations:
         {{- toYaml .Values.tolerations | nindent 8 }}
       hostNetwork: {{ .Values.hostNetwork }}
