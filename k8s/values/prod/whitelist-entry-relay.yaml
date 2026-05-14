@@ -5,4 +5,4 @@
 #     -n vpn-prod --create-namespace \
 #     -f values/prod/whitelist-entry-relay.yaml
 
-upstream: "45.38.228.130:443"
+upstream: "5.180.20.36:443"
