@@ -7,22 +7,32 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls: "true"
+    {{- if .Values.vpn.publicHost }}
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    {{- end }}
 spec:
   rules:
-    - http:
+    {{- $svc := printf "%s-xray" .Release.Name }}
+    {{- $wsPath := .Values.vpn.wsPath }}
+    {{- if .Values.vpn.publicHost }}
+    - host: {{ .Values.vpn.publicHost }}
+      http:
         paths:
-          - path: {{ .Values.vpn.wsPath }}
+          - path: {{ $wsPath }}
             pathType: Prefix
             backend:
               service:
-                name: {{ .Release.Name }}-xray
+                name: {{ $svc }}
                 port:
                   name: ws
-          - path: {{ .Values.vpn.xhttpPath }}
+    {{- end }}
+    - http:
+        paths:
+          - path: {{ $wsPath }}
             pathType: Prefix
             backend:
               service:
-                name: {{ .Release.Name }}-xray
+                name: {{ $svc }}
                 port:
-                  name: xhttp
+                  name: ws
 {{- end }}

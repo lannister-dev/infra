@@ -30,7 +30,7 @@ ports:
 # Paths for Traefik Ingress routing
 vpn:
   wsPath: /api/v1/stream
-  xhttpPath: /api/v1/mobile
+  publicHost: ""
 
 # Xray config — mounted as ConfigMap
 # Set existingConfigMap to use a pre-created ConfigMap,

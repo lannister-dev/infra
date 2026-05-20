@@ -65,21 +65,8 @@ config:
             "security": "none",
             "wsSettings": {
               "path": "/api/v1/stream",
-              "headers": { "Host": "tech.apirelay.org" }
+              "headers": { "Host": "stream.apirelay.org" }
             }
-          },
-          "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] }
-        },
-        {
-          "tag": "vless-xhttp",
-          "listen": "0.0.0.0",
-          "port": 10001,
-          "protocol": "vless",
-          "settings": { "clients": [], "decryption": "none" },
-          "streamSettings": {
-            "network": "xhttp",
-            "security": "none",
-            "xhttpSettings": { "path": "/api/v1/mobile", "mode": "auto" }
           },
           "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] }
         },
@@ -149,7 +136,7 @@ config:
 
 vpn:
   wsPath: /api/v1/stream
-  xhttpPath: /api/v1/mobile
+  publicHost: origin-stream.apirelay.org
 
 fallback:
   enabled: true
