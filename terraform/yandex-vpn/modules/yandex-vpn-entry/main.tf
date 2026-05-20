@@ -192,11 +192,9 @@ resource "yandex_vpc_address" "adopted" {
   folder_id           = try(data.yandex_vpc_address.adopted[each.key].folder_id, null)
   deletion_protection = try(each.value.prevent_destroy, true)
   labels = merge(
-    try(data.yandex_vpc_address.adopted[each.key].labels, {}),
     {
-      managed_by = "terraform"
-      role       = "vpn"
-      peer_name  = each.key
+      for k, v in try(data.yandex_vpc_address.adopted[each.key].labels, {}) : k => v
+      if !contains(["managed_by", "role", "peer_name", "traffic_role"], k)
     },
     each.value.labels,
   )
@@ -218,11 +216,9 @@ resource "yandex_vpc_security_group" "adopted" {
   folder_id   = try(data.yandex_vpc_security_group.adopted[each.key].folder_id, null)
   network_id  = data.yandex_vpc_security_group.adopted[each.key].network_id
   labels = merge(
-    try(data.yandex_vpc_security_group.adopted[each.key].labels, {}),
     {
-      managed_by = "terraform"
-      role       = "vpn"
-      peer_name  = each.key
+      for k, v in try(data.yandex_vpc_security_group.adopted[each.key].labels, {}) : k => v
+      if !contains(["managed_by", "role", "peer_name", "traffic_role"], k)
     },
     each.value.labels,
   )
@@ -277,11 +273,9 @@ resource "yandex_compute_instance" "adopted" {
   maintenance_policy       = try(data.yandex_compute_instance.adopted[each.key].maintenance_policy, null) != null ? (trimspace(data.yandex_compute_instance.adopted[each.key].maintenance_policy) != "" ? data.yandex_compute_instance.adopted[each.key].maintenance_policy : null) : null
   maintenance_grace_period = try(data.yandex_compute_instance.adopted[each.key].maintenance_grace_period, null) != null ? (trimspace(data.yandex_compute_instance.adopted[each.key].maintenance_grace_period) != "" ? data.yandex_compute_instance.adopted[each.key].maintenance_grace_period : null) : null
   labels = merge(
-    try(data.yandex_compute_instance.adopted[each.key].labels, {}),
     {
-      managed_by = "terraform"
-      role       = "vpn"
-      peer_name  = each.key
+      for k, v in try(data.yandex_compute_instance.adopted[each.key].labels, {}) : k => v
+      if !contains(["managed_by", "role", "peer_name", "traffic_role"], k)
     },
     each.value.labels,
   )
@@ -388,14 +382,7 @@ resource "yandex_vpc_address" "created" {
 
   name                = each.key
   deletion_protection = try(each.value.prevent_destroy, false)
-  labels = merge(
-    {
-      managed_by = "terraform"
-      role       = "vpn"
-      peer_name  = each.key
-    },
-    each.value.labels,
-  )
+  labels              = each.value.labels
 
   external_ipv4_address {
     zone_id = each.value.zone
@@ -407,14 +394,7 @@ resource "yandex_vpc_security_group" "created" {
 
   name       = each.key
   network_id = each.value.network_id
-  labels = merge(
-    {
-      managed_by = "terraform"
-      role       = "vpn"
-      peer_name  = each.key
-    },
-    each.value.labels,
-  )
+  labels     = each.value.labels
 
   dynamic "ingress" {
     for_each = local.required_ingress_rules[each.key]
@@ -446,14 +426,7 @@ resource "yandex_compute_instance" "created" {
   hostname    = each.key
   zone        = each.value.zone
   platform_id = each.value.platform_id
-  labels = merge(
-    {
-      managed_by = "terraform"
-      role       = "vpn"
-      peer_name  = each.key
-    },
-    each.value.labels,
-  )
+  labels      = each.value.labels
   metadata = merge(
     {
       role      = "vpn"
@@ -701,6 +674,104 @@ REMOTE
       ? "ssh -i ${var.ssh_identity_file} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${var.ssh_user}@${each.value.public_ip} bash -s"
       : "yc compute ssh --id ${each.value.instance_id}${var.ssh_identity_file != "" ? " --identity-file ${var.ssh_identity_file}" : ""} -- bash -s"
 } <<<"$remote_script"
+    EOT
+    interpreter = ["bash", "-c"]
+  }
+}
+
+# =======================================================================
+# YC flannel VXLAN NAT/checksum fix.
+#
+# Works around two problems specific to YC's 1:1 NAT that break flannel
+# VXLAN egress from the node:
+#
+#   1. Flannel sets VXLAN vtep local to --node-ip (the public alias). The
+#      outer UDP 8472 packet leaves eth0 with src=<public>, but the VM's
+#      primary eth0 IP is the VPC private address — YC anti-spoofing drops
+#      the packet on egress. SNAT rewrites outer src to <private>; YC's
+#      1:1 NAT then translates it back to <public> on the way out, so other
+#      nodes' flannel FDB entries (which point at <public>) still match.
+#
+#   2. Kernel marks outer UDP as CHECKSUM_PARTIAL (expect NIC offload). Our
+#      SNAT rewrites src IP but doesn't fix the partial checksum; YC NAT
+#      doesn't fix it either. Receiver sees invalid UDP csum and drops
+#      (UdpInCsumErrors). ICMP works (no UDP csum), but DNS/TCP/any
+#      inner UDP or TCP breaks. `CHECKSUM --checksum-fill` forces the
+#      kernel to compute outer csum in software before egress.
+#
+# Shipped as a small oneshot systemd unit that runs after k3s-agent so
+# iptables rules survive reboots.
+# =======================================================================
+
+resource "null_resource" "yc_flannel_vxlan_fix" {
+  for_each = local.netplan_targets
+
+  triggers = {
+    instance_id = each.value.instance_id
+    public_ip   = each.value.public_ip
+    # Bump this when the script below changes to force re-provision.
+    script_version = "v1"
+  }
+
+  depends_on = [null_resource.k3s_install]
+
+  provisioner "local-exec" {
+    command     = <<-EOT
+      set -euo pipefail
+      ${local.use_plain_ssh
+      ? "ssh -i ${var.ssh_identity_file} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${var.ssh_user}@${each.value.public_ip} sudo bash -s"
+      : "yc compute ssh --id ${each.value.instance_id}${var.ssh_identity_file != "" ? " --identity-file ${var.ssh_identity_file}" : ""} -- sudo bash -s"
+} <<'REMOTE'
+set -euo pipefail
+install -m 0755 /dev/stdin /usr/local/sbin/yc-flannel-vxlan-fix <<'SCRIPT'
+#!/bin/bash
+# Managed by terraform/yandex-vpn — do not edit by hand.
+set -euo pipefail
+IFACE="$${YC_VXLAN_IFACE:-eth0}"
+VXLAN_PORT="$${YC_VXLAN_PORT:-8472}"
+detect_ips() {
+    PUBLIC_IP=$$(ip -4 -o addr show dev "$$IFACE" 2>/dev/null | awk '$$4 ~ /\/32$$/ {print $$4; exit}' | cut -d/ -f1)
+    PRIVATE_IP=$$(ip -4 -o addr show dev "$$IFACE" 2>/dev/null | awk '$$4 !~ /\/32$$/ {print $$4; exit}' | cut -d/ -f1)
+    [ -n "$${PUBLIC_IP:-}" ] && [ -n "$${PRIVATE_IP:-}" ] || { echo "yc-flannel-vxlan-fix: could not detect public (/32) and private IP on $$IFACE" >&2; return 1; }
+}
+apply() {
+    detect_ips
+    local snat=(POSTROUTING -o "$$IFACE" -p udp --dport "$$VXLAN_PORT" -s "$$PUBLIC_IP" -j SNAT --to-source "$$PRIVATE_IP")
+    local csum=(POSTROUTING -o "$$IFACE" -p udp --dport "$$VXLAN_PORT" -j CHECKSUM --checksum-fill)
+    iptables -t nat -C "$${snat[@]}" 2>/dev/null || { iptables -t nat -I "$${snat[@]}"; echo "inserted nat SNAT ($$PUBLIC_IP -> $$PRIVATE_IP)"; }
+    iptables -t mangle -C "$${csum[@]}" 2>/dev/null || { iptables -t mangle -I "$${csum[@]}"; echo "inserted mangle CHECKSUM --checksum-fill"; }
+}
+remove() {
+    detect_ips || true
+    if [ -n "$${PUBLIC_IP:-}" ] && [ -n "$${PRIVATE_IP:-}" ]; then
+        local snat=(POSTROUTING -o "$$IFACE" -p udp --dport "$$VXLAN_PORT" -s "$$PUBLIC_IP" -j SNAT --to-source "$$PRIVATE_IP")
+        while iptables -t nat -C "$${snat[@]}" 2>/dev/null; do iptables -t nat -D "$${snat[@]}"; done
+    fi
+    local csum=(POSTROUTING -o "$$IFACE" -p udp --dport "$$VXLAN_PORT" -j CHECKSUM --checksum-fill)
+    while iptables -t mangle -C "$${csum[@]}" 2>/dev/null; do iptables -t mangle -D "$${csum[@]}"; done
+}
+case "$${1:-apply}" in apply) apply ;; remove) remove ;; *) echo "usage: $$0 {apply|remove}" >&2; exit 2 ;; esac
+SCRIPT
+install -m 0644 /dev/stdin /etc/systemd/system/yc-flannel-vxlan-fix.service <<'UNIT'
+[Unit]
+Description=YC flannel VXLAN NAT/checksum fix
+Documentation=file:///usr/local/sbin/yc-flannel-vxlan-fix
+After=network-online.target k3s-agent.service
+Wants=network-online.target
+PartOf=k3s-agent.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/yc-flannel-vxlan-fix apply
+ExecStop=/usr/local/sbin/yc-flannel-vxlan-fix remove
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now yc-flannel-vxlan-fix.service
+REMOTE
     EOT
     interpreter = ["bash", "-c"]
   }
