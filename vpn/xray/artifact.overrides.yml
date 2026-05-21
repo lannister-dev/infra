@@ -5,8 +5,8 @@ profiles:
     type: ws_tls
     client:
       path: /api/v1/stream
-      host: prod.apirelay.org
-      sni: prod.apirelay.org
+      host: stream.apirelay.org
+      sni: stream.apirelay.org
 
   vless-xhttp:
     enabled: false
