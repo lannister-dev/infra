@@ -6,8 +6,8 @@ nodeSelector:
 reality:
   privateKey: "2JcSaVDfb3caMQ3-XaNEqfzcHBFLlQ4zmiLcfD0sp2o"
   shortId: "6c1ec52d8fabfd86"
-  serverName: "smartcaptcha.yandexcloud.net"
-  handshakeServer: "smartcaptcha.yandexcloud.net"
+  serverName: "rutube.ru"
+  handshakeServer: "rutube.ru"
   handshakePort: 443
 
 ports:
