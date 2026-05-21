@@ -17,9 +17,9 @@ profiles:
     display_name: REALITY TCP
     type: reality_tcp
     client:
-      sni: www.cloudflare.com
+      sni: smartcaptcha.yandexcloud.net
       flow: xtls-rprx-vision
-      fingerprint: chrome
+      fingerprint: qq
       public_key: JAhYG2mwU4TTlNmOPUHsmUZqptN0CjfutpRQj-MfvCM
       short_id: 6c1ec52d8fabfd86
       spider_x: /
