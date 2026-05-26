@@ -32,9 +32,14 @@ spec:
             - sh
             - -c
             - |
-              if [ ! -f {{ .Values.sharedConfigPath | quote }} ]; then
-                cp /etc/sing-box-bootstrap/config.json {{ .Values.sharedConfigPath | quote }}
+              CFG={{ .Values.sharedConfigPath | quote }}
+              if [ ! -f "$CFG" ]; then
+                cp /etc/sing-box-bootstrap/config.json "$CFG"
               fi
+              # allow go-node-agent (uid/gid 65532) to update the file in-place
+              chgrp {{ .Values.agentGid | default 65532 }} "$(dirname "$CFG")" "$CFG"
+              chmod 0775 "$(dirname "$CFG")"
+              chmod 0664 "$CFG"
           volumeMounts:
             - name: bootstrap
               mountPath: /etc/sing-box-bootstrap
