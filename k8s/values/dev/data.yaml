@@ -20,10 +20,10 @@ postgres:
     storageClassName: local-path
   resources:
     limits:
-      memory: 256Mi
+      memory: 1Gi
     requests:
       cpu: 25m
-      memory: 64Mi
+      memory: 256Mi
 
   backup:
     enabled: true
