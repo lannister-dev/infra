@@ -58,8 +58,42 @@ spec:
             - |
               CFG=/config/{{ .Values.configFileName }}
               IFACE=$(basename "$CFG" .conf)
+
+              # ensure_address sets the Address from CFG on IFACE if missing.
+              # `wg syncconf` does NOT re-apply Address — if the interface
+              # was created earlier without it, packets to wg-mesh peer IPs
+              # would route via the default gateway and dial would time out.
+              ensure_address() {
+                local addr=$(awk -F'= *' '/^Address/{print $2; exit}' "$CFG")
+                [ -z "$addr" ] && return
+                # AddrLine may be a comma-separated list; iterate.
+                local IFS=,
+                for a in $addr; do
+                  a=$(echo "$a" | tr -d ' ')
+                  ip addr show "$IFACE" 2>/dev/null | grep -qw "$a" || \
+                    ip addr add "$a" dev "$IFACE" 2>/dev/null || true
+                done
+              }
+
+              # ensure_routes adds /32 routes for every peer's AllowedIPs to IFACE.
+              # wg-quick adds these but `wg syncconf` does not; pod restart that
+              # falls back to syncconf-only would leave kernel routing peer
+              # IPs via the default gateway.
+              ensure_routes() {
+                wg show "$IFACE" allowed-ips 2>/dev/null | while read _ ips; do
+                  for ip in $ips; do
+                    [ -z "$ip" ] && continue
+                    [ "$ip" = "(none)" ] && continue
+                    ip route show "$ip" dev "$IFACE" >/dev/null 2>&1 || \
+                      ip route add "$ip" dev "$IFACE" scope link 2>/dev/null || true
+                  done
+                done
+              }
+
               wg-quick down "$CFG" 2>/dev/null || true
               wg-quick up "$CFG"
+              ensure_address
+              ensure_routes
               last_hash=$(sha256sum "$CFG" | awk '{print $1}')
               while true; do
                 sleep {{ .Values.peerSyncIntervalSec | default 15 }}
@@ -68,9 +102,16 @@ spec:
                   if wg syncconf "$IFACE" <(wg-quick strip "$CFG") 2>&1; then
                     echo "[wg-mesh] applied syncconf (hash $last_hash -> $cur_hash)"
                     last_hash="$cur_hash"
+                    ensure_address
+                    ensure_routes
                   else
                     echo "[wg-mesh] syncconf failed, retrying"
                   fi
+                else
+                  # cheap drift guard: even without config change, re-assert
+                  # Address & routes in case external actor flushed the iface
+                  ensure_address
+                  ensure_routes
                 fi
               done
           lifecycle:
