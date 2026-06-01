@@ -1,7 +1,7 @@
 nodeSelector:
   role: vpn
   channel: prod
-  traffic_role: entry
+  traffic_role: entry-disabled-embedded-cutover
 
 reality:
   privateKey: "2JcSaVDfb3caMQ3-XaNEqfzcHBFLlQ4zmiLcfD0sp2o"
