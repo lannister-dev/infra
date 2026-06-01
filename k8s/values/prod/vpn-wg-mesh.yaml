@@ -1,6 +1,6 @@
 nodeSelector:
   role: vpn
-  channel: prod
+  channel: prod-disabled-wg-in-agent
 
 listenPort: 51820
 meshCidr: "10.10.0.0/24"
