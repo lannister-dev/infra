@@ -14,6 +14,7 @@ spec:
   rules:
     {{- $svc := printf "%s-xray" .Release.Name }}
     {{- $wsPath := .Values.vpn.wsPath }}
+    {{- $xhttpPath := .Values.vpn.xhttpPath }}
     {{- if .Values.vpn.publicHost }}
     - host: {{ .Values.vpn.publicHost }}
       http:
@@ -25,6 +26,15 @@ spec:
                 name: {{ $svc }}
                 port:
                   name: ws
+          {{- if $xhttpPath }}
+          - path: {{ $xhttpPath }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $svc }}
+                port:
+                  name: xhttp
+          {{- end }}
     {{- end }}
     - http:
         paths:
@@ -35,4 +45,13 @@ spec:
                 name: {{ $svc }}
                 port:
                   name: ws
+          {{- if $xhttpPath }}
+          - path: {{ $xhttpPath }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $svc }}
+                port:
+                  name: xhttp
+          {{- end }}
 {{- end }}
