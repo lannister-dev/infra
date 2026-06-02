@@ -71,6 +71,23 @@ config:
           "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] }
         },
         {
+          "tag": "vless-xhttp",
+          "listen": "0.0.0.0",
+          "port": 10001,
+          "protocol": "vless",
+          "settings": { "clients": [], "decryption": "none" },
+          "streamSettings": {
+            "network": "xhttp",
+            "security": "none",
+            "xhttpSettings": {
+              "path": "/api/v1/mobile",
+              "mode": "packet-up",
+              "uplinkHTTPMethod": "PUT"
+            }
+          },
+          "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] }
+        },
+        {
           "tag": "vless-reality",
           "listen": "0.0.0.0",
           "port": 443,
@@ -136,6 +153,7 @@ config:
 
 vpn:
   wsPath: /api/v1/stream
+  xhttpPath: /api/v1/mobile
   publicHost: origin-stream.apirelay.org
 
 fallback:
