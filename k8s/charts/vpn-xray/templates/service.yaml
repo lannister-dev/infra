@@ -19,6 +19,7 @@ spec:
       port: 10001
       targetPort: 10001
       protocol: TCP
+      appProtocol: kubernetes.io/h2c
     - name: stats
       port: 10085
       targetPort: {{ .Values.ports.stats.containerPort }}
