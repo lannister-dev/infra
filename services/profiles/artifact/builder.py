@@ -19,6 +19,9 @@ from .models import (
     WsTlsClient,
     WsTlsClientOverride,
     WsTlsProfile,
+    XHttpClient,
+    XHttpClientOverride,
+    XHttpProfile,
     artifact_to_dict,
     parse_client_override,
     parse_overrides_map,
@@ -54,7 +57,7 @@ class ArtifactBuilder:
         if not isinstance(inbounds, list):
             raise ArtifactBuildError("xray config must contain 'inbounds' list")
 
-        artifact: dict[str, WsTlsProfile | RealityTcpProfile] = {}
+        artifact: dict[str, WsTlsProfile | RealityTcpProfile | XHttpProfile] = {}
         errors: list[str] = []
         seen_tags: set[str] = set()
 
@@ -206,12 +209,71 @@ class ArtifactBuilder:
         inbound: dict[str, Any],
         profile_type: str,
         override: ProfileOverride,
-    ) -> WsTlsProfile | RealityTcpProfile:
+    ) -> WsTlsProfile | RealityTcpProfile | XHttpProfile:
         if profile_type == "ws_tls":
             return self._build_ws_profile(tag=tag, inbound=inbound, override=override)
         if profile_type == "reality_tcp":
             return self._build_reality_profile(tag=tag, inbound=inbound, override=override)
+        if profile_type == "xhttp":
+            return self._build_xhttp_profile(tag=tag, inbound=inbound, override=override)
         raise ArtifactBuildError(f"{tag}: unsupported profile type '{profile_type}'")
+
+    def _build_xhttp_profile(
+        self,
+        *,
+        tag: str,
+        inbound: dict[str, Any],
+        override: ProfileOverride,
+    ) -> XHttpProfile:
+        stream = _as_dict(inbound.get("streamSettings"), field_path=f"{tag}.streamSettings")
+        xhttp_settings = _as_dict(
+            stream.get("xhttpSettings"),
+            field_path=f"{tag}.streamSettings.xhttpSettings",
+        )
+        tls_settings = _as_dict(
+            stream.get("tlsSettings"),
+            field_path=f"{tag}.streamSettings.tlsSettings",
+        )
+
+        try:
+            client_override = parse_client_override(
+                profile_type="xhttp",
+                raw_client_override=override.client,
+            )
+        except ValidationError as exc:
+            raise ArtifactBuildError(f"{tag}: invalid xhttp client override:\n{exc}") from exc
+
+        ov = client_override if isinstance(client_override, XHttpClientOverride) else None
+
+        path = _pick_first_non_empty(ov.path if ov else None, xhttp_settings.get("path"))
+        host = _pick_first_non_empty(ov.host if ov else None)
+        sni = _pick_first_non_empty(ov.sni if ov else None, tls_settings.get("serverName"), host)
+
+        missing = []
+        if _is_blank(path):
+            missing.append("client.path")
+        if _is_blank(host):
+            missing.append("client.host")
+        if _is_blank(sni):
+            missing.append("client.sni")
+        if missing:
+            raise ArtifactBuildError(f"{tag}: missing required fields: {', '.join(missing)}")
+
+        kwargs: dict[str, Any] = {"path": str(path), "host": str(host), "sni": str(sni)}
+        if ov and ov.mode:
+            kwargs["mode"] = ov.mode
+        if ov and ov.fingerprint:
+            kwargs["fingerprint"] = ov.fingerprint
+        if ov and ov.alpn:
+            kwargs["alpn"] = ov.alpn
+        if ov and ov.extra:
+            kwargs["extra"] = ov.extra
+
+        display_name = override.display_name or _default_display_name(tag)
+        try:
+            return XHttpProfile(display_name=display_name, client=XHttpClient(**kwargs))
+        except ValidationError as exc:
+            raise ArtifactBuildError(f"{tag}: invalid xhttp profile:\n{exc}") from exc
 
     def _build_ws_profile(
         self,
