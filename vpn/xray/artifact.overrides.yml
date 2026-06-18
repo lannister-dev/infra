@@ -9,7 +9,22 @@ profiles:
       sni: stream.apirelay.org
 
   vless-xhttp:
-    enabled: false
+    enabled: true
+    key: xhttp_cdn_v1
+    display_name: CDN XHTTP
+    type: xhttp
+    client:
+      path: /
+      host: stream.apirelay.org
+      sni: stream.apirelay.org
+      mode: packet-up
+      extra:
+        uplinkHTTPMethod: GET
+        xPaddingKey: _dc
+        xPaddingHeader: X-Client-Version
+        xPaddingMethod: tokenish
+        xPaddingObfsMode: true
+        xPaddingPlacement: queryInHeader
 
   vless-reality:
     enabled: true
