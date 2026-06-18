@@ -1,8 +1,0 @@
-# whitelist-entry-relay — production
-#
-# Install:
-#   helm upgrade --install whitelist-entry-relay charts/entry-relay \
-#     -n vpn-prod --create-namespace \
-#     -f values/prod/whitelist-entry-relay.yaml
-
-upstream: "195.137.245.194:10001"
