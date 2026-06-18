@@ -4,7 +4,7 @@ from typing import Annotated, Any, Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator
 
-ProfileType: TypeAlias = Literal["ws_tls", "reality_tcp"]
+ProfileType: TypeAlias = Literal["ws_tls", "reality_tcp", "xhttp"]
 
 
 class StrictModel(BaseModel):
@@ -54,7 +54,32 @@ class RealityTcpProfile(StrictModel):
     client: RealityTcpClient
 
 
-ArtifactProfile = Annotated[WsTlsProfile | RealityTcpProfile, Field(discriminator="type")]
+class XHttpClient(StrictModel):
+    path: str = Field(..., min_length=1, max_length=256)
+    host: str = Field(..., min_length=1, max_length=255)
+    sni: str = Field(..., min_length=1, max_length=255)
+    mode: str = Field(default="packet-up", min_length=1, max_length=32)
+    fingerprint: str = Field(default="chrome", min_length=1, max_length=64)
+    alpn: str = Field(default="h2,http/1.1", min_length=1, max_length=64)
+    extra: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, value: str) -> str:
+        if not value.startswith("/"):
+            value = "/" + value
+        return value
+
+
+class XHttpProfile(StrictModel):
+    type: Literal["xhttp"] = "xhttp"
+    display_name: str = Field(..., min_length=1)
+    client: XHttpClient
+
+
+ArtifactProfile = Annotated[
+    WsTlsProfile | RealityTcpProfile | XHttpProfile, Field(discriminator="type")
+]
 
 
 class ArtifactPayload(StrictModel):
@@ -103,6 +128,23 @@ class RealityTcpClientOverride(StrictModel):
         return value
 
 
+class XHttpClientOverride(StrictModel):
+    path: str | None = None
+    host: str | None = None
+    sni: str | None = None
+    mode: str | None = None
+    fingerprint: str | None = None
+    alpn: str | None = None
+    extra: dict[str, Any] | None = None
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, value: str | None) -> str | None:
+        if value is not None and not value.startswith("/"):
+            raise ValueError("path must start with '/'")
+        return value
+
+
 class ProfileOverride(StrictModel):
     enabled: bool = True
     key: str | None = None
@@ -121,6 +163,7 @@ class ProfileOverride(StrictModel):
 _OVERRIDES_ADAPTER = TypeAdapter(dict[str, ProfileOverride])
 _WS_CLIENT_OVERRIDE_ADAPTER = TypeAdapter(WsTlsClientOverride)
 _REALITY_CLIENT_OVERRIDE_ADAPTER = TypeAdapter(RealityTcpClientOverride)
+_XHTTP_CLIENT_OVERRIDE_ADAPTER = TypeAdapter(XHttpClientOverride)
 
 
 def parse_overrides_map(raw: Any) -> dict[str, ProfileOverride]:
@@ -133,7 +176,7 @@ def parse_client_override(
     *,
     profile_type: ProfileType,
     raw_client_override: dict[str, Any] | None,
-) -> WsTlsClientOverride | RealityTcpClientOverride | None:
+) -> WsTlsClientOverride | RealityTcpClientOverride | XHttpClientOverride | None:
     """Parse type-specific client override block."""
 
     if raw_client_override is None:
@@ -141,6 +184,9 @@ def parse_client_override(
 
     if profile_type == "ws_tls":
         return _WS_CLIENT_OVERRIDE_ADAPTER.validate_python(raw_client_override)
+
+    if profile_type == "xhttp":
+        return _XHTTP_CLIENT_OVERRIDE_ADAPTER.validate_python(raw_client_override)
 
     return _REALITY_CLIENT_OVERRIDE_ADAPTER.validate_python(raw_client_override)
 
