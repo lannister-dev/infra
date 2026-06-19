@@ -18,7 +18,7 @@ dnsPolicy: ClusterFirstWithHostNet
 # Local doorman (xray dokodemo+xhttp) port that nginx forwards /v1/edge to.
 # Must match go-node-agent values.whitelist-prod.yaml doorman.hostPort.
 doorman:
-  port: 8080
+  port: 8088
 
 resources:
   requests:
