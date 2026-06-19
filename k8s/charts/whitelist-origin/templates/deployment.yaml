@@ -6,6 +6,8 @@ metadata:
     app: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.replicas }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: {{ .Release.Name }}
@@ -14,7 +16,7 @@ spec:
       labels:
         app: {{ .Release.Name }}
       annotations:
-        checksum/content: {{ .Files.Get "files/default.conf" | sha256sum }}-{{ .Files.Get "files/index.html" | sha256sum }}
+        checksum/content: {{ tpl (.Files.Get "files/default.conf") . | sha256sum }}-{{ .Files.Get "files/index.html" | sha256sum }}
     spec:
       hostNetwork: {{ .Values.hostNetwork }}
       dnsPolicy: {{ .Values.dnsPolicy }}
