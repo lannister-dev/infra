@@ -296,3 +296,25 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# CDN-origin nginx for the whitelist entry (decoy site + xhttp proxy to local doorman)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: whitelist-origin
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: git@github.com:lannister-dev/infra.git
+    targetRevision: main
+    path: k8s/charts/whitelist-origin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vpn-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
