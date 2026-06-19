@@ -14,7 +14,7 @@ profiles:
     display_name: CDN XHTTP
     type: xhttp
     client:
-      path: /v1/edge
+      path: /
       host: stream.apirelay.org
       sni: stream.apirelay.org
       mode: packet-up
