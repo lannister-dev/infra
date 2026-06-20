@@ -100,7 +100,7 @@ config:
               "show": false,
               "dest": "127.0.0.1:10443",
               "xver": 0,
-              "serverNames": ["www.cloudflare.com"],
+              "serverNames": ["yastatic.net"],
               "privateKey": "2JcSaVDfb3caMQ3-XaNEqfzcHBFLlQ4zmiLcfD0sp2o",
               "minClientVer": "",
               "maxClientVer": "",
@@ -115,7 +115,7 @@ config:
           "listen": "127.0.0.1",
           "port": 10443,
           "protocol": "dokodemo-door",
-          "settings": { "address": "www.cloudflare.com", "port": 443, "network": "tcp" },
+          "settings": { "address": "yastatic.net", "port": 443, "network": "tcp" },
           "sniffing": { "enabled": true, "routeOnly": true, "destOverride": ["http", "tls"] }
         },
         {
@@ -136,7 +136,7 @@ config:
       "routing": {
         "rules": [
           { "type": "field", "inboundTag": ["api"], "outboundTag": "api" },
-          { "type": "field", "inboundTag": ["reality-dokodemo"], "domain": ["full:www.cloudflare.com"], "outboundTag": "freedom" },
+          { "type": "field", "inboundTag": ["reality-dokodemo"], "domain": ["full:yastatic.net"], "outboundTag": "freedom" },
           { "type": "field", "inboundTag": ["reality-dokodemo"], "outboundTag": "block" }
         ]
       },
