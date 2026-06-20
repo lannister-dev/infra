@@ -236,3 +236,14 @@ additionalPrometheusRulesMap:
             annotations:
               summary: "Prometheus target {{ $labels.instance }} is down"
               description: "Target has been unreachable for more than 5 minutes."
+
+      - name: vpn
+        rules:
+          - alert: EntryProxyEmpty
+            expr: agent_entry_users == 0
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Entry node {{ $labels.pod }} has 0 users loaded"
+              description: "agent_entry_users has been 0 for more than 5 minutes — the entry proxy never received/applied a snapshot, so it resets every client. Restart the pod or check snapshot delivery."
