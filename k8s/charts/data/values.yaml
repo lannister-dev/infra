@@ -5,6 +5,8 @@
 nodeSelector: {}
 
 postgres:
+  # Set to false to omit the PostgreSQL StatefulSet/Service/backup (e.g. prod, migrated to CNPG)
+  enabled: true
   image:
     repository: postgres
     tag: "16-alpine"
