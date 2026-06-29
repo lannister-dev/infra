@@ -13,6 +13,8 @@ nodeSelector:
   kind: prod
 
 postgres:
+  # Disabled: prod migrated to CNPG (pg-prod-rw). Legacy single-instance postgres removed 2026-06-29.
+  enabled: false
   image:
     tag: "16-alpine"
   database: vpn_control
