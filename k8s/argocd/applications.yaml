@@ -17,7 +17,7 @@ spec:
         installCRDs: true
         replicaCount: 1
         nodeSelector:
-          kubernetes.io/hostname: infra-manager-03
+          kubernetes.io/hostname: 2669415-um55169.twc1.net
         resources:
           limits:
             memory: 128Mi
@@ -26,7 +26,7 @@ spec:
             memory: 64Mi
         webhook:
           nodeSelector:
-            kubernetes.io/hostname: infra-manager-03
+            kubernetes.io/hostname: 2669415-um55169.twc1.net
           resources:
             limits:
               memory: 64Mi
@@ -35,7 +35,7 @@ spec:
               memory: 32Mi
         certController:
           nodeSelector:
-            kubernetes.io/hostname: infra-manager-03
+            kubernetes.io/hostname: 2669415-um55169.twc1.net
           resources:
             limits:
               memory: 64Mi
