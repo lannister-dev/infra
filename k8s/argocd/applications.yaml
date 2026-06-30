@@ -16,8 +16,6 @@ spec:
       values: |
         installCRDs: true
         replicaCount: 1
-        nodeSelector:
-          kubernetes.io/hostname: 2669415-um55169.twc1.net
         resources:
           limits:
             memory: 128Mi
@@ -25,8 +23,6 @@ spec:
             cpu: 10m
             memory: 64Mi
         webhook:
-          nodeSelector:
-            kubernetes.io/hostname: 2669415-um55169.twc1.net
           resources:
             limits:
               memory: 64Mi
@@ -34,8 +30,6 @@ spec:
               cpu: 10m
               memory: 32Mi
         certController:
-          nodeSelector:
-            kubernetes.io/hostname: 2669415-um55169.twc1.net
           resources:
             limits:
               memory: 64Mi
