@@ -20,7 +20,7 @@ config:
       maxSize: 512Mi
     memoryStore:
       enabled: true
-      maxSize: 128Mi
+      maxSize: 512Mi
 
   merge:
     authorization:
@@ -38,10 +38,10 @@ container:
   merge:
     resources:
       limits:
-        memory: 256Mi
+        memory: 1Gi
       requests:
         cpu: 100m
-        memory: 128Mi
+        memory: 512Mi
 
 promExporter:
   enabled: true
