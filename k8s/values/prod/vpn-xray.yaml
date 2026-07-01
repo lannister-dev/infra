@@ -146,6 +146,7 @@ config:
       "routing": {
         "rules": [
           { "type": "field", "inboundTag": ["api"], "outboundTag": "api" },
+          { "type": "field", "network": "udp", "port": 443, "outboundTag": "block" },
           { "type": "field", "inboundTag": ["reality-dokodemo"], "domain": ["full:yastatic.net"], "outboundTag": "freedom" },
           { "type": "field", "inboundTag": ["reality-dokodemo"], "outboundTag": "block" }
         ]
