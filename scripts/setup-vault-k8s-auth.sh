@@ -48,6 +48,12 @@ path "kv/data/probe/*" {
 path "kv/metadata/probe/*" {
   capabilities = ["read", "list"]
 }
+path "kv/data/infra/*" {
+  capabilities = ["read"]
+}
+path "kv/metadata/infra/*" {
+  capabilities = ["read", "list"]
+}
 POLICY
 
 echo "==> Creating Kubernetes auth role for ESO..."

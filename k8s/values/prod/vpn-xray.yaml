@@ -147,12 +147,24 @@ config:
         "rules": [
           { "type": "field", "inboundTag": ["api"], "outboundTag": "api" },
           { "type": "field", "network": "udp", "port": 443, "outboundTag": "block" },
+          { "type": "field", "domain": ["geosite:google", "domain:gemini.google.com", "domain:generativelanguage.googleapis.com"], "outboundTag": "warp" },
           { "type": "field", "inboundTag": ["reality-dokodemo"], "domain": ["full:yastatic.net"], "outboundTag": "freedom" },
           { "type": "field", "inboundTag": ["reality-dokodemo"], "outboundTag": "block" }
         ]
       },
       "outbounds": [
         { "tag": "freedom", "protocol": "freedom", "settings": { "domainStrategy": "UseIPv4" } },
+        {
+          "tag": "warp",
+          "protocol": "wireguard",
+          "settings": {
+            "secretKey": "__WARP_PRIVATE_KEY__",
+            "address": ["172.16.0.2/32"],
+            "peers": [{ "publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=", "endpoint": "engage.cloudflareclient.com:2408", "allowedIPs": ["0.0.0.0/0"] }],
+            "reserved": [86, 248, 210],
+            "mtu": 1280
+          }
+        },
         { "tag": "block", "protocol": "blackhole" }
       ]
     }
@@ -168,3 +180,9 @@ fallback:
 nodeAgent:
   bootstrapToken: ""
   secretName: node-agent-prod-bootstrap
+
+# Cloudflare Warp egress for Google/Gemini (RUS-20).
+# privateKey comes from Vault via ExternalSecret (k8s/external-secrets/xray-warp-prod.yaml),
+# NOT git. Dedicated prod Warp account (reserved [86,248,210]).
+warp:
+  enabled: true

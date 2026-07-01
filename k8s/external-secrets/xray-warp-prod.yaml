@@ -1,0 +1,19 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: xray-warp
+  namespace: vpn-prod
+spec:
+  refreshInterval: 5m
+  secretStoreRef:
+    name: vault
+    kind: ClusterSecretStore
+  target:
+    name: xray-warp
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  data:
+    - secretKey: privateKey
+      remoteRef:
+        key: infra/prod
+        property: warp_private_key
