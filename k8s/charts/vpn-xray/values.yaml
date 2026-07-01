@@ -64,6 +64,16 @@ wgIsolate:
   port: 10100
   interface: wg0
 
+# Cloudflare Warp egress for Google/Gemini (which geo-block RU node IPs).
+# When enabled, an init-container renders config.json substituting the Warp
+# private key from a secret, so the key never lives in git/ConfigMap.
+warp:
+  enabled: false
+  image: alpine:3.20
+  # Secret holding the Warp WireGuard private key under key `privateKey`.
+  secretName: xray-warp
+  # config.json must contain the literal placeholder __WARP_PRIVATE_KEY__.
+
 # node-agent bootstrap secret (optional)
 nodeAgent:
   bootstrapToken: ""

@@ -32,8 +32,10 @@ spec:
       tolerations:
         {{- toYaml .Values.tolerations | nindent 8 }}
       hostNetwork: {{ .Values.hostNetwork }}
-      {{- if .Values.wgIsolate.enabled }}
+      {{- if or .Values.wgIsolate.enabled .Values.warp.enabled }}
       initContainers:
+      {{- end }}
+      {{- if .Values.wgIsolate.enabled }}
         - name: wg-isolate
           image: {{ .Values.wgIsolate.image | quote }}
           command:
@@ -58,6 +60,32 @@ spec:
               memory: 128Mi
               cpu: 100m
       {{- end }}
+      {{- if .Values.warp.enabled }}
+        - name: warp-config-render
+          image: {{ .Values.warp.image | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              sed "s|__WARP_PRIVATE_KEY__|$WARP_PRIVATE_KEY|g" /etc/xray-tpl/config.json > /etc/xray/config.json
+          env:
+            - name: WARP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.warp.secretName }}
+                  key: privateKey
+          volumeMounts:
+            - name: xray-config-tpl
+              mountPath: /etc/xray-tpl
+              readOnly: true
+            - name: xray-config-rendered
+              mountPath: /etc/xray
+          resources:
+            limits:
+              memory: 64Mi
+              cpu: 100m
+      {{- end }}
       containers:
         - name: xray
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -79,9 +107,9 @@ spec:
               protocol: TCP
           {{- end }}
           volumeMounts:
-            - name: xray-config
+            - name: {{ if .Values.warp.enabled }}xray-config-rendered{{ else }}xray-config{{ end }}
               mountPath: /etc/xray
-              readOnly: true
+              readOnly: {{ not .Values.warp.enabled }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -96,6 +124,10 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
       volumes:
-        - name: xray-config
+        - name: {{ if .Values.warp.enabled }}xray-config-tpl{{ else }}xray-config{{ end }}
           configMap:
             name: {{ .Values.config.existingConfigMap | default (printf "%s-xray-config" .Release.Name) }}
+        {{- if .Values.warp.enabled }}
+        - name: xray-config-rendered
+          emptyDir: {}
+        {{- end }}
