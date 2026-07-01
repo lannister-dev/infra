@@ -33,3 +33,7 @@ terraform/backends/*.hcl
 # Generated Ansible inventory artifacts
 ansible/inventory/generated/*.yml
 !ansible/inventory/generated/.gitkeep
+
+# never commit backups (contain vault unseal key, db dumps)
+backups/
+*.bak

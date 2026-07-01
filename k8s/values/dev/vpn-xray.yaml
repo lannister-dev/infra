@@ -136,12 +136,25 @@ config:
       "routing": {
         "rules": [
           { "type": "field", "inboundTag": ["api"], "outboundTag": "api" },
+          { "type": "field", "network": "udp", "port": 443, "outboundTag": "block" },
+          { "type": "field", "domain": ["geosite:google", "domain:gemini.google.com", "domain:generativelanguage.googleapis.com"], "outboundTag": "warp" },
           { "type": "field", "inboundTag": ["reality-dokodemo"], "domain": ["full:yastatic.net"], "outboundTag": "freedom" },
           { "type": "field", "inboundTag": ["reality-dokodemo"], "outboundTag": "block" }
         ]
       },
       "outbounds": [
         { "tag": "freedom", "protocol": "freedom", "settings": { "domainStrategy": "UseIPv4" } },
+        {
+          "tag": "warp",
+          "protocol": "wireguard",
+          "settings": {
+            "secretKey": "__WARP_PRIVATE_KEY__",
+            "address": ["172.16.0.2/32"],
+            "peers": [{ "publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=", "endpoint": "engage.cloudflareclient.com:2408", "allowedIPs": ["0.0.0.0/0"] }],
+            "reserved": [1, 217, 110],
+            "mtu": 1280
+          }
+        },
         { "tag": "block", "protocol": "blackhole" }
       ]
     }
@@ -163,3 +176,9 @@ resources:
   requests:
     cpu: 50m
     memory: 64Mi
+
+# Cloudflare Warp egress for Google/Gemini (RUS-20).
+# privateKey is NOT in git — the `xray-warp` secret is created out-of-band
+# (kubectl/Vault) with key `privateKey`. Chart just references it.
+warp:
+  enabled: true
